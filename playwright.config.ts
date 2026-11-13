@@ -4,7 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
 // with the same base path GitHub Pages uses, so service worker scope, CSP and
 // asset paths are exercised as deployed.
 const base = process.env.ROGUE_ARCHIVE_BASE ?? '/rogue_archive/';
-const port = 4173;
+// ROGUE_ARCHIVE_E2E_PORT lets several checkouts run their tests at once.
+const port = Number(process.env.ROGUE_ARCHIVE_E2E_PORT ?? 4173);
 
 export default defineConfig({
   testDir: 'e2e',
