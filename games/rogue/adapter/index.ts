@@ -46,6 +46,8 @@ import {
   controlsFor,
   findCommand,
   keyToRogue,
+  continueFirst,
+  isDirectionKey,
   type RogueContext,
 } from './input.ts';
 import type { FromWorker, SavedGame, ToWorker } from './protocol.ts';
@@ -322,7 +324,7 @@ class RogueAdapter implements GameAdapter {
     if (!this.#playing) return;
     if (input.type === 'key') {
       const keys = keyToRogue(input);
-      if (keys) this.#send(keys);
+      if (keys) this.#send(continueFirst(this.#context, keys, { directionKey: isDirectionKey(input) }));
       return;
     }
     if (input.type === 'text') {
@@ -343,14 +345,19 @@ class RogueAdapter implements GameAdapter {
     }
     const command = findCommand(input.commandId);
     if (!command) return;
-    // Run: the next direction as a capital letter (on the map only).
-    if (this.#run && command.id.startsWith('move-') && this.#context === 'map') {
+    // Run: the next direction as a capital letter (on the map, or after --More--).
+    if (
+      this.#run &&
+      command.id.startsWith('move-') &&
+      (this.#context === 'map' || this.#context === 'more')
+    ) {
       this.#run = false;
-      this.#send(command.keys.map((key) => String.fromCharCode(key).toUpperCase().charCodeAt(0)));
+      const run = command.keys.map((key) => String.fromCharCode(key).toUpperCase().charCodeAt(0));
+      this.#send(continueFirst(this.#context, run, { commandId: command.id }));
       this.#publishContext(true);
       return;
     }
-    this.#send(command.keys);
+    this.#send(continueFirst(this.#context, command.keys, { commandId: command.id }));
   }
 
   #send(keys: number[]): void {

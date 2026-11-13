@@ -120,7 +120,8 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 | Context | Dock |
 |---|---|
 | Map | Search (fan: rest, run, pick up, step over, identify trap, repeat) · Fight (fan: fight to the death, throw, zap) · Pack (fan: eat, quaff, read, wield, wear, take off, ring on/off, drop, call, one item) · Stairs (fan: up) · Look (fan: discoveries, last message, weapon, armor, rings, help) · More, plus the pad with Search in the centre |
-| `--More--`, "Press space to continue" | Continue |
+| `--More--` | Continue, plus the pad: a move or search continues first, then acts (Rogue ignores every key but Space at `--More--`, which in a fight comes after almost every blow) |
+| "Press space to continue" (lists) | The list's lines, Close |
 | Tombstone and scores ("Press return") | Continue (Enter) |
 | "which direction?" | The pad; Cancel |
 | Item prompt ("(* for list)") | Show items, Cancel, Type; with the list shown, its items |

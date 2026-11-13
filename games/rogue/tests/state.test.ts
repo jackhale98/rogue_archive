@@ -1,7 +1,14 @@
 import type { TouchAction } from '@rogue-archive/game-api';
 import type { Grid } from '@rogue-archive/term-view';
 import { describe, expect, it } from 'vitest';
-import { CHOOSE, controlsFor, keyToRogue, ROGUE_COMMANDS } from '../adapter/input.ts';
+import {
+  CHOOSE,
+  continueFirst,
+  controlsFor,
+  isDirectionKey,
+  keyToRogue,
+  ROGUE_COMMANDS,
+} from '../adapter/input.ts';
 import { detectContext, heroCell, mapOverlay, parseState, screenChoices } from '../adapter/state.ts';
 
 const actions = (layout: { actions: (string | TouchAction)[] }): TouchAction[] =>
@@ -111,5 +118,27 @@ describe('Rogue keys and docks', () => {
         for (const alternate of action.alternates ?? []) expect(ids.has(alternate), alternate).toBe(true);
       }
     }
+  });
+
+  it('at --More--, the pad stays and a move continues first', () => {
+    const more = controlsFor('more', { hp: 10, maxHp: 10, run: false });
+    expect(more.directionPad).toBeDefined();
+    expect(actions(more)[0]?.command).toBe('continue');
+    const h = 'h'.charCodeAt(0);
+    expect(continueFirst('more', [h], { commandId: 'move-w' })).toEqual([32, h]);
+    expect(continueFirst('more', [115], { commandId: 'search' })).toEqual([32, 115]);
+    expect(continueFirst('more', [105], { commandId: 'inventory' })).toEqual([105]);
+    expect(continueFirst('map', [h], { commandId: 'move-w' })).toEqual([h]);
+    const key = (key: string, code = '') => ({
+      type: 'key' as const,
+      key,
+      code,
+      modifiers: { shift: false, ctrl: false, alt: false, meta: false },
+    });
+    expect(isDirectionKey(key('ArrowLeft', 'ArrowLeft'))).toBe(true);
+    expect(isDirectionKey(key('h', 'KeyH'))).toBe(true);
+    expect(isDirectionKey(key('i', 'KeyI'))).toBe(false);
+    expect(continueFirst('more', [h], { directionKey: true })).toEqual([32, h]);
+    expect(continueFirst('more', [32], { directionKey: false })).toEqual([32]);
   });
 });

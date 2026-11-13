@@ -461,6 +461,10 @@
           "action": "Context dock (long-press for related actions), thumb pad, lists and prompts as buttons, More lists every command"
         },
         {
+          "keys": "--More--",
+          "action": "Space continues; a move continues and moves (one key per blow in a fight)"
+        },
+        {
           "keys": "Menu → Display",
           "action": "Text (original), Tiles (RLTiles pictures for the map) or 1-Bit (Kenney's one-colour tiles)"
         },

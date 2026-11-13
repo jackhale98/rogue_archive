@@ -368,6 +368,31 @@ export const PAD = {
   se: 'move-se',
 } as const;
 
+const PAD_COMMANDS = new Set<string>(Object.values(PAD));
+
+/** A direction key: Rogue's letters (capitals run), the arrows or the keypad. */
+export function isDirectionKey(input: Extract<GameInput, { type: 'key' }>): boolean {
+  if (input.modifiers.meta || input.modifiers.ctrl) return false;
+  return Boolean(DIRECTIONS[input.key] ?? KEYPAD[input.code]) || /^[hjklyubn]$/i.test(input.key);
+}
+
+/**
+ * At --More-- Rogue waits for Space and ignores every other key (io.c
+ * endmsg), and a fight shows one after almost every blow ("You hit the bat"
+ * then "The bat hits you"). A move or search there (the pad, or a direction
+ * key) sends the Space first, then the move, so a blow takes one tap. If
+ * another --More-- follows, Rogue ignores the move, as it always would.
+ */
+export function continueFirst(
+  context: RogueContext | null,
+  keys: number[],
+  move: { commandId: string } | { directionKey: boolean },
+): number[] {
+  if (context !== 'more' || keys.length === 0) return keys;
+  const isMove = 'commandId' in move ? PAD_COMMANDS.has(move.commandId) : move.directionKey;
+  return isMove ? [32, ...keys] : keys;
+}
+
 export const PALETTE = ROGUE_COMMANDS.filter(
   (command) => !command.id.startsWith('move-') && command.category !== 'Keys',
 ).map((command) => command.id);
@@ -403,7 +428,12 @@ export function controlsFor(
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop' })], palette: PALETTE };
     case 'more':
-      return { actions: [a('continue', { emphasis: 'primary', wide: true })], palette: PALETTE };
+      // The pad stays: a move continues first (continueFirst).
+      return {
+        directionPad: PAD,
+        actions: [a('continue', { emphasis: 'primary', wide: true })],
+        palette: PALETTE,
+      };
     case 'enter':
       return {
         actions: [a('confirm', { label: 'Continue', emphasis: 'primary', wide: true })],
