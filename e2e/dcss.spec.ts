@@ -41,11 +41,31 @@ test('DCSS: new character, auto-explore, menus, save and continue after reload',
   const launcher = page.locator('.dcss-launcher');
   await expect(launcher).toBeVisible({ timeout: 60_000 });
   await expect(launcher).toContainText('Game saved');
+  await expect(launcher.getByRole('button', { name: /Continue Tester/ })).toBeVisible();
 
   // Saves are in IndexedDB: still there after a reload.
   await page.reload();
   await expect(launcher).toBeVisible({ timeout: 120_000 });
-  await launcher.getByRole('button', { name: /Continue Tester/ }).click();
+  const listed = launcher.getByRole('button', { name: /Continue Tester/ });
+  await listed.waitFor({ timeout: 30_000 }).catch(async () => {
+    // Diagnose a missing save: what IndexedDB holds for DCSS's save directory.
+    const stored = await page.evaluate(
+      () =>
+        new Promise<string[]>((resolve) => {
+          const open = indexedDB.open('/saves');
+          open.onerror = () => resolve([`open failed: ${String(open.error)}`]);
+          open.onsuccess = () => {
+            const db = open.result;
+            if (!db.objectStoreNames.contains('FILE_DATA')) return resolve(['(no FILE_DATA store)']);
+            const keys = db.transaction('FILE_DATA').objectStore('FILE_DATA').getAllKeys();
+            keys.onsuccess = () =>
+              resolve(keys.result.map(String).filter((key) => !/\/(des|db)\//.test(key)));
+          };
+        }),
+    );
+    throw new Error(`No saved character after reload. IndexedDB /saves holds: ${stored.join(', ')}`);
+  });
+  await listed.click();
   await waitForContext(page, 'map', 180_000);
   await expect.poll(() => clientText(page)).toContain('Welcome back, Tester');
 });

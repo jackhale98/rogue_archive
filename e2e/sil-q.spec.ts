@@ -46,9 +46,13 @@ test('Sil-Q: new character, prompts, message log, save and continue after reload
   // Save and quit (Ctrl+X): back at Sil's title menu after the scores.
   await page.locator('canvas').first().click();
   await page.keyboard.press('Control+x');
-  for (let i = 0; i < 6 && !(await screenText(page)).includes('b) New character'); i++) {
-    await page.waitForTimeout(500);
-    await page.keyboard.press(' ');
+  // Acknowledge "-more-" and the scores ("press any key") only while they show:
+  // at the title menu, Space would choose the highlighted Tutorial.
+  for (let i = 0; i < 20; i++) {
+    const text = await screenText(page);
+    if (text.includes('b) New character')) break;
+    if (/-more-|press any key/.test(text)) await page.keyboard.press(' ');
+    await page.waitForTimeout(400);
   }
   await expect.poll(() => screenText(page)).toContain('c) Open saved character');
 

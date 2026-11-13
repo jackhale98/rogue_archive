@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { glyphRect } from '../adapter/atlas.ts';
-import { cameraFocus, findTextOverlay, messageLines } from '../adapter/camera.ts';
+import { cameraFocus, findTextOverlay, itemActions, messageLines } from '../adapter/camera.ts';
 import { COLS, EventType, Key, ROWS } from '../adapter/constants.ts';
 import {
   ADAPTER_COMMANDS,
@@ -151,6 +151,31 @@ describe('camera', () => {
     expect(focus.x + focus.width).toBe(76);
     expect(focus.y).toBe(4);
     expect(focus.y + focus.height).toBe(24);
+  });
+
+  it("reads an item panel's buttons, with map glyphs showing through its gaps", () => {
+    const box = { x: 20, y: 4, width: 42, height: 18 };
+    // Rows as the e2e test's random dungeons drew them (the panel is translucent).
+    const cells = frame({
+      8: [20, 'A simple iron dagger with a well-worn'],
+      17: [20, '    throw        drop     #  remove     '],
+      19: [20, '                Relabel  #?   call    ##'],
+      20: [20, '    throw        drop        remove  #~~'],
+    });
+    expect(itemActions(cells, { ...box, height: 16 })).toEqual([
+      'throw',
+      'drop',
+      'unequip',
+      'relabel',
+      'call',
+    ]);
+    expect(itemActions(frame({ 17: [20, 'throw drop remove      #~~~~ k'] }), box)).toEqual([
+      'throw',
+      'drop',
+      'unequip',
+    ]);
+    // Description text is never a button row.
+    expect(itemActions(frame({ 8: [20, 'You can throw it or drop it.'] }), box)).toEqual([]);
   });
 
   it('extracts colored message lines', () => {

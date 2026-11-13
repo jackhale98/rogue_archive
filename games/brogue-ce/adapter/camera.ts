@@ -217,8 +217,11 @@ export function itemActions(cells: Uint8Array, box: Rect): string[] {
       const sprite = cells[offset]! | (cells[offset + 1]! << 8);
       line += sprite >= 32 && sprite < 127 ? String.fromCharCode(sprite) : ' ';
     }
-    // A row of buttons: every word on it is an action (description text never is).
-    const words = line.trim().split(/\s+/).filter(Boolean);
+    // A row of buttons: every word on it is an action (description text never
+    // is). The panel is translucent, so map glyphs show through the gaps
+    // between buttons ("drop  #  remove"); only words of three or more letters
+    // count (glyphs are symbols or single letters, every action is longer).
+    const words = line.match(/[A-Za-z]{3,}/g) ?? [];
     if (words.length > 0 && words.every((word) => word in ITEM_ACTIONS)) {
       for (const word of words) actions.push(ITEM_ACTIONS[word]!);
     }

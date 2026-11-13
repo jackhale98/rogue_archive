@@ -38,19 +38,19 @@ jobs:
       # built here only if the cache was evicted.
       - name: Restore Brogue CE runtime
         id: brogue
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: games/brogue-ce/dist
           key: runtime-brogue-ce-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/brogue-ce/**', '!games/brogue-ce/dist/**', '!games/brogue-ce/node_modules/**', '!games/brogue-ce/**/*.md') }}
       - name: Restore DCSS runtime
         id: dcss
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: games/dcss/dist
           key: runtime-dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/dcss/**', '!games/dcss/dist/**', '!games/dcss/node_modules/**', '!games/dcss/**/*.md') }}
       - name: Restore Sil-Q runtime
         id: sil
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: games/sil-q/dist
           key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/**', '!games/sil-q/dist/**', '!games/sil-q/node_modules/**', '!games/sil-q/**/*.md') }}
