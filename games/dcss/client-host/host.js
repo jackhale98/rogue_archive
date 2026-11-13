@@ -146,10 +146,27 @@
         }
         var msgs = msgobj.msgs == null ? [msgobj] : msgobj.msgs;
         for (var j = 0; j < msgs.length; j++) {
+          adjust(msgs[j]);
           if (!comm.handle_message_immediately(msgs[j])) message_queue.push(msgs[j]);
         }
       }
       handle_message_backlog();
+    }
+
+    /**
+     * Phones show fewer message lines so the map has room (the shell's log
+     * keeps the history). The pane is only a view: the game's own message
+     * window is unchanged.
+     */
+    var PHONE_MESSAGE_LINES = 4;
+    function adjust(msg) {
+      if (
+        msg.msg === 'layout' &&
+        msg.message_pane &&
+        document.documentElement.classList.contains('compact')
+      ) {
+        msg.message_pane.height = Math.min(msg.message_pane.height, PHONE_MESSAGE_LINES);
+      }
     }
 
     function in_game() {
@@ -464,7 +481,16 @@
             client.uninhibit_messages();
           });
         }
-        require(['game/game'], function () {
+        require(['game/game', 'game/minimap', 'game/enums'], function (game, minimap, enums) {
+          // Phones hide the stats column (it opens as a drawer), so the client
+          // sizes the minimap beside it to zero width, and drawing a zero-size
+          // canvas throws. Keep it at least one pixel per map cell.
+          var fit_minimap = minimap.fit_to;
+          minimap.fit_to = function (width) {
+            var args = Array.prototype.slice.call(arguments);
+            args[0] = Math.max(width || 0, enums.gxm);
+            return fit_minimap.apply(this, args);
+          };
           start().then(function () {
             bridge.ready({
               receive: client.receive,

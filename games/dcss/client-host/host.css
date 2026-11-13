@@ -38,7 +38,8 @@ html.compact.drawer #right_column {
   top: 8px;
   left: 8px;
   bottom: 8px;
-  max-width: calc(100vw - 16px);
+  width: min(28rem, calc(100vw - 16px));
+  box-sizing: border-box;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 10px 12px;
@@ -48,34 +49,41 @@ html.compact.drawer #right_column {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
 }
 
+/* The client sizes the stats to a fixed width when it lays out the map; in
+   the drawer they use the drawer's width. */
+html.compact.drawer #stats,
+html.compact.drawer #monster_list {
+  width: auto !important;
+}
+
 /* The shell shows recent messages and the full log; keep the in-frame
    message pane to the lines the game is actively using (prompts, --more--). */
 html.compact #message_pane {
   font-size: 13px;
 }
 
-/* Popups (menus, descriptions, the character sheet) use the whole frame
-   with larger text, and scroll. */
-html.compact .ui-popup {
-  max-width: 100vw;
+/* Popups (menus, descriptions, the character sheet, character creation)
+   use the whole frame and scroll. */
+html.compact .ui-popup-outer {
+  margin: 6px;
+  padding: 10px;
+  max-width: calc(100vw - 14px);
+  max-height: calc(100dvh - 14px);
+  box-sizing: border-box;
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 html.compact .ui-popup-inner {
-  max-width: calc(100vw - 12px);
-  max-height: calc(100dvh - 12px);
-  box-sizing: border-box;
+  max-height: none;
 }
 
-html.compact .ui-popup[data-generation-id] .menu,
-html.compact .ui-popup .describe-generic,
-html.compact .ui-popup .describe-item,
-html.compact .ui-popup .describe-monster,
-html.compact .ui-popup .formatted-scroller {
-  font-size: 15px;
-  line-height: 1.45;
+html.compact .ui-popup + .ui-popup {
+  padding-top: 0;
 }
 
 html.compact .menu li {
-  min-height: 32px;
-  line-height: 32px;
+  min-height: 30px;
+  line-height: 30px;
 }

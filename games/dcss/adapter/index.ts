@@ -12,7 +12,6 @@
  */
 import {
   GAME_API_VERSION,
-  SHELL_COMMAND,
   type GameAdapter,
   type GameHost,
   type GameInput,
@@ -34,7 +33,7 @@ import {
   type DcssContext,
   type KeyInput,
 } from './input.ts';
-import { formattedToRuns, MessageLog, type GameMessage, type Run } from './messages.ts';
+import { MessageLog, type GameMessage } from './messages.ts';
 import type { FromWorker, SavedCharacter, ToWorker } from './protocol.ts';
 import { GameTracker, parseLines } from './state.ts';
 
@@ -124,8 +123,6 @@ class DcssAdapter implements GameAdapter {
   #keyBacklog: KeyInput[] = [];
   #tracker = new GameTracker();
   #log = new MessageLog();
-  #recent: Run[][] = [];
-  #context: DcssContext | null = null;
   #layoutSignature = '';
   #busyTimer: ReturnType<typeof setTimeout> | undefined;
   #presentation: Presentation | null = null;
@@ -353,28 +350,34 @@ class DcssAdapter implements GameAdapter {
       frame.style.width = frame.style.height = '100%';
     } else {
       if (!this.#hud) {
-        this.#hud = new DcssHud(mount, {
-          onStatus: () => this.#setDrawer(!this.#drawer),
-          onMessages: () => this.#host?.emit({ type: 'shell-command', command: SHELL_COMMAND.log }),
-        });
+        this.#hud = new DcssHud(mount, () => this.#setDrawer(!this.#drawer));
       }
       const rect = mount.getBoundingClientRect();
       const portrait = rect.height > rect.width;
       this.#hud.setReserve(presentation.topRightReserve ?? 0, portrait);
-      this.#hud.update(this.#tracker.player, this.#recent);
+      this.#hud.update(this.#tracker.player);
+      this.#hud.setExpanded(this.#drawer);
       const insets = presentation.insets;
       const top = Math.round(this.#hud.height);
-      frame.style.width = frame.style.height = 'auto';
-      frame.style.inset = `${top}px ${Math.round(insets.right)}px ${Math.round(insets.bottom)}px ${Math.round(insets.left)}px`;
+      const left = Math.round(insets.left);
+      const right = Math.round(insets.right);
+      const bottom = Math.round(insets.bottom);
+      // An iframe is a replaced element: with width/height "auto" it would take
+      // its default 300x150 size, not the space between the insets.
+      frame.style.inset = `${top}px auto auto ${left}px`;
+      frame.style.width = `calc(100% - ${left + right}px)`;
+      frame.style.height = `calc(100% - ${top + bottom}px)`;
     }
     this.#client?.setClasses(
       [compact ? 'compact' : '', compact && this.#drawer ? 'drawer' : ''].filter(Boolean),
     );
   }
 
+  /** Phones: the stats panel opens over the map; the client re-fits around it. */
   #setDrawer(open: boolean): void {
     this.#drawer = open;
     this.#applyPresentation();
+    this.#client?.relayout();
   }
 
   applySetting(key: string, value: string | number): void {
@@ -472,7 +475,6 @@ class DcssAdapter implements GameAdapter {
       case 'exit':
         // The game process ended; the worker has a fresh one ready.
         this.#tracker.reset();
-        this.#recent = [];
         this.#client?.restart();
         this.#characters = message.characters;
         this.#showLauncher(message.reason);
@@ -514,17 +516,12 @@ class DcssAdapter implements GameAdapter {
         );
         if (update) {
           this.#host?.emit({ type: 'message-log', reset: update.reset, entries: update.entries });
-          for (const item of (message.messages as GameMessage[] | undefined) ?? []) {
-            const runs = formattedToRuns(item.text ?? '');
-            if (runs.some((run) => run.text.trim())) this.#recent.push(runs);
-          }
-          if (this.#recent.length > 4) this.#recent.splice(0, this.#recent.length - 4);
           changed = true;
         }
       }
     }
     if (!changed) return;
-    this.#hud?.update(this.#tracker.player, this.#recent);
+    this.#hud?.update(this.#tracker.player);
     this.#publishContext();
   }
 
@@ -544,7 +541,6 @@ class DcssAdapter implements GameAdapter {
   }
 
   #emitContext(context: DcssContext, force = false): void {
-    this.#context = context;
     this.debug.context = context;
     const player = this.#tracker.player;
     const layout = controlsFor(context, { hp: player.hp ?? 0, hpMax: player.hp_max ?? 0, run: this.#run });

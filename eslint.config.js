@@ -30,6 +30,15 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // Pages that host an upstream game client (loaded with that client's AMD loader).
+    files: ['games/*/client-host/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.browser, require: 'readonly', define: 'readonly' },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
     files: ['apps/web/public/sw.js'],
     languageOptions: { globals: { ...globals.serviceworker } },
   },
