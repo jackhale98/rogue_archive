@@ -212,6 +212,9 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
         </div>
       </header>
 
+      {/* Settings first: the display (text or tiles) is what players look for. */}
+      {launchable ? <GameSettings game={game} /> : null}
+
       {game.about.length > 0 ? (
         <section className="detail-section prose">
           {game.about.map((paragraph) => (
@@ -256,8 +259,6 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
           </table>
         </section>
       ) : null}
-
-      {launchable ? <GameSettings game={game} /> : null}
 
       {launchable && runtime ? (
         <section className="detail-section" aria-labelledby="offline-title">

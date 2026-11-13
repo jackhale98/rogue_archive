@@ -162,6 +162,34 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
         </button>
       </div>
 
+      {/* Preferences first: the display (text or tiles) is what players look for. */}
+      {adapter.settings && adapter.settings.length > 0 ? (
+        <section className="shell-menu__section" aria-labelledby="menu-prefs">
+          <h3 id="menu-prefs">Preferences</h3>
+          <div className="settings-list">
+            {adapter.settings.map((descriptor) => (
+              <label key={descriptor.key} className="setting">
+                <span className="setting__label">{descriptor.label}</span>
+                <span className="setting__description">
+                  {descriptor.description}
+                  {descriptor.appliesOn === 'next-launch' ? ' Takes effect next launch.' : ''}
+                </span>
+                <select
+                  value={String(values[descriptor.key] ?? descriptor.default)}
+                  onChange={(event) => changeSetting(descriptor, event.target.value)}
+                >
+                  {descriptor.options.map((option) => (
+                    <option key={String(option.value)} value={String(option.value)}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="shell-menu__section" aria-labelledby="menu-commands">
         <h3 id="menu-commands">Commands</h3>
         <p className="muted">Every command sends the game's original key, shown on the right.</p>
@@ -300,33 +328,6 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
               {message.text}
             </p>
           ) : null}
-        </section>
-      ) : null}
-
-      {adapter.settings && adapter.settings.length > 0 ? (
-        <section className="shell-menu__section" aria-labelledby="menu-prefs">
-          <h3 id="menu-prefs">Preferences</h3>
-          <div className="settings-list">
-            {adapter.settings.map((descriptor) => (
-              <label key={descriptor.key} className="setting">
-                <span className="setting__label">{descriptor.label}</span>
-                <span className="setting__description">
-                  {descriptor.description}
-                  {descriptor.appliesOn === 'next-launch' ? ' Takes effect next launch.' : ''}
-                </span>
-                <select
-                  value={String(values[descriptor.key] ?? descriptor.default)}
-                  onChange={(event) => changeSetting(descriptor, event.target.value)}
-                >
-                  {descriptor.options.map((option) => (
-                    <option key={String(option.value)} value={String(option.value)}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
-          </div>
         </section>
       ) : null}
 
