@@ -111,6 +111,25 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 - From Start until DCSS shows its first screen, the start screen shows "Preparing the dungeon for *name*…" with a spinner and the seconds elapsed. DCSS's caches ship prebuilt, so this takes a second or two; the dock stays empty meanwhile.
 - Character creation's species and background columns are flowed into one scrolling column on phones, column by column with each group's heading (`client-host/host.css`; `host.js` orders the items from upstream's grid placement). The status band reads "New character" until the character exists.
 
+## Rogue
+
+Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses standout in reverse video); a start screen (`packages/start-screen`) names the character or continues a saved game.
+
+- **Layout on phones:** a status band (Rogue's status line and its message line; tap for the message log), the map at a readable size following the hero (pinch to zoom, drag to look around), lists (inventory, discoveries) as a sheet with tappable lines; long press on the map identifies the symbol there (`/`).
+
+| Context | Dock |
+|---|---|
+| Map | Search (fan: rest, run, pick up, step over, identify trap, repeat) · Fight (fan: fight to the death, throw, zap) · Pack (fan: eat, quaff, read, wield, wear, take off, ring on/off, drop, call, one item) · Stairs (fan: up) · Look (fan: discoveries, last message, weapon, armor, rings, help) · More, plus the pad with Search in the centre |
+| `--More--`, "Press space to continue" | Continue |
+| Tombstone and scores ("Press return") | Continue (Enter) |
+| "which direction?" | The pad; Cancel |
+| Item prompt ("(* for list)") | Show items, Cancel, Type; with the list shown, its items |
+| Lists over the map | The lettered lines, Close, Cancel |
+| Yes/no ("Really quit?", "Save file?") | Yes, No, Cancel |
+| Typed answers ("call it", "file name") | Type, OK, Cancel |
+
+`games/rogue/tests/conformance/key-coverage.ts` checks each command against `command.c`.
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad**: press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.

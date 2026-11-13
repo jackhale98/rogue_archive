@@ -9,6 +9,7 @@ const ADAPTERS: Record<string, () => Promise<GameModule>> = {
   'brogue-ce': () => import('@rogue-archive/game-brogue-ce').then((m) => m.default),
   dcss: () => import('@rogue-archive/game-dcss').then((m) => m.default),
   'sil-q': () => import('@rogue-archive/game-sil-q').then((m) => m.default),
+  rogue: () => import('@rogue-archive/game-rogue').then((m) => m.default),
 };
 
 export function loadAdapterModule(adapterId: string): Promise<GameModule> {

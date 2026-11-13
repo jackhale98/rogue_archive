@@ -90,6 +90,21 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass
 
+## Phase 6b — Rogue 5.4.4 🟡 experimental
+
+- [x] Feasibility report: docs/games/rogue-feasibility.md
+- [x] License/provenance report (BSD-3-Clause 5.4.4 source release, three notices retained)
+- [x] WASM build with no patches: a small curses written for the port (windows as data, as Rogue needs), a browser `config.h`, the browser's "user" for the home directory, emulated K&R function pointer casts
+- [x] Shared start screen for games started by name (`packages/start-screen`, MIT); curses standout as reverse video in `packages/term-view`
+- [x] Saves in IndexedDB (/rogue: savefiles, scoreboard), export/import; classic semantics (saved with S, removed on restore)
+- [x] Phone layout: status band, map around the hero with pinch zoom, lists as tappable sheets, long-press to identify a symbol
+- [x] Context docks: --More--, scores, yes/no, direction, item prompts, lists, text
+- [x] Engine conformance: key coverage against `command.c`; native vs WebAssembly replay (screens, scoreboard and savefiles identical)
+- [x] e2e: desktop (moves, inventory, item prompt, log, save, reload, continue) and phone (band, pad, dock, sheet, direction prompt)
+- [x] CI build, deploy, weekly canary
+- [ ] Test on physical phones, Firefox and Safari
+- [ ] Promote to `playable` once the above pass
+
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
@@ -98,5 +113,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → Rogue 5.4.4 → HyperRogue → NetHack 5.0.0 → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → HyperRogue → NetHack 5.0.0 → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

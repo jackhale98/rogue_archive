@@ -156,6 +156,11 @@ export interface RendererOptions {
   background?: string;
   /** Frame colour for views with `frame`. */
   frameColor?: string;
+  /**
+   * Colour indices drawn in reverse video (the cell filled with the colour,
+   * the glyph in the background colour), e.g. curses standout.
+   */
+  inverse?: (color: number) => boolean;
 }
 
 const DEFAULT_FONT = "'DejaVu Sans Mono', Menlo, Consolas, 'Liberation Mono', monospace";
@@ -178,6 +183,7 @@ export class TermRenderer {
       glyph: options.glyph ?? ((code) => String.fromCharCode(code)),
       background: options.background ?? '#000',
       frameColor: options.frameColor ?? 'rgba(224,170,74,0.55)',
+      inverse: options.inverse ?? (() => false),
     };
     this.canvas = document.createElement('canvas');
     this.canvas.style.cssText =
@@ -317,8 +323,16 @@ export class TermRenderer {
       for (let x = firstX; x < lastX && x < grid.cols; x++) {
         const offset = (y * grid.cols + x) * 2;
         const code = grid.cells[offset]!;
-        if (code === 32 || code === 0) continue;
-        ctx.fillStyle = this.#palette[grid.cells[offset + 1]!] ?? '#fff';
+        const color = grid.cells[offset + 1]!;
+        if (this.#options.inverse(color)) {
+          ctx.fillStyle = this.#palette[color] ?? '#fff';
+          ctx.fillRect(view.originX + x * view.cellWidth, py, view.cellWidth, view.cellHeight);
+          if (code === 32 || code === 0) continue;
+          ctx.fillStyle = this.#options.background;
+        } else {
+          if (code === 32 || code === 0) continue;
+          ctx.fillStyle = this.#palette[color] ?? '#fff';
+        }
         ctx.fillText(
           this.#options.glyph(code),
           view.originX + (x + 0.5) * view.cellWidth,

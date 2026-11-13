@@ -1,0 +1,40 @@
+{
+  "$comment": "Key scripts replayed by replay.mjs in the native and WebAssembly builds from the same fixed seed (ROGUEOPTS name=Tester, file=Tester.save unless given). Keys: literal characters, plus {CR} {ESC} {SPACE} and {^X} for Ctrl+X. `expect`: text that must appear in the native output. `exits`: the script ends the program (save, quit).",
+  "scenarios": [
+    {
+      "name": "explore-and-fight",
+      "keys": [
+        "hhhhhhhhjjjjjjjjllllllllllllllllkkkkkkkkyyyyuuuubbbbnnnn",
+        "LLLLHHHHJJJJKKKK",
+        "s5ssss10.",
+        "fhfjfkfl{ESC}",
+        "/@{ESC}D{SPACE}{^P}@"
+      ],
+      "expect": ["Level: 1", "Hp:"]
+    },
+    {
+      "name": "inventory-and-items",
+      "keys": [
+        "i{SPACE}I{ESC}",
+        "e*{SPACE}{ESC}",
+        "q{ESC}r{ESC}w*{SPACE}d{ESC}W{ESC}T",
+        "{SPACE}t{ESC}z{ESC}c{ESC})]=",
+        "ee",
+        "?{SPACE}{SPACE}{SPACE}"
+      ],
+      "expect": ["Some food", "--Press space to continue--"]
+    },
+    {
+      "name": "save",
+      "keys": ["llll", "jjjj", "S", "y"],
+      "exits": true,
+      "expect": ["Save file (Tester.save)?"]
+    },
+    {
+      "name": "quit-and-scores",
+      "keys": ["hhhh", "Q", "y", "{SPACE}", "{CR}"],
+      "exits": true,
+      "expect": ["Really quit?", "[Press return to continue]"]
+    }
+  ]
+}

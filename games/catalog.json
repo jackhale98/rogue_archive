@@ -382,28 +382,118 @@
       "title": "Rogue",
       "subtitle": "5.4.4 source release",
       "description": "The game that named the genre: explore the Dungeons of Doom, identify what you find, and bring back the Amulet of Yendor.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 3,
       "effort": "low-medium",
       "rationale": "Small, classic terminal roguelike; relatively straightforward integration.",
       "firstReleased": 1980,
-      "authors": "Michael Toy, Glenn Wichman, Ken Arnold and later contributors",
+      "authors": "Michael Toy, Glenn Wichman and Ken Arnold; 5.4.4 source release by the Roguelike Restoration Project",
       "upstream": {
         "name": "Rogue 5.4.4",
         "repository": "https://github.com/Davidslv/rogue"
       },
       "license": {
-        "code": "BSD-style license of the later redistributable 5.4.4 source release (to be verified)",
-        "assets": "Text-only; included notices to be audited"
+        "code": "BSD-3-Clause (Rogue 5.4.4 source release; state.c and mdport.c by Nicholas J. Kisseberth, xcrypt.c by David Burren, under the same terms)",
+        "assets": "No graphics, sounds or fonts are shipped: the game is drawn as text with the browser's monospace font",
+        "report": "games/rogue/LICENSES.md"
       },
       "interface": ["ascii"],
       "input": {
         "keyboard": true,
         "mouse": false,
-        "touch": false
+        "touch": true
       },
       "tags": ["Classic", "Historic"],
-      "glyph": "R"
+      "glyph": "R",
+      "version": "5.4.4",
+      "sourceRevision": "cf9bd26d564a72fac4cf56b55c96c2435270d29a",
+      "renderMode": "terminal-fit",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "rogue",
+      "runtimeManifest": "runtime/rogue/runtime-manifest.json",
+      "about": [
+        "Rogue is the 1980 game that named the genre: descend through the Dungeons of Doom, identify potions, scrolls, rings and wands by trying them, and bring back the Amulet of Yendor. Every level is new, every death is final, and the screen is made of letters.",
+        "This port compiles the Rogue 5.4.4 source release, the later BSD-licensed version, without changing it, on a small curses written for the browser. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "h j k l y u b n · arrow keys · keypad",
+          "action": "Move or attack; Shift (or capitals) to run"
+        },
+        {
+          "keys": "s · . · ,",
+          "action": "Search, rest a turn, pick up"
+        },
+        {
+          "keys": "f · F · t · z",
+          "action": "Fight, fight to the death, throw, zap a wand or staff"
+        },
+        {
+          "keys": "i · q · r · e · w · W · T · P · R · d",
+          "action": "Inventory, quaff, read, eat, wield, wear, take off, ring on, ring off, drop"
+        },
+        {
+          "keys": "> · <",
+          "action": "Take the stairs"
+        },
+        {
+          "keys": "/ · D · Ctrl+P",
+          "action": "Identify a symbol, discoveries, repeat the last message"
+        },
+        {
+          "keys": "digits",
+          "action": "Repeat count for the next command (e.g. 10s)"
+        },
+        {
+          "keys": "S · Q",
+          "action": "Save (the game ends; continue it from the start screen) · quit"
+        },
+        {
+          "keys": "?",
+          "action": "Rogue's command list"
+        },
+        {
+          "keys": "Phone",
+          "action": "Context dock (long-press for related actions), thumb pad, lists and prompts as buttons, More lists every command"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download your .save files and scoreboard; desktop Rogue 5.4.4 savefiles can be imported"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "As in the original, Rogue saves only when you press S, and a saved game is removed when you continue it: closing the page mid-game loses that game's progress.",
+        "No shell escape (!): there is no shell in the browser."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "New character, moves, inventory, item prompts, message log, save, reload and continue verified by end-to-end tests."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Status band, thumb pad, dock, inventory sheet and direction prompt exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ]
     },
     {
       "id": "hyperrogue",

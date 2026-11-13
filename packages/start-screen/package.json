@@ -1,0 +1,11 @@
+{
+  "name": "@rogue-archive/start-screen",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "A start screen for games the page starts by name: continue a saved character or begin a new one.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

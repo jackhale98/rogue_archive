@@ -54,8 +54,14 @@ jobs:
         with:
           path: games/sil-q/dist
           key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/**', '!games/sil-q/dist/**', '!games/sil-q/node_modules/**', '!games/sil-q/**/*.md') }}
+      - name: Restore Rogue runtime
+        id: rogue
+        uses: actions/cache/restore@v4
+        with:
+          path: games/rogue/dist
+          key: runtime-rogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/rogue/**', '!games/rogue/dist/**', '!games/rogue/node_modules/**', '!games/rogue/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -80,6 +86,11 @@ jobs:
       - name: Build Sil-Q runtime
         if: steps.sil.outputs.cache-hit != 'true'
         run: pnpm build:sil
+        env:
+          ROGUE_ARCHIVE_HARNESS: '0'
+      - name: Build Rogue runtime
+        if: steps.rogue.outputs.cache-hit != 'true'
+        run: pnpm build:rogue
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build

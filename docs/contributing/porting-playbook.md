@@ -166,3 +166,13 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **"In the dungeon" flags can outlive the game**: `character_dungeon` stays set at the title menu after a game ends; combine it with `p_ptr->playing`.
 - **Verify every command's key against the source.** The key-coverage check found `*` (target) commented out of Sil-Q's command switch.
 - **Ghost clicks after opening UI from a touch**: an action run on pointerup that opens a dialog receives the touch's compatibility click on whatever is now under the finger. The shared dock now cancels `touchend`; do the same for any custom touch button that opens UI.
+
+### From Rogue
+
+- **Curses can be data, not just display.** Rogue keeps the monster map in a curses window and reads it back (`mvwinch`), and saves windows into the savefile. A small curses of your own with real in-memory windows (refresh copies to the screen and presents it; `wgetch` blocks for the page's key) is simpler than porting ncurses and keeps the game unchanged. Implement exactly what the game links against; missing functions fail at link time, not in play.
+- **K&R function pointers trap in WebAssembly.** Calling a `void (*)()` with an argument the function doesn't declare works natively and traps in WebAssembly ("function signature mismatch"). `-sEMULATE_FUNCTION_POINTER_CASTS` fixes it without a patch; find the call with `--profiling-funcs`.
+- **The C library reads the environment once.** Emscripten builds `environ` at start-up; set `ENV` in `preRun` (a fresh module instance per game run), not before `callMain`.
+- **`chdir` in `preRun` doesn't stick** (start-up resets the working directory); do it in `onRuntimeInitialized`, or use absolute paths.
+- **Uninitialised bytes in files:** a savefile can contain stack garbage upstream writes (Rogue's 80-byte header buffer); compare the rest byte for byte and document the stretch skipped.
+- **Classic save semantics are part of the game.** Rogue deletes a savefile when it restores it; keep that, and say so where the player starts.
+
