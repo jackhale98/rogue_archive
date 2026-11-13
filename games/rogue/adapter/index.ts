@@ -49,7 +49,7 @@ import {
   type RogueContext,
 } from './input.ts';
 import type { FromWorker, SavedGame, ToWorker } from './protocol.ts';
-import { RogueTiles } from './tiles.ts';
+import { loadTiles, type TileSet, type TileStyle } from './tiles.ts';
 import {
   MESSAGE_ROW,
   STATUS_ROW,
@@ -76,12 +76,19 @@ export interface RogueDebugState {
   inGame: boolean;
   /** The map is drawn with tiles now. */
   tiled: boolean;
+  /** The tile style drawn when tiled ('tiles' or 'one-bit'), else null. */
+  tileStyle: TileStyle | null;
   state: RogueState | null;
   saves: string[];
   screenText(): string;
   rowText(y: number): string;
   views(): string[];
   cellToClient(x: number, y: number): { x: number; y: number } | null;
+}
+
+/** The Display setting's value. */
+function displayOf(value: unknown): 'text' | TileStyle {
+  return value === 'tiles' || value === 'one-bit' ? value : 'text';
 }
 
 function findFile(files: RuntimeFile[], path: string): RuntimeFile {
@@ -109,10 +116,11 @@ class RogueAdapter implements GameAdapter {
       key: 'display',
       label: 'Display',
       description:
-        "Text is Rogue's own screen. Tiles draws the map with pictures from the public-domain RLTiles (as Dungeon Crawl Stone Soup's tiles); messages and lists stay text.",
+        "Text is Rogue's own screen. Tiles draws the map with pictures from the public-domain RLTiles (as Dungeon Crawl Stone Soup's tiles); 1-Bit uses Kenney's one-colour 1-Bit Pack. Messages and lists stay text.",
       options: [
         { value: 'text', label: 'Text (original)' },
-        { value: 'tiles', label: 'Tiles' },
+        { value: 'tiles', label: 'Tiles (RLTiles)' },
+        { value: 'one-bit', label: '1-Bit' },
       ],
       default: 'text',
       appliesOn: 'immediately',
@@ -132,9 +140,10 @@ class RogueAdapter implements GameAdapter {
   #playing = false;
   #name = '';
   #defaultName = '';
-  #display: 'text' | 'tiles' = 'text';
-  #tiles: RogueTiles | null = null;
-  #tilesLoading: Promise<void> | null = null;
+  #display: 'text' | TileStyle = 'text';
+  /** Each tile style, once loaded (or loading). */
+  readonly #tiles = new Map<TileStyle, TileSet>();
+  readonly #tilesLoading = new Map<TileStyle, Promise<void>>();
   #runtimeFiles: readonly RuntimeFile[] = [];
   #runtimeBaseUrl = '';
   /** Whether the map is drawn with tiles for the current screen (worked out in #layout). */
@@ -162,6 +171,7 @@ class RogueAdapter implements GameAdapter {
       context: null,
       inGame: false,
       tiled: false,
+      tileStyle: null,
       state: null,
       saves: [],
       rowText: row,
@@ -183,7 +193,7 @@ class RogueAdapter implements GameAdapter {
     const stored = Number(options.settings.mapCellCss);
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
     this.#defaultName = String(options.settings.lastName ?? '');
-    this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.#display = displayOf(options.settings.display);
     this.#runtimeFiles = runtime.files;
     this.#runtimeBaseUrl = runtimeBaseUrl;
 
@@ -232,34 +242,43 @@ class RogueAdapter implements GameAdapter {
         pinch: (scale) => this.#zoomBy(scale),
       }),
     );
-    if (this.#display === 'tiles') await this.#loadTiles();
+    if (this.#display !== 'text') await this.#loadTiles(this.#display);
     host.emit({ type: 'status', status: { stage: 'ready' } });
   }
 
-  /** Downloads the tiles once (when Tiles is first chosen). */
-  #loadTiles(): Promise<void> {
-    this.#tilesLoading ??= RogueTiles.load(this.#runtimeFiles, this.#runtimeBaseUrl)
-      .then((tiles) => {
-        this.#tiles = tiles;
-        this.#layout();
-      })
-      .catch((error: unknown) => {
-        this.#tilesLoading = null;
-        this.#host?.logger.warn('Could not load the tiles; showing text', error);
-      });
-    return this.#tilesLoading;
+  /** Downloads a tile style once (when it is first chosen). */
+  #loadTiles(style: TileStyle): Promise<void> {
+    let loading = this.#tilesLoading.get(style);
+    if (!loading) {
+      loading = loadTiles(style, this.#runtimeFiles, this.#runtimeBaseUrl)
+        .then((tiles) => {
+          this.#tiles.set(style, tiles);
+          this.#layout();
+        })
+        .catch((error: unknown) => {
+          this.#tilesLoading.delete(style);
+          this.#host?.logger.warn('Could not load the tiles; showing text', error);
+        });
+      this.#tilesLoading.set(style, loading);
+    }
+    return loading;
+  }
+
+  /** The chosen tile style, if one is chosen and loaded. */
+  #tileSet(): TileSet | null {
+    return this.#display === 'text' ? null : (this.#tiles.get(this.#display) ?? null);
   }
 
   /** Whether the map is drawn with tiles now (chosen, loaded, in a game, no list over it). */
   #tiled(): boolean {
     const grid = this.#grid;
-    if (this.#display !== 'tiles' || !this.#tiles || !grid || !this.#state?.inGame) return false;
+    if (!this.#tileSet() || !grid || !this.#state?.inGame) return false;
     return this.#context === 'map' || !(listBox(grid) ?? mapOverlay(grid));
   }
 
   #tileFor(code: number, _x: number, y: number, view: string): readonly CanvasImageSource[] | null {
     if (view !== 'map' || y < MESSAGE_ROW + 1 || y >= STATUS_ROW || !this.#tiledNow) return null;
-    return this.#tiles?.images(code) ?? null;
+    return this.#tileSet()?.images(code) ?? null;
   }
 
   async start(): Promise<void> {
@@ -356,8 +375,8 @@ class RogueAdapter implements GameAdapter {
 
   applySetting(key: string, value: unknown): void {
     if (key !== 'display') return;
-    this.#display = value === 'tiles' ? 'tiles' : 'text';
-    if (this.#display === 'tiles' && !this.#tiles) void this.#loadTiles();
+    this.#display = displayOf(value);
+    if (this.#display !== 'text') void this.#loadTiles(this.#display);
     this.#layout();
   }
 
@@ -563,6 +582,7 @@ class RogueAdapter implements GameAdapter {
     if (!renderer || !grid) return;
     this.#tiledNow = this.#tiled();
     this.debug.tiled = this.#tiledNow;
+    this.debug.tileStyle = this.#tiledNow && this.#display !== 'text' ? this.#display : null;
     const { width, height } = renderer.size;
     const dpr = renderer.dpr;
     const whole: Rect = { x: 0, y: 0, width: grid.cols, height: grid.rows };

@@ -44,20 +44,18 @@ test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction p
   await dock.getByRole('button', { name: /^Cancel/ }).tap();
   await waitForContext(page, 'map');
 
-  // Display: Tiles (Menu): the map is drawn with tiles, and back to text.
+  // Display (Menu): the map is drawn with each tile style, and back to text.
   await settle();
-  await page.getByRole('button', { name: 'Menu' }).tap();
-  await page.getByLabel('Display').selectOption('tiles');
-  await page.keyboard.press('Escape');
-  const tiled = () =>
+  const tileStyle = () =>
     page.evaluate(
       () =>
-        (window as unknown as { __rogueArchive: { adapter: { debug: { tiled: boolean } } } }).__rogueArchive
-          .adapter.debug.tiled,
+        (window as unknown as { __rogueArchive: { adapter: { debug: { tileStyle: string | null } } } })
+          .__rogueArchive.adapter.debug.tileStyle,
     );
-  await expect.poll(tiled).toBe(true);
-  await page.getByRole('button', { name: 'Menu' }).tap();
-  await page.getByLabel('Display').selectOption('text');
-  await page.keyboard.press('Escape');
-  await expect.poll(tiled).toBe(false);
+  for (const style of ['tiles', 'one-bit', 'text']) {
+    await page.getByRole('button', { name: 'Menu' }).tap();
+    await page.getByLabel('Display').selectOption(style);
+    await page.keyboard.press('Escape');
+    await expect.poll(tileStyle).toBe(style === 'text' ? null : style);
+  }
 });

@@ -394,7 +394,7 @@
       },
       "license": {
         "code": "BSD-3-Clause (Rogue 5.4.4 source release; state.c and mdport.c by Nicholas J. Kisseberth, xcrypt.c by David Burren, under the same terms)",
-        "assets": "Optional tiles: CC0 1.0 (Dungeon Crawl Stone Soup's tile export, based on the public-domain RLTiles); otherwise text in the browser's monospace font",
+        "assets": "Optional tiles: CC0 1.0 (Dungeon Crawl Stone Soup's tile export, based on the public-domain RLTiles; Kenney's 1-Bit Pack); otherwise text in the browser's monospace font",
         "report": "games/rogue/LICENSES.md"
       },
       "interface": ["ascii", "tiles"],
@@ -462,7 +462,7 @@
         },
         {
           "keys": "Menu → Display",
-          "action": "Text (original) or Tiles (RLTiles pictures for the map)"
+          "action": "Text (original), Tiles (RLTiles pictures for the map) or 1-Bit (Kenney's one-colour tiles)"
         },
         {
           "keys": "Menu → Save files for desktop",

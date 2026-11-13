@@ -12,7 +12,8 @@
 #    page) and port/platform.c (the browser's "user", for the home directory).
 # 4. Writes games/rogue/dist with runtime-manifest.json, and links the same
 #    objects for Node as the conformance harness (not deployed). Copies the
-#    tiles tiles/tiles.json names from the pinned CC0 crawl/tiles export.
+#    tiles tiles/tiles.json names from the pinned CC0 crawl/tiles export, and
+#    the tile sheet of the pinned CC0 Kenney 1-Bit Pack (tiles/one-bit.json).
 set -euo pipefail
 
 GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -125,6 +126,22 @@ node -e '
 done
 cp "$TILES/README.md" "$OUT/licenses/crawl-tiles-README.md"
 cp "$TILES/ARTISTS.md" "$OUT/licenses/crawl-tiles-ARTISTS.md"
+
+# Display: 1-Bit. The tile sheet of Kenney's 1-Bit Pack (CC0; upstream.env
+# ONEBIT_*), verified by SHA-256 and shipped as it is with the pack's licence.
+ONEBIT_ZIP="$WORK/kenney-1-bit-pack-$ONEBIT_SHA256.zip"
+if [ ! -f "$ONEBIT_ZIP" ]; then
+  curl -fsSL --retry 3 -o "$ONEBIT_ZIP.part" "$ONEBIT_URL"
+  mv "$ONEBIT_ZIP.part" "$ONEBIT_ZIP"
+fi
+if ! echo "$ONEBIT_SHA256  $ONEBIT_ZIP" | sha256sum -c --status; then
+  rm -f "$ONEBIT_ZIP"
+  echo "error: $ONEBIT_URL does not match ONEBIT_SHA256 in upstream.env" >&2
+  exit 1
+fi
+mkdir -p "$OUT/tiles/one-bit"
+unzip -p "$ONEBIT_ZIP" "$ONEBIT_SHEET" >"$OUT/tiles/one-bit/$(basename "$ONEBIT_SHEET")"
+unzip -p "$ONEBIT_ZIP" License.txt >"$OUT/licenses/kenney-1-bit-pack-License.txt"
 
 # Conformance harness: the same game objects for Node, with the curses host
 # bridge written in C (tests/conformance/replay-platform.c) instead of

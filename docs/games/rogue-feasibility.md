@@ -31,7 +31,7 @@ curses (screen and keys), `mdport.c` (keys, users, home directory, signals, proc
 - **Environment:** Emscripten's C library reads the environment once at start-up, so `ROGUEOPTS` (name, savefile) must be set before the module starts; each game is a fresh module instance.
 - **Savefiles:** the same format as desktop Rogue 5.4.4 (32/64-bit independent; byte-identical between the native and WebAssembly builds apart from an uninitialised stretch upstream writes).
 - **Size:** about 0.33 MB, plus 43 optional tiles (about 30 KB, loaded only when Display: Tiles is chosen).
-- **Tiles:** Rogue's screen holds only symbols, so tiles are a presentation of the map rows (CC0 tiles from Dungeon Crawl Stone Soup's export, based on RLTiles); each item class has one picture.
+- **Tiles:** Rogue's screen holds only symbols, so tiles are a presentation of the map rows (CC0 tiles from Dungeon Crawl Stone Soup's export, based on RLTiles, or Kenney's CC0 1-Bit Pack); each item class has one picture.
 
 ## Risks
 

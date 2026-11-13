@@ -13,11 +13,11 @@ pnpm dev                   # or: pnpm build && pnpm preview
 2. Shallow-clones upstream at the tag in `upstream.env` and **fails if the tag does not resolve to the pinned commit**.
 3. Resets the checkout to pristine and applies `patches/*.patch` (none today).
 4. Reads the source list from upstream's `Makefile.std` (`CFILES`) and compiles it with `-DHAVE_CONFIG_H` and `port/` first on the include path, so `port/config.h` and `port/curses.h` are used; adds `port/curses-web.c` and `port/platform.c`.
-5. Fetches the pinned CC0 tile export (`upstream.env` `TILES_*`, verified by commit) and copies the tiles `tiles/tiles.json` names into `dist/tiles/` (Display: Tiles).
+5. Fetches the pinned CC0 tile export (`upstream.env` `TILES_*`, verified by commit) and copies the tiles `tiles/tiles.json` names into `dist/tiles/` (Display: Tiles). Downloads Kenney's 1-Bit Pack (`upstream.env` `ONEBIT_*`), **fails unless its SHA-256 matches**, and ships its tile sheet as `dist/tiles/one-bit/` with its licence (Display: 1-Bit).
 6. Links a Web Worker module (Asyncify, emulated function pointer casts, 16 MiB initial memory with growth, IDBFS), copies the licence and writes `dist/runtime-manifest.json`. Rogue has no data files.
 7. Links the same objects once more for Node with the C replay host (the conformance harness, not deployed; skip with `ROGUE_ARCHIVE_HARNESS=0`).
 
-Requirements: `git`, `make`, `node` ≥ 22. The conformance test also needs a host C compiler (`cc`).
+Requirements: `git`, `make`, `curl`, `unzip`, `sha256sum`, `node` ≥ 22. The conformance test also needs a host C compiler (`cc`).
 
 A build takes well under a minute (Rogue is about 16,000 lines of C). The runtime is about 0.33 MB.
 

@@ -2,7 +2,7 @@
 
 This report covers every file the Rogue port distributes from the public site. It is an engineering record, not legal advice. Re-check it whenever the pinned upstream version changes.
 
-**Summary:** everything shipped has a documented redistribution basis. Rogue 5.4.4 is the later, redistributable source release of Rogue (not the original 1980 code), under a **BSD-3-Clause** licence; two contributed files carry the same terms from their authors. The port's own files use the same licence. The optional tiles are CC0 (Dungeon Crawl Stone Soup's tiles, based on the public-domain RLTiles). No sounds or fonts are shipped.
+**Summary:** everything shipped has a documented redistribution basis. Rogue 5.4.4 is the later, redistributable source release of Rogue (not the original 1980 code), under a **BSD-3-Clause** licence; two contributed files carry the same terms from their authors. The port's own files use the same licence. The optional tiles are CC0 (Dungeon Crawl Stone Soup's tiles, based on the public-domain RLTiles; Kenney's 1-Bit Pack). No sounds or fonts are shipped.
 
 ## Inventory
 
@@ -16,6 +16,7 @@ This report covers every file the Rogue port distributes from the public site. I
 | Shared packages (`packages/term-view`, `packages/start-screen`) | This repository | — | MIT | Yes (JS chunks) | Platform code. |
 | Emscripten runtime (JS glue, libc linked in) | https://github.com/emscripten-core/emscripten | 6.0.13 | MIT / University of Illinois NCSA; musl libc (MIT); compiler-rt (Apache-2.0 WITH LLVM-exception) | Yes | Notices in `licenses/THIRD_PARTY_NOTICES.md`. |
 | Tiles for Display: Tiles (`dist/tiles/`, 43 PNG files, 32×32) | https://github.com/crawl/tiles, `releases/Nov-2015` @ `a6ea1655db5c044829d9eea19a232fa6fcac87b0` | Nov 2015 export | CC0 1.0 (Dungeon Crawl Stone Soup's tiles, based on the public-domain RLTiles; the export contains only tiles whose artists released them under CC0 and excludes those of unclear ownership, `TILES_UNDER_UNKNOWN_LICENSE.md`) | Yes, unmodified | Listed below. The export's `README.md` and `ARTISTS.md` are shipped in `licenses/` as a courtesy. |
+| Tile sheet for Display: 1-Bit (`dist/tiles/one-bit/colored_transparent_packed.png`, 768×352, 16×16 tiles) | Kenney's 1-Bit Pack, https://kenney.nl/assets/1-bit-pack, downloaded from https://opengameart.org/content/1-bit-pack (`1bitpack_kenney_1.1.zip`, SHA-256 `7ca44530…0d8e`, pinned in `upstream.env`) | 1.1 (2020-05-06) | CC0 1.0 (the pack's `License.txt`: "free to use in personal, educational and commercial projects"; crediting Kenney is optional and done here) | Yes, unmodified; the rest of the pack is not shipped | The page cuts tiles from the sheet and tints some (listed below). The pack's `License.txt` is shipped as `licenses/kenney-1-bit-pack-License.txt`. |
 | Build and test scripts (`scripts/`, `tests/`) | This repository | — | BSD-3-Clause | No (source only) | |
 | Generated artifacts (`dist/`, `runtime-manifest.json`) | Built in CI from the above | — | As their inputs | Yes | Content-hashed; every file listed with SHA-256. |
 
@@ -68,6 +69,56 @@ Each symbol's tile (`tiles/tiles.json`; the room-floor tile is also drawn under 
 | `X` | xeroc | `mon/shapeshifter.png` |
 | `Y` | yeti | `mon/animals/polar_bear.png` |
 | `Z` | zombie | `mon/undead/zombies/zombie_ogre.png` |
+
+## 1-Bit tiles
+
+Each symbol's tile for Display: 1-Bit (`tiles/one-bit.json`): its row and column in `Tilesheet/colored_transparent_packed.png` of Kenney's 1-Bit Pack 1.1 (16×16 tiles, 48 columns), and the colour the page gives its pixels, if any. The floor tile (row 0, column 1, tinted `#4a2c38`) is also drawn under monsters and items. The pack has no tile for most of Rogue's creatures by name; the nearest figure stands in (an octopus as the aquator, a duck as the emu, a treasure chest as the xeroc, which mimics treasure), and the snakes share one tile in two colours.
+
+| Symbol | Rogue | Tile (row, column) | Tint |
+|---|---|---|---|
+| `@` | the hero | 0, 27 | — |
+| `.` | room floor | 0, 1 | `#4a2c38` |
+| `#` | passage | 0, 3 | — |
+| `-` | wall | 13, 0 | — |
+| `|` | wall | 13, 0 | — |
+| `+` | doorway | 9, 3 | — |
+| `%` | stairs | 6, 2 | — |
+| `^` | trap | 0, 22 | — |
+| `:` | food | 16, 33 | — |
+| `!` | potion | 13, 32 | — |
+| `?` | scroll | 15, 33 | — |
+| `/` | wand or staff | 4, 34 | — |
+| `=` | ring | 6, 45 | — |
+| `]` | armor | 1, 37 | — |
+| `)` | weapon | 8, 32 | — |
+| `*` | gold | 4, 41 | — |
+| `,` | the Amulet of Yendor | 7, 45 | — |
+| `A` | aquator | 8, 25 | `#5fb4e0` |
+| `B` | bat | 8, 26 | `#e4705c` |
+| `C` | centaur | 0, 26 | `#e4705c` |
+| `D` | dragon | 8, 29 | `#e4705c` |
+| `E` | emu | 7, 25 | `#e4705c` |
+| `F` | venus flytrap | 2, 1 | — |
+| `G` | griffin | 7, 26 | `#e4705c` |
+| `H` | hobgoblin | 2, 25 | `#e4705c` |
+| `I` | ice monster | 6, 27 | `#a8d8f0` |
+| `J` | jabberwock | 5, 24 | `#e4705c` |
+| `K` | kestrel | 5, 31 | `#e4705c` |
+| `L` | leprechaun | 2, 31 | `#5ec46a` |
+| `M` | medusa | 4, 24 | `#e4705c` |
+| `N` | nymph | 3, 29 | `#e4705c` |
+| `O` | orc | 2, 29 | `#e4705c` |
+| `P` | phantom | 8, 27 | `#c0a8e8` |
+| `Q` | quagga | 7, 27 | `#e4705c` |
+| `R` | rattlesnake | 8, 28 | `#d8b060` |
+| `S` | snake | 8, 28 | `#5ec46a` |
+| `T` | troll | 7, 24 | `#e4705c` |
+| `U` | black unicorn | 7, 28 | `#9a9aa8` |
+| `V` | vampire | 1, 24 | `#e4705c` |
+| `W` | wraith | 8, 24 | `#e4705c` |
+| `X` | xeroc | 6, 9 | `#e4705c` |
+| `Y` | yeti | 8, 30 | `#e4705c` |
+| `Z` | zombie | 2, 26 | `#e4705c` |
 
 ## Obligations and how they are met
 
