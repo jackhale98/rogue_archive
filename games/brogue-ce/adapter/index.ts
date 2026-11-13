@@ -72,6 +72,11 @@ export interface BrogueDebugState {
   /** Text of one screen row (glyphs < 128 only; others become '?'). */
   /** What Brogue is waiting for (drives context-aware touch controls). */
   context: string | null;
+  /**
+   * Brogue is waiting for input now. `context` keeps its last value while
+   * Brogue is briefly busy (so the controls don't flicker); this does not.
+   */
+  waiting: boolean;
   rowText(y: number): string;
   screenText(): string;
   /** Names of the views currently drawn (e.g. ["map", "sheet"]), for tests. */
@@ -209,6 +214,7 @@ class BrogueAdapter implements GameAdapter {
       playerY: -1,
       graphicsMode: GraphicsMode.TEXT,
       context: null,
+      waiting: false,
       rowText,
       screenText: () => Array.from({ length: ROWS }, (_, y) => rowText(y)).join('\n'),
       cellToClient: (x: number, y: number) => this.#renderer?.cellToClient(x, y) ?? null,
@@ -566,6 +572,7 @@ class BrogueAdapter implements GameAdapter {
         this.debug.graphicsMode = message.mode;
         this.#renderer?.setFrame(message.cells, message.playerX, message.playerY, inGame);
         this.#state = parseState(message.state);
+        this.debug.waiting = this.#state.waiting;
         this.#lastCells = message.cells;
         this.#updateTitlePanel(message.cells);
         this.debug.context = this.#updateContext(inGame, this.#state, message.cells);

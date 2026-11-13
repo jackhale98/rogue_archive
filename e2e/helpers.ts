@@ -28,10 +28,16 @@ export function screenText(page: Page): Promise<string> {
   );
 }
 
+/**
+ * Waits for text on the game screen. Brogue draws dialogs over the map, and
+ * where a dialog's text has a space the map can show through in the screen
+ * dump ("Save this#game?and?exit"), so each space matches any one character.
+ */
 export async function waitForScreenText(page: Page, text: string, timeout = 45_000): Promise<void> {
+  const pattern = new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '.'));
   await expect
     .poll(() => screenText(page), { timeout, message: `waiting for "${text}" on the game screen` })
-    .toContain(text);
+    .toMatch(pattern);
 }
 
 export async function player(page: Page): Promise<{ inGame: boolean; x: number; y: number }> {
