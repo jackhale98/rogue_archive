@@ -14,6 +14,7 @@ import {
   type GameModule,
   type GameSettingDescriptor,
   type InitializeOptions,
+  type Presentation,
   type RuntimeFile,
   type SaveFile,
 } from '@rogue-archive/game-api';
@@ -30,7 +31,10 @@ import {
 } from './constants.ts';
 import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
 import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
-import { BrogueRenderer, RendererUnsupportedError } from './renderer.ts';
+import { BrogueHud } from './hud.ts';
+import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from './renderer.ts';
+import type { HitResult, OverlayKind } from './views.ts';
+import { controlsFor, detectContext, parseState, type BrogueContext, type BrogueState } from './state.ts';
 
 export const GAME_ID = 'brogue-ce';
 
@@ -41,6 +45,7 @@ const ZOOM_STEPS = [
 ] as const;
 
 const FLUSH_TIMEOUT_MS = 8000;
+const BUSY_DELAY_MS = 350;
 const LONG_PRESS_MS = 450;
 const TAP_SLOP_PX = 12;
 
@@ -54,8 +59,12 @@ export interface BrogueDebugState {
   playerY: number;
   graphicsMode: number;
   /** Text of one screen row (glyphs < 128 only; others become '?'). */
+  /** What Brogue is waiting for (drives context-aware touch controls). */
+  context: string | null;
   rowText(y: number): string;
   screenText(): string;
+  /** Names of the views currently drawn (e.g. ["map", "sheet"]), for tests. */
+  views(): string[];
   /** Client (CSS pixel) center of a screen cell, for tests. */
   cellToClient(x: number, y: number): { x: number; y: number } | null;
 }
@@ -144,6 +153,15 @@ class BrogueAdapter implements GameAdapter {
   #zoomIndex = 0;
   #lastHover: { x: number; y: number } | null = null;
   #inGame = false;
+  #state: BrogueState | null = null;
+  #context: BrogueContext | null = null;
+  #layoutSignature = '';
+  #busyTimer: ReturnType<typeof setTimeout> | undefined;
+  #presentation: Presentation | null = null;
+  #mount: HTMLElement | null = null;
+  #hud: BrogueHud | null = null;
+  #drawer = false;
+  #lastCells: Uint8Array | null = null;
   #modifiers = { shift: false, ctrl: false };
   #cleanup: (() => void)[] = [];
   readonly debug: BrogueDebugState;
@@ -166,18 +184,11 @@ class BrogueAdapter implements GameAdapter {
       playerX: -1,
       playerY: -1,
       graphicsMode: GraphicsMode.TEXT,
+      context: null,
       rowText,
       screenText: () => Array.from({ length: ROWS }, (_, y) => rowText(y)).join('\n'),
-      cellToClient: (x: number, y: number) => {
-        const renderer = this.#renderer;
-        const layout = renderer?.layout;
-        if (!renderer || !layout) return null;
-        const rect = renderer.canvas.getBoundingClientRect();
-        return {
-          x: rect.left + (layout.originX + (x + 0.5) * layout.cellWidth) / layout.dpr,
-          y: rect.top + (layout.originY + (y + 0.5) * layout.cellHeight) / layout.dpr,
-        };
-      },
+      cellToClient: (x: number, y: number) => this.#renderer?.cellToClient(x, y) ?? null,
+      views: () => this.#renderer?.views.map((view) => view.name) ?? [],
     };
   }
 
@@ -225,6 +236,7 @@ class BrogueAdapter implements GameAdapter {
     if (signal.aborted) return;
 
     try {
+      this.#mount = options.mount;
       this.#renderer = new BrogueRenderer(options.mount, sheet);
     } catch (error) {
       if (error instanceof RendererUnsupportedError) throw Object.assign(error, { kind: 'unsupported' });
@@ -278,6 +290,63 @@ class BrogueAdapter implements GameAdapter {
       void this.persist().catch((error: unknown) => this.#host?.logger.warn('persist failed', error));
   }
 
+  setPresentation(presentation: Presentation): void {
+    this.#presentation = presentation;
+    this.#applyCompact();
+  }
+
+  /** Phone layout on/off, and what it shows, from the presentation and the game's context. */
+  #applyCompact(): void {
+    const renderer = this.#renderer;
+    const mount = this.#mount;
+    if (!renderer || !mount) return;
+    const presentation = this.#presentation;
+    const compact = !!presentation?.compact && this.#inGame;
+    if (!compact) {
+      this.#hud?.destroy();
+      this.#hud = null;
+      this.#drawer = false;
+      renderer.setCompact(null);
+      return;
+    }
+    if (!this.#hud) {
+      this.#hud = new BrogueHud(mount, {
+        onStatus: () => this.#setDrawer(!this.#drawer),
+        onMessages: () => this.sendInput({ type: 'command', commandId: 'messages' }),
+      });
+      if (this.#state && this.#lastCells) this.#hud.update(this.#state, this.#lastCells);
+    }
+    const rect = mount.getBoundingClientRect();
+    this.#hud.setReserve(
+      presentation!.topRightReserve ?? 0,
+      rect.height > rect.width,
+      presentation!.insets.bottom,
+    );
+    // Menus and dialogs are modal sheets; descriptions shown while exploring are peek cards.
+    const context = this.#context;
+    const overlayKind: OverlayKind =
+      context === 'menu' || context === 'yesno' || context === 'more'
+        ? 'sheet'
+        : context === 'title'
+          ? 'none'
+          : 'peek';
+    const stored = Number(this.#settings.mapCellCss);
+    renderer.setCompact({
+      band: this.#hud.height,
+      insets: presentation!.insets,
+      mapCellCss:
+        renderer.compact?.mapCellCss ??
+        (Number.isFinite(stored) && stored > 0 ? stored : DEFAULT_MAP_CELL_CSS),
+      overlayKind,
+      drawer: this.#drawer,
+    });
+  }
+
+  #setDrawer(open: boolean): void {
+    this.#drawer = open;
+    this.#applyCompact();
+  }
+
   applySetting(key: string, value: string | number): void {
     this.#settings = { ...this.#settings, [key]: value };
   }
@@ -328,6 +397,9 @@ class BrogueAdapter implements GameAdapter {
     worker.terminate();
     this.#worker = null;
     for (const cleanup of this.#cleanup.splice(0)) cleanup();
+    clearTimeout(this.#busyTimer);
+    this.#hud?.destroy();
+    this.#hud = null;
     this.#renderer?.destroy();
     this.#renderer = null;
     for (const resolve of this.#pending.values())
@@ -368,18 +440,17 @@ class BrogueAdapter implements GameAdapter {
         this.debug.playerY = message.playerY;
         this.debug.graphicsMode = message.mode;
         this.#renderer?.setFrame(message.cells, message.playerX, message.playerY, message.inGame);
+        this.#state = parseState(message.state);
+        this.#lastCells = message.cells;
+        this.debug.context = this.#updateContext(message.inGame, this.#state, message.cells);
+        this.#applyCompact();
+        if (this.#hud && message.inGame) this.#hud.update(this.#state, message.cells);
         break;
       case 'status':
         host?.emit({ type: 'status', status: message.status });
         break;
       case 'error':
         if (this.#started) host?.emit({ type: 'error', error: message.error });
-        break;
-      case 'text-input':
-        host?.emit({
-          type: 'input-context',
-          context: { textEntry: message.active, mode: message.active ? 'text' : 'game' },
-        });
         break;
       case 'graphics-mode':
         host?.emit({ type: 'setting-changed', key: 'graphicsMode', value: message.mode });
@@ -406,6 +477,37 @@ class BrogueAdapter implements GameAdapter {
     }
   }
 
+  /**
+   * Works out what Brogue is waiting for and publishes matching touch controls.
+   * "Busy" (engine animating or auto-exploring) only shows after a short delay
+   * so brief animations don't make the controls flicker.
+   */
+  #updateContext(inGame: boolean, state: BrogueState, cells: Uint8Array): BrogueContext {
+    const context = detectContext(inGame, state, cells);
+    clearTimeout(this.#busyTimer);
+    if (context === 'busy') {
+      this.#busyTimer = setTimeout(() => this.#publishContext('busy', state), BUSY_DELAY_MS);
+      return this.#context ?? context;
+    }
+    this.#publishContext(context, state);
+    return context;
+  }
+
+  #publishContext(context: BrogueContext, state: BrogueState): void {
+    const layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette);
+    const signature = `${context}:${JSON.stringify(layout.actions)}`;
+    const contextChanged = context !== this.#context;
+    this.#context = context;
+    this.debug.context = context;
+    if (signature !== this.#layoutSignature) {
+      this.#layoutSignature = signature;
+      this.#host?.emit({ type: 'touch-layout', layout, context });
+    }
+    if (contextChanged) {
+      this.#host?.emit({ type: 'input-context', context: { textEntry: context === 'menu', mode: context } });
+    }
+  }
+
   #sendPointer(type: number, cell: { x: number; y: number }): void {
     this.#post({
       type: 'event',
@@ -427,75 +529,141 @@ class BrogueAdapter implements GameAdapter {
 
   #attachPointer(canvas: HTMLCanvasElement): void {
     const renderer = () => this.#renderer;
-    let touchStart: { x: number; y: number; at: number; id: number } | null = null;
+    const touches = new Map<number, { x: number; y: number }>();
+    let tap: { x: number; y: number; id: number; hit: HitResult } | null = null;
     let longPressTimer: ReturnType<typeof setTimeout> | undefined;
     let longPressed = false;
+    let panning = false;
+    let pinch: { distance: number; cellCss: number } | null = null;
+
+    const distance = () => {
+      const [a, b] = [...touches.values()];
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+    };
 
     const onPointerMove = (event: PointerEvent) => {
-      if (event.pointerType === 'touch') {
-        if (
-          touchStart &&
-          Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > TAP_SLOP_PX
-        ) {
-          clearTimeout(longPressTimer);
-          touchStart = null;
-        }
+      if (event.pointerType !== 'touch') {
+        const cell = renderer()?.cellAt(event.clientX, event.clientY);
+        if (cell) this.#hover(cell);
         return;
       }
-      const cell = renderer()?.cellAt(event.clientX, event.clientY);
-      if (cell) this.#hover(cell);
+      const previous = touches.get(event.pointerId);
+      if (!previous) return;
+      touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const compact = renderer()?.compact;
+      if (pinch && compact) {
+        // Two fingers: pinch to change the map's size.
+        const now = distance();
+        if (now > 0) renderer()!.setMapCellCss(pinch.cellCss * (now / pinch.distance));
+        return;
+      }
+      if (
+        tap &&
+        tap.id === event.pointerId &&
+        Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > TAP_SLOP_PX
+      ) {
+        clearTimeout(longPressTimer);
+        // One finger dragged on the map: look around (phones). Elsewhere it just cancels the tap.
+        panning = !!compact && tap.hit?.kind === 'cell' && tap.hit.view === 'map';
+        tap = null;
+      }
+      if (panning) renderer()!.panBy(event.clientX - previous.x, event.clientY - previous.y);
     };
 
     const onPointerDown = (event: PointerEvent) => {
       canvas.focus({ preventScroll: true });
-      const cell = renderer()?.cellAt(event.clientX, event.clientY);
-      if (!cell) return;
+      const hit = renderer()?.hitTest(event.clientX, event.clientY) ?? null;
       if (event.pointerType === 'touch') {
-        touchStart = { x: event.clientX, y: event.clientY, at: performance.now(), id: event.pointerId };
+        try {
+          canvas.setPointerCapture(event.pointerId);
+        } catch {
+          // Not capturable; the gesture still works within the canvas.
+        }
+        touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (touches.size === 2) {
+          // A second finger turns the gesture into a pinch; no tap will fire.
+          clearTimeout(longPressTimer);
+          tap = null;
+          panning = false;
+          const cellCss = renderer()?.compact?.mapCellCss;
+          if (cellCss) pinch = { distance: distance(), cellCss };
+          return;
+        }
+        if (touches.size > 2) return;
+        tap = { x: event.clientX, y: event.clientY, id: event.pointerId, hit };
         longPressed = false;
+        panning = false;
         clearTimeout(longPressTimer);
-        // Long press inspects a cell (hover) without acting on it.
-        longPressTimer = setTimeout(() => {
-          longPressed = true;
-          this.#lastHover = null;
-          this.#hover(cell);
-        }, LONG_PRESS_MS);
-        return;
-      }
-      if (event.button === 0) {
-        this.#hover(cell);
-        this.#sendPointer(EventType.MOUSE_DOWN, cell);
-      } else if (event.button === 2) {
-        this.#sendPointer(EventType.RIGHT_MOUSE_DOWN, cell);
-      }
-    };
-
-    const onPointerUp = (event: PointerEvent) => {
-      const cell = renderer()?.cellAt(event.clientX, event.clientY);
-      if (event.pointerType === 'touch') {
-        clearTimeout(longPressTimer);
-        const start = touchStart;
-        touchStart = null;
-        if (!start || start.id !== event.pointerId || longPressed || !cell) return;
-        const tapMode: TapMode = this.#settings.tapMode === 'immediate' ? 'immediate' : 'preview';
-        const alreadyPreviewed = this.#lastHover?.x === cell.x && this.#lastHover?.y === cell.y;
-        if (tapMode === 'preview' && this.#inGame && isInMap(cell) && !alreadyPreviewed) {
-          // First tap shows the path and description; a second tap on the same cell acts.
-          this.#hover(cell);
-        } else {
-          this.#click(cell);
+        if (hit?.kind === 'cell') {
+          // Long press inspects a cell (hover) without acting on it.
+          longPressTimer = setTimeout(() => {
+            longPressed = true;
+            this.#lastHover = null;
+            this.#hover(hit);
+          }, LONG_PRESS_MS);
         }
         return;
       }
+      if (hit?.kind !== 'cell') return;
+      if (event.button === 0) {
+        this.#hover(hit);
+        this.#sendPointer(EventType.MOUSE_DOWN, hit);
+      } else if (event.button === 2) {
+        this.#sendPointer(EventType.RIGHT_MOUSE_DOWN, hit);
+      }
+    };
+
+    const endTouch = (event: PointerEvent) => {
+      touches.delete(event.pointerId);
+      if (touches.size < 2 && pinch) {
+        pinch = null;
+        this.#host?.emit({
+          type: 'setting-changed',
+          key: 'mapCellCss',
+          value: renderer()?.compact?.mapCellCss,
+        });
+      }
+      if (touches.size === 0) panning = false;
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') {
+        clearTimeout(longPressTimer);
+        const start = tap;
+        tap = null;
+        endTouch(event);
+        if (!start || start.id !== event.pointerId || longPressed) return;
+        const hit = renderer()?.hitTest(event.clientX, event.clientY) ?? null;
+        if (hit?.kind === 'dismiss') {
+          // Tapping outside a sheet or the sidebar drawer closes it.
+          if (hit.view === 'drawer') this.#setDrawer(false);
+          else this.sendInput({ type: 'command', commandId: 'cancel' });
+          return;
+        }
+        if (hit?.kind !== 'cell') return;
+        if (hit.view === 'drawer') this.#setDrawer(false);
+        const tapMode: TapMode = this.#settings.tapMode === 'immediate' ? 'immediate' : 'preview';
+        const alreadyPreviewed = this.#lastHover?.x === hit.x && this.#lastHover?.y === hit.y;
+        const onMap = renderer()?.compact ? hit.view === 'map' : isInMap(hit);
+        if (tapMode === 'preview' && this.#inGame && onMap && !alreadyPreviewed) {
+          // First tap shows the path and description; a second tap on the same cell acts.
+          this.#hover(hit);
+        } else {
+          this.#click(hit);
+        }
+        return;
+      }
+      const cell = renderer()?.cellAt(event.clientX, event.clientY);
       if (!cell) return;
       if (event.button === 0) this.#sendPointer(EventType.MOUSE_UP, cell);
       else if (event.button === 2) this.#sendPointer(EventType.RIGHT_MOUSE_UP, cell);
     };
 
     const onContextMenu = (event: Event) => event.preventDefault();
-    const onPointerCancel = () => {
+    const onPointerCancel = (event: PointerEvent) => {
       clearTimeout(longPressTimer);
-      touchStart = null;
+      tap = null;
+      endTouch(event);
     };
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerdown', onPointerDown);

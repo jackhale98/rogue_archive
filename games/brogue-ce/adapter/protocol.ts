@@ -23,8 +23,16 @@ export type FromWorker =
   | { type: 'status'; status: RuntimeStatus }
   | { type: 'error'; error: GameError }
   | { type: 'ready' }
-  | { type: 'frame'; cells: Uint8Array; playerX: number; playerY: number; mode: number; inGame: boolean }
-  | { type: 'text-input'; active: boolean }
+  | {
+      type: 'frame';
+      cells: Uint8Array;
+      playerX: number;
+      playerY: number;
+      mode: number;
+      inGame: boolean;
+      /** Read-only game state; see adapter/state.ts for the field order. */
+      state: Int32Array;
+    }
   | { type: 'graphics-mode'; mode: number }
   | { type: 'notify'; eventId: number; data1: number; data2: number; str1: string; str2: string }
   | { type: 'exit'; status: number }

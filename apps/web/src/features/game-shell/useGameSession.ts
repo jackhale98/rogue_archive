@@ -9,6 +9,7 @@ import {
   type GameHost,
   type InputContext,
   type RuntimeStatus,
+  type TouchControlLayout,
 } from '@rogue-archive/game-api';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { loadAdapterModule } from '../../app/adapters.ts';
@@ -26,6 +27,9 @@ export interface GameSession {
   adapter: GameAdapter | null;
   runtime: LoadedRuntime | null;
   settings: Record<string, unknown>;
+  /** Current touch controls, updated by the adapter as the game's context changes. */
+  touchLayout: TouchControlLayout | null;
+  touchContext: string;
 }
 
 const INITIAL: GameSession = {
@@ -36,6 +40,8 @@ const INITIAL: GameSession = {
   adapter: null,
   runtime: null,
   settings: {},
+  touchLayout: null,
+  touchContext: 'title',
 };
 
 function toGameError(error: unknown): GameError {
@@ -105,6 +111,9 @@ export function useGameSession(
           case 'error':
             fail(event.error);
             break;
+          case 'touch-layout':
+            update({ touchLayout: event.layout, touchContext: event.context });
+            break;
           case 'input-context':
             update({ inputContext: event.context });
             break;
@@ -154,7 +163,7 @@ export function useGameSession(
           throw new Error(`Adapter API ${adapter.apiVersion} is not supported.`);
         adapterRef.current = adapter;
         const settings = (await store?.getSettings(gameSettingsScope(game.id))) ?? {};
-        update({ adapter, runtime, settings });
+        update({ adapter, runtime, settings, touchLayout: adapter.touchLayout ?? null });
 
         lifecycle.transition('initialize');
         await adapter.initialize(host, {

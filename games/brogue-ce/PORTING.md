@@ -57,6 +57,8 @@ What this does **not** cover is human usability on real devices, which is why th
 
 ## Display
 
+On phones the screen is recomposed into a full-bleed map, a status band, sheets for menus, peek cards for descriptions and a sidebar drawer, with context-aware controls. See [docs/design/mobile-play.md](../../docs/design/mobile-play.md). Everything below describes the desktop and tablet layout.
+
 - WebGL2 is required (all current target browsers have it); otherwise the launcher explains why the game cannot start.
 - Cells are whole device pixels. Fit mode keeps the cell width-to-height ratio between 0.42 and 0.75 (the sheet's native ratio is 0.55).
 - **Zoom** (toolbar) cycles fit / 1.6× / 2.2× and follows the player. Portrait screens start zoomed unless the player has chosen otherwise. The title screen always fits.

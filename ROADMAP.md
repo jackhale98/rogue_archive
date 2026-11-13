@@ -36,7 +36,10 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Engine conformance in CI: upstream seed catalogs (3 variants) reproduced exactly; native-vs-WASM replay of saves; source-driven key coverage
 - [x] Saves interchangeable with desktop Brogue CE 1.15.1 (download/import plain `.broguesave`)
 - [x] Content-aware zoom (keeps descriptions, menus and dialogs in view) and a pinned message strip
-- [ ] Phone layout: show sidebar essentials (health, nutrition) while zoomed; consider an immersive mode that hides the shell bar
+- [x] Phone layout: full-bleed map with pinch zoom and pan, status band (health, hunger, depth, messages), menus as sheets, descriptions as peek cards, sidebar drawer, immersive shell (see docs/design/mobile-play.md)
+- [x] Context-aware dock (exploring, targeting, --MORE--, yes/no, menus, busy) with long-press fans; floating thumb pad; optional vibration
+- [ ] Try it on real phones; tune default map size, dock contents and fan timing from that feedback
+- [ ] iPhone: one-time "Add to Home Screen" hint for full screen
 - [ ] **Test on physical iOS Safari and Android Chrome**, then fill in the compatibility table
 - [ ] Test Firefox and desktop Safari
 - [ ] Measure peak memory and startup time on a mid-range phone

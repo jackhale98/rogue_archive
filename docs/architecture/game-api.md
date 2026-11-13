@@ -27,11 +27,15 @@ created ─initialize→ initializing ─initialized→ ready ─start→ runnin
 | `applySetting(key, value)`, `cycleView()`, `setVisible(visible)` | Optional conveniences. |
 | `shutdown()` | Persist if needed, then release the worker, WASM memory, GL contexts and listeners. Idempotent. |
 
+Adapters may also implement `setPresentation({ compact, insets, topRightReserve })`: the shell tells them when it is on a phone, overlaying its controls, and which edges they cover, so the adapter can use a layout designed for small screens.
+
+Touch layouts can change with the game's situation: the adapter emits `{ type: 'touch-layout', layout, context }` and the shell re-renders its pad and dock. Actions are command ids or `TouchAction` objects (`label`, `alternates` for long-press fans, `emphasis`, `wide`). `SHELL_COMMAND.palette` and `SHELL_COMMAND.keyboard` place shell features (command list, device keyboard) in a layout.
+
 Adapters also expose `commands`, `touchLayout`, `settings` (setting descriptors the shell can render without understanding them) and `resumeHint` (shown after leaving mid-game).
 
 ## Events to the host
 
-`status`, `error`, `message`, `input-context` (`textEntry` true while the game wants typed text, which shows the keyboard prompt), `save-state`, `setting-changed` (persisted per game), `exit`.
+`status`, `error`, `message`, `touch-layout`, `input-context` (`textEntry` true while the game wants typed text, which shows the keyboard prompt), `save-state`, `setting-changed` (persisted per game), `exit`.
 
 ## Versioning
 

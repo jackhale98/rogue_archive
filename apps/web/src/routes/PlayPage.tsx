@@ -1,4 +1,5 @@
 import { isLaunchable } from '@rogue-archive/catalog';
+import { SHELL_COMMAND } from '@rogue-archive/game-api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gamesById } from '../app/catalog.ts';
 import { setFlash } from '../app/flash.ts';
@@ -7,7 +8,7 @@ import { useSettings } from '../app/settings.tsx';
 import { ErrorView } from '../features/game-shell/ErrorView.tsx';
 import { LoadingView } from '../features/game-shell/LoadingView.tsx';
 import { ShellMenu } from '../features/game-shell/ShellMenu.tsx';
-import { TouchControls } from '../features/game-shell/TouchControls.tsx';
+import { ActionDock, ThumbPad } from '../features/game-shell/TouchControls.tsx';
 import { useGameSession } from '../features/game-shell/useGameSession.ts';
 import { VirtualKeyboard, type VirtualKeyboardHandle } from '../features/game-shell/VirtualKeyboard.tsx';
 import '../styles/shell.css';
@@ -35,9 +36,39 @@ export function PlayPage({ gameId }: { gameId: string }) {
   return <GameShell gameId={gameId} />;
 }
 
+/** Phones: small screens where the shell overlays its controls and the game may use a compact layout. */
+function useCompactViewport(enabled: boolean): boolean {
+  const check = () => enabled && Math.min(window.innerWidth, window.innerHeight) < 600;
+  const [compact, setCompact] = useState(check);
+  useEffect(() => {
+    const onResize = () => setCompact(check());
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
+  return compact;
+}
+
+function usePortrait(): boolean {
+  const query = '(orientation: portrait)';
+  const [portrait, setPortrait] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = () => setPortrait(media.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+  return portrait;
+}
+
+/** Space (CSS px) the floating tools take in the top-right corner of the compact layout. */
+const COMPACT_TOOLS_WIDTH = 168;
+
 function GameShell({ gameId }: { gameId: string }) {
   const game = gamesById.get(gameId)!;
   const mountRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const keyboardRef = useRef<VirtualKeyboardHandle>(null);
   const [attempt, setAttempt] = useState(0);
   const session = useGameSession(game, mountRef, attempt);
@@ -47,12 +78,50 @@ function GameShell({ gameId }: { gameId: string }) {
   const [viewLabel, setViewLabel] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const showTouch = settings.touchControls === 'always' || (settings.touchControls === 'auto' && coarse);
+  const compact = useCompactViewport(showTouch);
+  const portrait = usePortrait();
   const { adapter, phase, runtime } = session;
   const running = phase === 'running' && adapter !== null;
+  const layout = session.touchLayout;
+  const hapticsEnabled = settings.haptics === 'on';
+  const leftHanded = settings.handedness === 'left';
 
   useEffect(() => {
     document.title = `${game.title} · Rogue Archive`;
   }, [game]);
+
+  // Tell the adapter how it is presented, and which edges our controls cover.
+  useEffect(() => {
+    if (!running || !adapter.setPresentation) return;
+    const stage = stageRef.current;
+    const measure = () => {
+      if (!compact || !stage) {
+        adapter.setPresentation!({ compact: false, insets: { top: 0, right: 0, bottom: 0, left: 0 } });
+        return;
+      }
+      const dock = stage.querySelector('.play__dock')?.getBoundingClientRect();
+      const pad = stage.querySelector('.play__pad')?.getBoundingClientRect();
+      const dockWidth = dock?.width ?? 0;
+      const padWidth = pad?.width ?? 0;
+      // Landscape: controls sit at the sides. Portrait: along the bottom.
+      adapter.setPresentation!({
+        compact: true,
+        insets: portrait
+          ? { top: 0, right: 0, bottom: Math.max(dock?.height ?? 0, pad?.height ?? 0), left: 0 }
+          : {
+              top: 0,
+              right: leftHanded ? dockWidth : padWidth,
+              bottom: 0,
+              left: leftHanded ? padWidth : dockWidth,
+            },
+        topRightReserve: COMPACT_TOOLS_WIDTH,
+      });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (stage) observer.observe(stage);
+    return () => observer.disconnect();
+  }, [running, adapter, compact, leftHanded, layout, portrait]);
 
   const leave = useCallback(async () => {
     if (leaving) return;
@@ -64,6 +133,7 @@ function GameShell({ gameId }: { gameId: string }) {
       // The session cleanup retries on shutdown; never trap the player here.
     }
     if (adapter?.resumeHint && phase === 'running') setFlash(adapter.resumeHint);
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     navigate(`/games/${game.id}`);
   }, [adapter, game.id, leaving, phase]);
 
@@ -79,91 +149,142 @@ function GameShell({ gameId }: { gameId: string }) {
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
-    else void document.documentElement.requestFullscreen().catch(() => undefined);
+    else void document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => undefined);
   };
 
-  return (
-    <div className="play" data-touch={showTouch ? 'on' : 'off'} data-hand={settings.handedness}>
-      <header className="play__bar">
-        <a
-          className="play__back"
-          href={href(`/games/${game.id}`)}
-          onClick={(event) => {
-            event.preventDefault();
-            void leave();
-          }}
-        >
-          <span aria-hidden="true">←</span> <span className="play__back-label">Library</span>
-        </a>
-        <h1 className="play__title">{game.title}</h1>
-        <div className="play__tools">
-          {running && adapter.cycleView ? (
-            <button
-              type="button"
-              className="tool-button"
-              onClick={() => {
-                setViewLabel(adapter.cycleView!());
-                focusGame();
-              }}
-              aria-label="Change zoom"
-            >
-              <span aria-hidden="true">⤢</span>
-              <span className="tool-button__label">{viewLabel ?? 'Zoom'}</span>
-            </button>
-          ) : null}
-          {running ? (
-            <button
-              type="button"
-              className="tool-button"
-              onClick={() => keyboardRef.current?.open()}
-              aria-label="Open keyboard"
-              // Highlighted (without moving the layout) while the game accepts typed text.
-              data-attention={session.inputContext.textEntry ? 'true' : undefined}
-            >
-              <span aria-hidden="true">⌨</span>
-              <span className="tool-button__label">Keyboard</span>
-            </button>
-          ) : null}
-          {canFullscreen() ? (
-            <button
-              type="button"
-              className="tool-button"
-              onClick={() => {
-                toggleFullscreen();
-                focusGame();
-              }}
-              aria-label="Toggle full screen"
-            >
-              <span aria-hidden="true">⛶</span>
-              <span className="tool-button__label">Full screen</span>
-            </button>
-          ) : null}
-          {running ? (
-            <button
-              type="button"
-              className="tool-button tool-button--primary"
-              onClick={() => setMenuOpen(true)}
-              aria-haspopup="dialog"
-              aria-label="Menu"
-            >
-              <span aria-hidden="true">☰</span>
-              <span className="tool-button__label">Menu</span>
-            </button>
-          ) : null}
-        </div>
-      </header>
+  const onShellCommand = (command: string): boolean => {
+    if (command === SHELL_COMMAND.palette) {
+      setMenuOpen(true);
+      return true;
+    }
+    if (command === SHELL_COMMAND.keyboard) {
+      keyboardRef.current?.open();
+      return true;
+    }
+    return false;
+  };
 
-      <div className="play__stage">
-        {showTouch && running && adapter.touchLayout ? (
-          <div className="play__rail play__rail--actions">
-            <TouchControls adapter={adapter} layout={adapter.touchLayout} part="actions" />
-          </div>
+  const tools = (
+    <>
+      {running && adapter.cycleView && !compact ? (
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => {
+            setViewLabel(adapter.cycleView!());
+            focusGame();
+          }}
+          aria-label="Change zoom"
+        >
+          <span aria-hidden="true">⤢</span>
+          <span className="tool-button__label">{viewLabel ?? 'Zoom'}</span>
+        </button>
+      ) : null}
+      {running ? (
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => keyboardRef.current?.open()}
+          aria-label="Open keyboard"
+          // Highlighted (without moving the layout) while the game accepts typed text.
+          data-attention={session.inputContext.textEntry ? 'true' : undefined}
+        >
+          <span aria-hidden="true">⌨</span>
+          <span className="tool-button__label">Keyboard</span>
+        </button>
+      ) : null}
+      {canFullscreen() ? (
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => {
+            toggleFullscreen();
+            focusGame();
+          }}
+          aria-label="Toggle full screen"
+        >
+          <span aria-hidden="true">⛶</span>
+          <span className="tool-button__label">Full screen</span>
+        </button>
+      ) : null}
+      {running ? (
+        <button
+          type="button"
+          className="tool-button tool-button--primary"
+          onClick={() => setMenuOpen(true)}
+          aria-haspopup="dialog"
+          aria-label="Menu"
+        >
+          <span aria-hidden="true">☰</span>
+          <span className="tool-button__label">Menu</span>
+        </button>
+      ) : null}
+    </>
+  );
+
+  const backLink = (
+    <a
+      className="play__back"
+      href={href(`/games/${game.id}`)}
+      aria-label="Back to library"
+      onClick={(event) => {
+        event.preventDefault();
+        void leave();
+      }}
+    >
+      <span aria-hidden="true">←</span> <span className="play__back-label">Library</span>
+    </a>
+  );
+
+  const pad =
+    showTouch && running && layout?.directionPad ? (
+      <ThumbPad adapter={adapter} pad={layout.directionPad} hapticsEnabled={hapticsEnabled} />
+    ) : null;
+  const dock =
+    showTouch && running && layout && layout.actions.length > 0 ? (
+      <ActionDock
+        key={session.touchContext}
+        adapter={adapter}
+        actions={layout.actions}
+        context={session.touchContext}
+        hapticsEnabled={hapticsEnabled}
+        onShellCommand={onShellCommand}
+        orientation={compact && portrait ? 'horizontal' : 'vertical'}
+      />
+    ) : null;
+
+  return (
+    <div
+      className={`play${compact ? ' play--compact' : ''}`}
+      data-touch={showTouch ? 'on' : 'off'}
+      data-hand={settings.handedness}
+      data-context={session.touchContext}
+    >
+      {compact ? null : (
+        <header className="play__bar">
+          {backLink}
+          <h1 className="play__title">{game.title}</h1>
+          <div className="play__tools">{tools}</div>
+        </header>
+      )}
+
+      <div className="play__stage" ref={stageRef}>
+        {!compact && showTouch && running ? (
+          <div className="play__rail play__rail--actions">{dock}</div>
         ) : null}
         <div className="play__screen" ref={mountRef} />
-        {showTouch && running && adapter.touchLayout ? (
-          <div className="play__rail play__rail--pad">
-            <TouchControls adapter={adapter} layout={adapter.touchLayout} part="pad" />
-          </div>
+        {!compact && showTouch && running ? <div className="play__rail play__rail--pad">{pad}</div> : null}
+
+        {compact ? (
+          <>
+            <h1 className="visually-hidden">{game.title}</h1>
+            <div className="play__float play__float--tools">
+              {backLink}
+              {tools}
+            </div>
+            {dock ? <div className="play__dock">{dock}</div> : null}
+            {pad ? <div className="play__pad">{pad}</div> : null}
+          </>
         ) : null}
 
         {phase === 'loading' ? (

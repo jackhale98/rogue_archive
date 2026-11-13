@@ -92,8 +92,9 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified only in desktop browser emulation.",
-        "Brogue's full screen is 100×34 cells, which is small on phones. Use landscape, full screen and the zoom control; when zoomed, the sidebar (health, nearby monsters) is off-screen until you zoom out.",
+        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Phones use a rearranged layout (full-screen map, status bar, menus as large sheets); pinch to resize the map. Tablets and desktop show Brogue's original screen.",
+        "iPhone Safari cannot hide its toolbars from a web page; add the site to the Home Screen for a full-screen view.",
         "The tile downscaler is a simplified version of Brogue's desktop renderer (no sub-pixel sharpening or wall-top shading), so very small sizes can look softer than on desktop.",
         "Screenshots (the desktop build's Print Screen command) are not supported in the browser."
       ],
@@ -106,7 +107,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Tap and on-screen controls exercised; not a substitute for a real device."
+          "notes": "Phone layout, thumb pad, context dock, long-press fans, sheets, drawer and on-screen keyboard exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

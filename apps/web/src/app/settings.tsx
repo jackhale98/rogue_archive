@@ -7,6 +7,7 @@ export interface PlatformSettings {
   touchControls: 'auto' | 'always' | 'never';
   handedness: 'right' | 'left';
   reducedMotion: 'system' | 'reduce';
+  haptics: 'off' | 'on';
 }
 
 export const DEFAULT_SETTINGS: PlatformSettings = {
@@ -15,6 +16,7 @@ export const DEFAULT_SETTINGS: PlatformSettings = {
   touchControls: 'auto',
   handedness: 'right',
   reducedMotion: 'system',
+  haptics: 'off',
 };
 
 const SCOPE = 'platform';

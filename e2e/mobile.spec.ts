@@ -1,25 +1,39 @@
 import { expect, test } from '@playwright/test';
-import { cellCenter, findCell, openBrogue, player, waitForScreenText, waitInGame } from './helpers.ts';
+import {
+  cellCenter,
+  findCell,
+  gameContext,
+  gameViews,
+  openBrogue,
+  player,
+  waitForScreenText,
+  waitInGame,
+} from './helpers.ts';
 
 /** Screen position of the dungeon map (upstream STAT_BAR_WIDTH + 1, MESSAGE_LINES). */
 const MAP_X = 21;
 const MAP_Y = 3;
 
-test('touch: tap the title menu, use the pad, and preview-then-travel on the map', async ({ page }) => {
+async function newGame(page: import('@playwright/test').Page) {
   await openBrogue(page);
-  const pad = page.getByRole('group', { name: 'Movement' });
-  await expect(pad).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Actions' })).toBeVisible();
-
-  // Title screen buttons respond to a single tap.
-  const newGame = await findCell(page, 'New Game');
-  expect(newGame).not.toBeNull();
-  const title = await cellCenter(page, { x: newGame!.x + 2, y: newGame!.y });
+  const newGameCell = await findCell(page, 'New Game');
+  expect(newGameCell).not.toBeNull();
+  const title = await cellCenter(page, { x: newGameCell!.x + 2, y: newGameCell!.y });
   await page.touchscreen.tap(title.x, title.y);
   await waitInGame(page);
-  await waitForScreenText(page, 'Depth: 1');
+  await expect.poll(() => gameContext(page)).toBe('map');
+}
 
-  // The pad sends the original movement keys.
+test('phone layout: full-bleed map, status bar, thumb pad and preview-then-travel', async ({ page }) => {
+  await newGame(page);
+  // The phone layout draws the map on its own, with health and depth in a status bar.
+  expect(await gameViews(page)).toEqual(['map']);
+  await expect(page.locator('.brogue-hud')).toContainText('Depth 1');
+  await expect(page.locator('.brogue-hud')).toContainText('Dungeons of Doom');
+  const pad = page.getByRole('group', { name: 'Movement' });
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect(dock.getByRole('button', { name: 'Explore (x)' })).toBeVisible();
+
   const moves: [string, number, number][] = [
     ['Move right (l)', 1, 0],
     ['Move left (h)', -1, 0],
@@ -33,7 +47,10 @@ test('touch: tap the title menu, use the pad, and preview-then-travel on the map
     try {
       await expect
         .poll(
-          async () => (await player(page)).x === before.x + dx && (await player(page)).y === before.y + dy,
+          async () => {
+            const now = await player(page);
+            return now.x === before.x + dx && now.y === before.y + dy;
+          },
           { timeout: 1500 },
         )
         .toBe(true);
@@ -50,26 +67,108 @@ test('touch: tap the title menu, use the pad, and preview-then-travel on the map
   const target = { x: MAP_X + here.x - delta![0], y: MAP_Y + here.y - delta![1] };
   const point = await cellCenter(page, target);
   await page.touchscreen.tap(point.x, point.y);
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(600);
   expect(await player(page)).toMatchObject({ x: here.x, y: here.y });
   const again = await cellCenter(page, target);
   await page.touchscreen.tap(again.x, again.y);
   await expect
     .poll(() => player(page), { timeout: 5000 })
-    .toMatchObject({ x: here.x - delta![0], y: here.y - delta![1] });
-
-  // Action buttons reach game commands (inventory opens Brogue's own menu).
-  await page.getByRole('button', { name: 'Inventory (i)' }).tap();
-  await waitForScreenText(page, 'more items');
-  await page.getByRole('button', { name: 'Cancel / back (Esc)' }).tap();
+    .toMatchObject({
+      x: here.x - delta![0],
+      y: here.y - delta![1],
+    });
 });
 
-test('touch: the on-screen keyboard reaches text prompts', async ({ page }) => {
-  await openBrogue(page);
-  await page.keyboard.press('n');
-  await waitInGame(page);
+test('context-aware dock: a yes/no dialog shows Yes and No, then exploring returns', async ({ page }) => {
+  await newGame(page);
   await page.keyboard.press('Shift+S');
-  await waitForScreenText(page, 'Save this game');
+  await expect.poll(() => gameContext(page)).toBe('yesno');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect(dock.getByRole('button', { name: /^Yes/ })).toBeVisible();
+  await expect(dock.getByRole('button', { name: /^No/ })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Movement' })).toHaveCount(0);
+  await dock.getByRole('button', { name: /^No/ }).tap();
+  await expect.poll(() => gameContext(page)).toBe('map');
+  await expect(dock.getByRole('button', { name: 'Explore (x)' })).toBeVisible();
+});
+
+test('long-press fans out related actions; slide and release to choose', async ({ page }) => {
+  await newGame(page);
+  const pack = page.getByRole('button', { name: 'Pack (i)' });
+  const box = (await pack.boundingBox())!;
+  const start = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  // Touch press, hold, slide onto "Apply / use", release.
+  await page.dispatchEvent('.dock-button[aria-label="Pack (i)"]', 'pointerdown', {
+    pointerId: 7,
+    pointerType: 'touch',
+    isPrimary: true,
+    clientX: start.x,
+    clientY: start.y,
+    button: 0,
+    buttons: 1,
+  });
+  const fan = page.getByRole('menu', { name: 'Pack options' });
+  await expect(fan).toBeVisible();
+  const apply = (await fan.getByRole('menuitem', { name: /Apply/ }).boundingBox())!;
+  const target = { x: apply.x + apply.width / 2, y: apply.y + apply.height / 2 };
+  await page.dispatchEvent('.dock-button[aria-label="Pack (i)"]', 'pointermove', {
+    pointerId: 7,
+    pointerType: 'touch',
+    clientX: target.x,
+    clientY: target.y,
+    buttons: 1,
+  });
+  await expect(fan.getByRole('menuitem', { name: /Apply/ })).toHaveClass(/fan-option--hot/);
+  await page.dispatchEvent('.dock-button[aria-label="Pack (i)"]', 'pointerup', {
+    pointerId: 7,
+    pointerType: 'touch',
+    clientX: target.x,
+    clientY: target.y,
+    button: 0,
+  });
+  await expect(fan).toBeHidden();
+  // Brogue asks what to apply, with its inventory: shown as a readable sheet.
+  await expect.poll(() => gameContext(page)).toBe('menu');
+  await expect.poll(() => gameViews(page)).toEqual(['map', 'sheet']);
+});
+
+test('menus open as a large sheet; tapping outside dismisses', async ({ page }) => {
+  await newGame(page);
+  await page.getByRole('button', { name: 'Pack (i)' }).tap();
+  await waitForScreenText(page, 'more items');
+  await expect.poll(() => gameViews(page)).toEqual(['map', 'sheet']);
+  const canvas = (await page.locator('canvas.brogue-canvas').boundingBox())!;
+  const line = (await findCell(page, 'more items'))!;
+  const start = await cellCenter(page, { x: line.x, y: line.y });
+  const end = await cellCenter(page, { x: line.x + 'more items.'.length, y: line.y });
+  for (const point of [start, end]) {
+    expect(point.x).toBeGreaterThanOrEqual(canvas.x);
+    expect(point.x).toBeLessThanOrEqual(canvas.x + canvas.width);
+  }
+  // Text is drawn much larger than the full-screen layout would allow.
+  const cellWidth = (end.x - start.x) / 'more items.'.length;
+  expect(cellWidth).toBeGreaterThan(canvas.width / 100);
+
+  // Tap the dimmed map just below the status bar (outside the sheet) to close it (sends Escape).
+  const hud = (await page.locator('.brogue-hud').boundingBox())!;
+  await page.touchscreen.tap(canvas.x + canvas.width / 2, hud.y + hud.height + 12);
+  await expect.poll(() => gameContext(page)).toBe('map');
+  await expect.poll(() => gameViews(page)).toEqual(['map']);
+});
+
+test('tapping the status bar opens the sidebar drawer', async ({ page }) => {
+  await newGame(page);
+  await page.locator('.brogue-hud__status').tap();
+  await expect.poll(() => gameViews(page)).toEqual(['map', 'drawer']);
+  const canvas = (await page.locator('canvas.brogue-canvas').boundingBox())!;
+  await page.touchscreen.tap(canvas.x + canvas.width - 20, canvas.y + canvas.height / 2);
+  await expect.poll(() => gameViews(page)).toEqual(['map']);
+});
+
+test('the on-screen keyboard reaches text prompts', async ({ page }) => {
+  await newGame(page);
+  await page.keyboard.press('Shift+S');
+  await expect.poll(() => gameContext(page)).toBe('yesno');
   await page.keyboard.press('Enter');
   await waitForScreenText(page, 'Save game as');
   await page.getByRole('button', { name: 'Open keyboard' }).tap();
@@ -80,30 +179,4 @@ test('touch: the on-screen keyboard reaches text prompts', async ({ page }) => {
   await waitForScreenText(page, 'mobile');
   await field.press('Enter');
   await waitForScreenText(page, 'Saved.');
-});
-
-test('touch: zoom never cuts off text Brogue shows over the map', async ({ page }) => {
-  await openBrogue(page);
-  await page.keyboard.press('n');
-  await waitInGame(page);
-  const zoom = page.getByRole('button', { name: 'Change zoom' });
-  // Cycle until the view is zoomed (portrait starts zoomed; landscape starts at fit).
-  for (let i = 0; i < 3 && !(await page.locator('.brogue-messages').isVisible()); i++) await zoom.tap();
-  await expect(page.locator('.brogue-messages')).toBeVisible();
-  await expect(page.locator('.brogue-messages')).toContainText('Dungeons of Doom');
-
-  await page.keyboard.press('i');
-  await waitForScreenText(page, 'more items');
-  const canvas = await page.locator('canvas.brogue-canvas').boundingBox();
-  const line = await findCell(page, 'more items');
-  expect(line).not.toBeNull();
-  const start = await cellCenter(page, { x: line!.x - 25, y: line!.y });
-  const end = await cellCenter(page, { x: line!.x + 'more items.'.length, y: line!.y });
-  for (const point of [start, end]) {
-    expect(point.x).toBeGreaterThanOrEqual(canvas!.x);
-    expect(point.x).toBeLessThanOrEqual(canvas!.x + canvas!.width);
-    expect(point.y).toBeGreaterThanOrEqual(canvas!.y);
-    expect(point.y).toBeLessThanOrEqual(canvas!.y + canvas!.height);
-  }
-  await page.keyboard.press('Escape');
 });

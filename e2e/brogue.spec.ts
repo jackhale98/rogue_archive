@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
-import { openBrogue, player, screenText, waitForScreenText, waitInGame } from './helpers.ts';
+import {
+  cellCenter,
+  findCell,
+  openBrogue,
+  player,
+  screenText,
+  waitForScreenText,
+  waitInGame,
+} from './helpers.ts';
 
 test.describe('Brogue CE', () => {
   test('starts a real game and moves the player with original keys', async ({ page }) => {
@@ -166,5 +174,29 @@ test.describe('Brogue CE runtime integrity', () => {
     });
     await page.goto('#/play/brogue-ce');
     await expect(page.getByRole('alert')).toContainText('integrity');
+  });
+});
+
+test.describe('Brogue CE on a small non-touch window', () => {
+  test.use({ viewport: { width: 900, height: 420 } });
+
+  test('zoom never cuts off text Brogue shows over the map', async ({ page }) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    const zoom = page.getByRole('button', { name: 'Change zoom' });
+    await zoom.click();
+    await zoom.click();
+    await expect(page.locator('.brogue-messages')).toBeVisible();
+    await expect(page.locator('.brogue-messages')).toContainText('Dungeons of Doom');
+    await page.keyboard.press('i');
+    await waitForScreenText(page, 'more items');
+    const canvas = (await page.locator('canvas.brogue-canvas').boundingBox())!;
+    const line = (await findCell(page, 'more items'))!;
+    for (const x of [line.x - 25, line.x + 'more items.'.length]) {
+      const point = await cellCenter(page, { x, y: line.y });
+      expect(point.x).toBeGreaterThanOrEqual(canvas.x);
+      expect(point.x).toBeLessThanOrEqual(canvas.x + canvas.width);
+    }
   });
 });

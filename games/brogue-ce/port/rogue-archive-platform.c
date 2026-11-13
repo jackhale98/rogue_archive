@@ -45,11 +45,28 @@ static uint8_t cells[ROWS * COLS * CELL_BYTES];
 static boolean cellsChanged = true;
 static double lastDelayTime = 0;
 
+// Read-only snapshot of game state sent with each frame, so the browser can
+// offer context-aware controls and a compact status bar. Nothing here is ever
+// written back to the game. Field order is mirrored in adapter/state.ts.
+enum {
+    ST_HP, ST_MAX_HP, ST_NUTRITION, ST_STRENGTH, ST_DEPTH, ST_DEEPEST, ST_GOLD,
+    ST_CURSOR_X, ST_CURSOR_Y, ST_CURSOR_MODE, ST_UP_X, ST_UP_Y, ST_DOWN_X, ST_DOWN_Y,
+    ST_TEXT_INPUT, ST_COLORS_DANCE, ST_PLAYBACK, ST_WAITING, ST_FIELDS
+};
+static int32_t state[ST_FIELDS];
+// What the game is currently doing: blocked in nextKeyOrMouseEvent (and how)
+// or busy (animating, auto-exploring, generating a level).
+static boolean waitingForInput = false;
+static boolean waitingTextInput = false;
+static boolean waitingColorsDance = false;
+
 // ---------------------------------------------------------------------------
 // JavaScript bridge. The worker installs these hooks on `Module` before main().
 
-EM_JS(void, ra_present, (const uint8_t *buf, int len, int playerX, int playerY, int mode, int inGame), {
-    Module.raPresent(HEAPU8.slice(buf, buf + len), playerX, playerY, mode, inGame);
+EM_JS(void, ra_present, (const uint8_t *buf, int len, int playerX, int playerY, int mode, int inGame,
+                         const int32_t *state, int stateLen), {
+    Module.raPresent(HEAPU8.slice(buf, buf + len), playerX, playerY, mode, inGame,
+                     HEAP32.slice(state >> 2, (state >> 2) + stateLen));
 });
 
 EM_JS(int, ra_poll_event, (int *out), {
@@ -87,11 +104,6 @@ EM_JS(void, ra_graphics_mode_changed, (int mode), {
     Module.raGraphicsModeChanged(mode);
 });
 
-// Tells the host whether the game is waiting for typed text (e.g. a save name).
-EM_JS(void, ra_set_text_input, (int active), {
-    Module.raSetTextInput(active !== 0);
-});
-
 EM_JS(void, ra_game_exit, (int status), {
     Module.raGameExit(status);
 });
@@ -107,7 +119,28 @@ static void present(void) {
         px = player.loc.x;
         py = player.loc.y;
     }
-    ra_present(cells, (int) sizeof(cells), px, py, (int) showGraphics, inGame ? 1 : 0);
+    memset(state, 0, sizeof(state));
+    if (inGame) {
+        state[ST_HP] = player.currentHP;
+        state[ST_MAX_HP] = player.info.maxHP;
+        state[ST_NUTRITION] = player.status[STATUS_NUTRITION];
+        state[ST_STRENGTH] = rogue.strength - player.weaknessAmount;
+        state[ST_DEPTH] = rogue.depthLevel;
+        state[ST_DEEPEST] = rogue.deepestLevel;
+        state[ST_GOLD] = (int32_t) rogue.gold;
+        state[ST_UP_X] = rogue.upLoc.x;
+        state[ST_UP_Y] = rogue.upLoc.y;
+        state[ST_DOWN_X] = rogue.downLoc.x;
+        state[ST_DOWN_Y] = rogue.downLoc.y;
+    }
+    state[ST_CURSOR_X] = rogue.cursorLoc.x;
+    state[ST_CURSOR_Y] = rogue.cursorLoc.y;
+    state[ST_CURSOR_MODE] = rogue.cursorMode ? 1 : 0;
+    state[ST_TEXT_INPUT] = waitingTextInput ? 1 : 0;
+    state[ST_COLORS_DANCE] = waitingColorsDance ? 1 : 0;
+    state[ST_PLAYBACK] = rogue.playbackMode ? 1 : 0;
+    state[ST_WAITING] = waitingForInput ? 1 : 0;
+    ra_present(cells, (int) sizeof(cells), px, py, (int) showGraphics, inGame ? 1 : 0, state, ST_FIELDS);
 }
 
 // Brogue may ask for a flush at any input wait; this is the same operation the
@@ -167,6 +200,10 @@ static void ra_gameLoop(void) {
 }
 
 static boolean ra_pauseForMilliseconds(short ms, PauseBehavior behavior) {
+    if (waitingForInput) {
+        waitingForInput = false;
+        cellsChanged = true; // report the state change even if nothing was redrawn
+    }
     present();
     delayUpTo(ms);
     serviceHostRequests();
@@ -182,8 +219,13 @@ static boolean ra_pauseForMilliseconds(short ms, PauseBehavior behavior) {
 }
 
 static void ra_nextKeyOrMouseEvent(rogueEvent *returnEvent, boolean textInput, boolean colorsDance) {
+    if (!waitingForInput || waitingTextInput != textInput || waitingColorsDance != colorsDance) {
+        waitingForInput = true;
+        waitingTextInput = textInput;
+        waitingColorsDance = colorsDance;
+        cellsChanged = true; // report the new input state even if nothing was redrawn
+    }
     present();
-    ra_set_text_input(textInput ? 1 : 0);
 
     if (lastEvent.eventType != EVENT_ERROR) {
         *returnEvent = lastEvent;
@@ -193,7 +235,10 @@ static void ra_nextKeyOrMouseEvent(rogueEvent *returnEvent, boolean textInput, b
 
     while (true) {
         serviceHostRequests();
-        if (pollBrogueEvent(returnEvent, textInput)) break;
+        if (pollBrogueEvent(returnEvent, textInput)) {
+            waitingForInput = false;
+            break;
+        }
 
         if (colorsDance) {
             shuffleTerrainColors(3, true);

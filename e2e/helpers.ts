@@ -10,6 +10,8 @@ interface DebugWindow {
         playerY: number;
         rowText(y: number): string;
         cellToClient(x: number, y: number): { x: number; y: number } | null;
+        context: string | null;
+        views(): string[];
       };
     };
   };
@@ -66,4 +68,14 @@ export async function cellCenter(
   );
   if (!point) throw new Error('Renderer has no layout yet');
   return point;
+}
+
+export function gameContext(page: Page): Promise<string | null> {
+  return page.evaluate(
+    () => (window as unknown as DebugWindow).__rogueArchive?.adapter.debug.context ?? null,
+  );
+}
+
+export function gameViews(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as DebugWindow).__rogueArchive?.adapter.debug.views() ?? []);
 }

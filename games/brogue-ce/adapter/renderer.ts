@@ -2,19 +2,31 @@
 /**
  * WebGL2 renderer for Brogue's 100x34 cell screen.
  *
- * One full-screen fragment shader looks up each pixel's cell, fetches that
- * cell's sprite index and colors, and blends the background and foreground
- * through the sprite's coverage mask, the same way the SDL renderer tints
- * white sprites with SDL_SetTextureColorMod. Cells are always whole device
- * pixels so text stays crisp.
+ * The screen is drawn as one or more *views* (see views.ts): on desktop a
+ * single view of the whole screen; on phones the map, sheets, peek cards and
+ * the sidebar drawer are separate views of the same cells. Each view is one
+ * scissored pass of a fragment shader that looks up the pixel's cell, fetches
+ * its sprite and colors, and blends background and foreground through the
+ * sprite's coverage mask (as the SDL renderer tints white sprites with
+ * SDL_SetTextureColorMod). Cells are whole device pixels so text stays crisp.
  */
 import { buildAtlas, type SourceSheet } from './atlas.ts';
 import { cameraFocus, findTextOverlay, messageLines, type Rect } from './camera.ts';
+import {
+  compactViews,
+  hitTest,
+  screenView,
+  sidebarRect,
+  type HitResult,
+  type Insets,
+  type OverlayKind,
+  type View,
+} from './views.ts';
 import { CELL_BYTES, COLS, MAP_ORIGIN_X, MAP_ORIGIN_Y, ROWS, SHEET } from './constants.ts';
 
 const VERTEX_SHADER = `#version 300 es
 void main() {
-  // Full-screen triangle.
+  // Full-screen triangle; each view is limited with the scissor test.
   vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
   gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
 }`;
@@ -24,23 +36,30 @@ precision highp float;
 precision highp int;
 uniform sampler2D uCells;
 uniform sampler2D uAtlas;
-uniform ivec2 uCell;
-uniform vec2 uOrigin;
+uniform vec2 uCell;        // view cell size, device px
+uniform vec2 uAtlasCell;   // atlas cell size, px (equal to uCell unless scaling)
+uniform vec2 uAtlasSize;   // atlas texture size, px
+uniform vec2 uOrigin;      // device-px position of screen cell (0,0)
+uniform ivec4 uSrc;        // visible cells: x, y, width, height
 uniform float uHeight;
+uniform float uDim;
 out vec4 outColor;
 void main() {
   vec2 p = vec2(gl_FragCoord.x, uHeight - gl_FragCoord.y) - uOrigin;
-  if (p.x < 0.0 || p.y < 0.0) { outColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
-  ivec2 px = ivec2(p);
-  ivec2 cell = px / uCell;
-  if (cell.x >= ${COLS} || cell.y >= ${ROWS}) { outColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+  ivec2 cell = ivec2(floor(p / uCell));
+  if (cell.x < uSrc.x || cell.y < uSrc.y || cell.x >= uSrc.x + uSrc.z || cell.y >= uSrc.y + uSrc.w) {
+    outColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
   vec4 fg = texelFetch(uCells, cell, 0);
   vec4 bg = texelFetch(uCells, ivec2(cell.x, cell.y + ${ROWS}), 0);
   int sprite = int(fg.a * 255.0 + 0.5) + int(bg.a * 255.0 + 0.5) * 256;
-  ivec2 local = px - cell * uCell;
-  ivec2 atlasPx = ivec2((sprite % ${SHEET.cols}) * uCell.x + local.x, (sprite / ${SHEET.cols}) * uCell.y + local.y);
-  float coverage = texelFetch(uAtlas, atlasPx, 0).r;
-  outColor = vec4(mix(bg.rgb, fg.rgb, coverage), 1.0);
+  vec2 local = (p - vec2(cell) * uCell) * (uAtlasCell / uCell);
+  local = clamp(local, vec2(0.5), uAtlasCell - 0.5);
+  vec2 atlasPx = vec2(float(sprite % ${SHEET.cols}), float(sprite / ${SHEET.cols})) * uAtlasCell + local;
+  float coverage = texture(uAtlas, atlasPx / uAtlasSize).r;
+  vec3 color = mix(bg.rgb, fg.rgb, coverage);
+  outColor = vec4(color * (1.0 - uDim), 1.0);
 }`;
 
 /** Allowed cell width/height ratios. The sheet's native ratio is 128/232 = 0.55. */
@@ -132,6 +151,25 @@ export class RendererUnsupportedError extends Error {
   override name = 'RendererUnsupportedError';
 }
 
+interface Atlas {
+  texture: WebGLTexture;
+  cellWidth: number;
+  cellHeight: number;
+  lastUsed: number;
+}
+
+const ATLAS_CACHE_SIZE = 4;
+/** Default readable map row height on phones (CSS px); pinch changes it. */
+export const DEFAULT_MAP_CELL_CSS = 18;
+
+export interface CompactState {
+  band: number;
+  insets: Insets;
+  mapCellCss: number;
+  overlayKind: OverlayKind;
+  drawer: boolean;
+}
+
 export class BrogueRenderer {
   readonly canvas: HTMLCanvasElement;
   readonly #container: HTMLElement;
@@ -139,21 +177,22 @@ export class BrogueRenderer {
   #gl: WebGL2RenderingContext;
   #program: WebGLProgram | null = null;
   #cellTexture: WebGLTexture | null = null;
-  #atlasTexture: WebGLTexture | null = null;
-  #uniforms: Record<'cell' | 'origin' | 'height', WebGLUniformLocation | null> = {
-    cell: null,
-    origin: null,
-    height: null,
-  };
+  #uniforms: Record<string, WebGLUniformLocation | null> = {};
   readonly #cellData = new Uint8Array(COLS * ROWS * 2 * 4);
+  #atlases = new Map<string, Atlas>();
+  #atlasBuildQueue = new Set<string>();
+  #atlasTimer: ReturnType<typeof setTimeout> | undefined;
   #layout: Layout | null = null;
-  #atlasSize = '';
+  #views: View[] = [];
   #zoom = 1;
   #focus: Rect | null = null;
   #messageStrip: HTMLDivElement;
   #messageSignature = '';
   #lastCells: Uint8Array | null = null;
   #player: { x: number; y: number } | null = null;
+  #inGame = false;
+  #compact: CompactState | null = null;
+  #pan = { x: 0, y: 0 };
   #dirty = true;
   #cellsDirty = true;
   #frameRequest = 0;
@@ -174,13 +213,14 @@ export class BrogueRenderer {
       alpha: false,
       preserveDrawingBuffer: false,
     });
-    if (!gl)
+    if (!gl) {
       throw new RendererUnsupportedError(
         'This browser does not support WebGL 2, which Brogue needs to draw the screen.',
       );
+    }
     this.#gl = gl;
     container.appendChild(this.canvas);
-    // While zoomed, Brogue's message lines may be off-screen; mirror them here.
+    // While zoomed on desktop/tablets, Brogue's message lines may be off-screen; mirror them here.
     this.#messageStrip = document.createElement('div');
     this.#messageStrip.className = 'brogue-messages';
     this.#messageStrip.setAttribute('aria-live', 'polite');
@@ -209,24 +249,55 @@ export class BrogueRenderer {
     this.#scheduleLayout();
   }
 
+  /** Classic (single-view) layout; null in compact mode. */
   get layout(): Layout | null {
-    return this.#layout;
+    return this.#compact ? null : this.#layout;
+  }
+
+  get views(): readonly View[] {
+    return this.#views;
   }
 
   get zoom(): number {
     return this.#zoom;
   }
 
+  get compact(): CompactState | null {
+    return this.#compact;
+  }
+
+  /** Classic-mode zoom (toolbar). */
   setZoom(zoom: number): void {
     this.#zoom = zoom;
     this.#focus = this.#computeFocus();
     this.#scheduleLayout();
   }
 
-  #computeFocus(): Rect | null {
-    // Only zoomed play needs the camera; skip the frame scan otherwise.
-    if (this.#zoom <= 1 || !this.#lastCells) return null;
-    return cameraFocus(this.#player, findTextOverlay(this.#lastCells));
+  /** Switch between the classic screen and the phone layout. */
+  setCompact(state: CompactState | null): void {
+    const before = JSON.stringify(this.#compact);
+    this.#compact = state ? { ...state } : null;
+    if (JSON.stringify(this.#compact) === before) return;
+    this.#messageStrip.hidden = true;
+    this.#updateLayout();
+  }
+
+  /** Pinch zoom on phones: map row height in CSS px. */
+  setMapCellCss(css: number): void {
+    if (!this.#compact) return;
+    this.#compact.mapCellCss = Math.max(6, Math.min(56, css));
+    this.#updateLayout();
+  }
+
+  /** Drag to look around the map on phones; cleared when the player moves. */
+  panBy(dx: number, dy: number): void {
+    if (!this.#compact) return;
+    const dpr = window.devicePixelRatio || 1;
+    this.#pan = { x: this.#pan.x + dx * dpr, y: this.#pan.y + dy * dpr };
+    this.#updateLayout();
+    // Keep the pan within what the clamped camera actually shows.
+    const map = this.#views.find((view) => view.name === 'map');
+    if (map) this.#pan = this.#effectivePan(map);
   }
 
   /** Updates the screen from a frame posted by the worker. */
@@ -244,41 +315,118 @@ export class BrogueRenderer {
       data[bgOffset + dst + 3] = cells[src + 1]!;
     }
     this.#lastCells = cells;
-    this.#player = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
-    const focus = this.#computeFocus();
-    const focusChanged = JSON.stringify(focus) !== JSON.stringify(this.#focus);
-    this.#focus = focus;
+    const player = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
+    if (player?.x !== this.#player?.x || player?.y !== this.#player?.y) this.#pan = { x: 0, y: 0 };
+    this.#player = player;
+    this.#inGame = inGame;
     this.#cellsDirty = true;
-    if (focusChanged) this.#updateLayout();
-    this.#updateMessageStrip();
+    if (this.#compact) {
+      this.#updateLayout();
+    } else {
+      const focus = this.#computeFocus();
+      const focusChanged = JSON.stringify(focus) !== JSON.stringify(this.#focus);
+      this.#focus = focus;
+      if (focusChanged) this.#updateLayout();
+      this.#updateMessageStrip();
+    }
     this.#requestDraw();
   }
 
-  /** Maps a client (CSS pixel) position to a screen cell, or null when outside the grid. */
-  cellAt(clientX: number, clientY: number): { x: number; y: number } | null {
-    const layout = this.#layout;
-    if (!layout) return null;
+  /** What is under a client (CSS pixel) point. */
+  hitTest(clientX: number, clientY: number): HitResult {
     const rect = this.canvas.getBoundingClientRect();
-    const px = (clientX - rect.left) * layout.dpr - layout.originX;
-    const py = (clientY - rect.top) * layout.dpr - layout.originY;
-    if (px < 0 || py < 0) return null;
-    const x = Math.floor(px / layout.cellWidth);
-    const y = Math.floor(py / layout.cellHeight);
-    return x < COLS && y < ROWS ? { x, y } : null;
+    const dpr = this.canvas.width / Math.max(1, rect.width);
+    return hitTest(this.#views, (clientX - rect.left) * dpr, (clientY - rect.top) * dpr);
+  }
+
+  /** Maps a client (CSS pixel) position to a screen cell, or null. */
+  cellAt(clientX: number, clientY: number): { x: number; y: number } | null {
+    const hit = this.hitTest(clientX, clientY);
+    return hit?.kind === 'cell' ? { x: hit.x, y: hit.y } : null;
+  }
+
+  /** Client (CSS pixel) center of a screen cell in the topmost view showing it. */
+  cellToClient(x: number, y: number): { x: number; y: number } | null {
+    const rect = this.canvas.getBoundingClientRect();
+    const dpr = this.canvas.width / Math.max(1, rect.width);
+    for (let i = this.#views.length - 1; i >= 0; i--) {
+      const view = this.#views[i]!;
+      const { src } = view;
+      if (x < src.x || y < src.y || x >= src.x + src.width || y >= src.y + src.height) continue;
+      const px = view.originX + (x + 0.5) * view.cellWidth;
+      const py = view.originY + (y + 0.5) * view.cellHeight;
+      if (px < view.x || py < view.y || px >= view.x + view.width || py >= view.y + view.height) continue;
+      return { x: rect.left + px / dpr, y: rect.top + py / dpr };
+    }
+    return null;
   }
 
   destroy(): void {
     cancelAnimationFrame(this.#frameRequest);
+    clearTimeout(this.#atlasTimer);
+    clearTimeout(this.#layoutTimer);
     this.#resizeObserver.disconnect();
     this.canvas.removeEventListener('webglcontextlost', this.#onContextLost);
     this.canvas.removeEventListener('webglcontextrestored', this.#onContextRestored);
     const gl = this.#gl;
+    for (const atlas of this.#atlases.values()) gl.deleteTexture(atlas.texture);
+    this.#atlases.clear();
     gl.deleteTexture(this.#cellTexture);
-    gl.deleteTexture(this.#atlasTexture);
     gl.deleteProgram(this.#program);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
     this.#messageStrip.remove();
+  }
+
+  #effectivePan(map: View): { x: number; y: number } {
+    // The pan that reproduces the clamped origin, so dragging past an edge doesn't accumulate.
+    const centered = this.#views.length
+      ? compactViews({ ...this.#compactInput(), pan: { x: 0, y: 0 } })[0]!
+      : map;
+    return { x: map.originX - centered.originX, y: map.originY - centered.originY };
+  }
+
+  #computeFocus(): Rect | null {
+    // Only zoomed classic play needs the camera; skip the frame scan otherwise.
+    if (this.#zoom <= 1 || !this.#lastCells) return null;
+    return cameraFocus(this.#player, findTextOverlay(this.#lastCells));
+  }
+
+  #compactInput() {
+    const compact = this.#compact!;
+    const dpr = window.devicePixelRatio || 1;
+    const cells = this.#lastCells;
+    const overlay = cells ? findTextOverlay(cells) : null;
+    let drawer: Rect | null = null;
+    if (compact.drawer && cells) {
+      let used = 0;
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < 20; x++) {
+          const offset = (y * COLS + x) * CELL_BYTES;
+          if ((cells[offset]! | (cells[offset + 1]! << 8)) > 32) used = y + 1;
+        }
+      }
+      drawer = sidebarRect(used);
+    }
+    return {
+      width: this.canvas.width,
+      height: this.canvas.height,
+      dpr,
+      band: Math.round(compact.band * dpr),
+      insets: {
+        top: compact.insets.top * dpr,
+        right: compact.insets.right * dpr,
+        bottom: compact.insets.bottom * dpr,
+        left: compact.insets.left * dpr,
+      },
+      mapCellCss: compact.mapCellCss,
+      pan: this.#pan,
+      player: this.#player,
+      focus: null,
+      overlay: compact.overlayKind === 'none' ? null : overlay,
+      overlayKind: compact.overlayKind,
+      drawer,
+    };
   }
 
   #onContextLost = (event: Event) => {
@@ -289,7 +437,7 @@ export class BrogueRenderer {
 
   #onContextRestored = () => {
     this.#contextLost = false;
-    this.#atlasSize = '';
+    this.#atlases.clear();
     this.#initGl();
     this.#updateLayout();
   };
@@ -314,36 +462,105 @@ export class BrogueRenderer {
     }
     gl.useProgram(program);
     this.#program = program;
-    this.#uniforms = {
-      cell: gl.getUniformLocation(program, 'uCell'),
-      origin: gl.getUniformLocation(program, 'uOrigin'),
-      height: gl.getUniformLocation(program, 'uHeight'),
-    };
+    for (const name of ['uCell', 'uAtlasCell', 'uAtlasSize', 'uOrigin', 'uSrc', 'uHeight', 'uDim']) {
+      this.#uniforms[name] = gl.getUniformLocation(program, name);
+    }
     gl.uniform1i(gl.getUniformLocation(program, 'uCells'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'uAtlas'), 1);
-
-    const makeTexture = (unit: number) => {
-      const texture = gl.createTexture();
-      gl.activeTexture(gl.TEXTURE0 + unit);
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      return texture;
-    };
-    this.#cellTexture = makeTexture(0);
+    this.#cellTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.#cellTexture);
+    for (const [key, value] of [
+      [gl.TEXTURE_MIN_FILTER, gl.NEAREST],
+      [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
+      [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE],
+      [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+    ] as const) {
+      gl.texParameteri(gl.TEXTURE_2D, key, value);
+    }
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, COLS, ROWS * 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    this.#atlasTexture = makeTexture(1);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     this.#cellsDirty = true;
   }
 
+  /** An atlas for this cell size: exact if cached, else the closest cached one (scaled) while it builds. */
+  #atlasFor(cellWidth: number, cellHeight: number): Atlas {
+    const key = `${cellWidth}x${cellHeight}`;
+    const exact = this.#atlases.get(key);
+    if (exact) {
+      exact.lastUsed = performance.now();
+      return exact;
+    }
+    if (this.#atlases.size === 0) return this.#buildAtlas(cellWidth, cellHeight);
+    this.#atlasBuildQueue.add(key);
+    this.#scheduleAtlasBuild();
+    let best: Atlas | null = null;
+    for (const atlas of this.#atlases.values()) {
+      if (!best || Math.abs(atlas.cellHeight - cellHeight) < Math.abs(best.cellHeight - cellHeight))
+        best = atlas;
+    }
+    return best!;
+  }
+
+  #scheduleAtlasBuild(): void {
+    if (this.#atlasTimer !== undefined) return;
+    // Build one atlas per idle moment, newest request first (pinching skips sizes it passed).
+    this.#atlasTimer = setTimeout(() => {
+      this.#atlasTimer = undefined;
+      const keys = [...this.#atlasBuildQueue];
+      const key = keys[keys.length - 1];
+      this.#atlasBuildQueue.clear();
+      if (!key || this.#contextLost) return;
+      const wanted = new Set(this.#views.map((view) => `${view.cellWidth}x${view.cellHeight}`));
+      if (!wanted.has(key)) return;
+      const [w, h] = key.split('x').map(Number) as [number, number];
+      this.#buildAtlas(w, h);
+      this.#dirty = true;
+      this.#requestDraw();
+      for (const view of this.#views) {
+        if (!this.#atlases.has(`${view.cellWidth}x${view.cellHeight}`))
+          this.#atlasFor(view.cellWidth, view.cellHeight);
+      }
+    }, 90);
+  }
+
+  #buildAtlas(cellWidth: number, cellHeight: number): Atlas {
+    const gl = this.#gl;
+    const pixels = buildAtlas(this.#sheet, cellWidth, cellHeight);
+    const texture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R8,
+      SHEET.cols * cellWidth,
+      SHEET.rows * cellHeight,
+      0,
+      gl.RED,
+      gl.UNSIGNED_BYTE,
+      pixels,
+    );
+    const atlas = { texture, cellWidth, cellHeight, lastUsed: performance.now() };
+    this.#atlases.set(`${cellWidth}x${cellHeight}`, atlas);
+    // Evict the least recently used atlas beyond the cache size.
+    while (this.#atlases.size > ATLAS_CACHE_SIZE) {
+      let oldest: [string, Atlas] | null = null;
+      for (const entry of this.#atlases)
+        if (!oldest || entry[1].lastUsed < oldest[1].lastUsed) oldest = entry;
+      gl.deleteTexture(oldest![1].texture);
+      this.#atlases.delete(oldest![0]);
+    }
+    return atlas;
+  }
+
   #layoutTimer: ReturnType<typeof setTimeout> | undefined;
   #scheduleLayout(): void {
-    // Apply immediately the first time, then debounce bursts of resize events
-    // because rebuilding the atlas is relatively expensive.
-    if (!this.#layout) {
+    if (this.#views.length === 0) {
       this.#updateLayout();
       return;
     }
@@ -354,47 +571,39 @@ export class BrogueRenderer {
   #updateLayout(): void {
     const rect = this.#container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    // Zoom follows the player (and any text Brogue shows); the title screen and
-    // other screens without a player always fit.
-    const stripHeight = MESSAGE_STRIP_HEIGHT;
-    const layout = computeLayout(
-      rect.width,
-      rect.height,
-      window.devicePixelRatio || 1,
-      this.#zoom,
-      this.#focus,
-      stripHeight,
-    );
-    this.#layout = layout;
-    const showStrip = layout.zoom > 1;
-    if (this.#messageStrip.hidden === showStrip) {
-      this.#messageStrip.hidden = !showStrip;
-      this.#messageSignature = '';
-      this.#updateMessageStrip();
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.round(rect.width * dpr));
+    const height = Math.max(1, Math.round(rect.height * dpr));
+    if (this.canvas.width !== width || this.canvas.height !== height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
     }
-    if (this.canvas.width !== layout.width || this.canvas.height !== layout.height) {
-      this.canvas.width = layout.width;
-      this.canvas.height = layout.height;
-    }
-    const size = `${layout.cellWidth}x${layout.cellHeight}`;
-    if (size !== this.#atlasSize && !this.#contextLost) {
-      const atlas = buildAtlas(this.#sheet, layout.cellWidth, layout.cellHeight);
-      const gl = this.#gl;
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this.#atlasTexture);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.R8,
-        SHEET.cols * layout.cellWidth,
-        SHEET.rows * layout.cellHeight,
-        0,
-        gl.RED,
-        gl.UNSIGNED_BYTE,
-        atlas,
+    if (this.#compact && this.#inGame) {
+      this.#views = compactViews(this.#compactInput());
+      this.#layout = null;
+    } else {
+      // Zoom follows the player (and any text Brogue shows); screens without a player always fit.
+      const layout = computeLayout(
+        rect.width,
+        rect.height,
+        dpr,
+        this.#compact ? 1 : this.#zoom,
+        this.#focus,
+        MESSAGE_STRIP_HEIGHT,
       );
-      this.#atlasSize = size;
+      this.#layout = layout;
+      const view = screenView(width, height, layout.cellWidth, layout.cellHeight);
+      view.originX = layout.originX;
+      view.originY = layout.originY;
+      this.#views = [view];
+      const showStrip = !this.#compact && layout.zoom > 1;
+      if (this.#messageStrip.hidden === showStrip) {
+        this.#messageStrip.hidden = !showStrip;
+        this.#messageSignature = '';
+        this.#updateMessageStrip();
+      }
     }
+    for (const view of this.#views) this.#atlasFor(view.cellWidth, view.cellHeight);
     this.#dirty = true;
     this.#requestDraw();
   }
@@ -429,8 +638,7 @@ export class BrogueRenderer {
   }
 
   #draw(): void {
-    const layout = this.#layout;
-    if (!layout || this.#contextLost) return;
+    if (this.#views.length === 0 || this.#contextLost) return;
     const gl = this.#gl;
     if (this.#cellsDirty) {
       gl.activeTexture(gl.TEXTURE0);
@@ -441,10 +649,27 @@ export class BrogueRenderer {
     }
     if (!this.#dirty) return;
     this.#dirty = false;
-    gl.viewport(0, 0, layout.width, layout.height);
-    gl.uniform2i(this.#uniforms.cell, layout.cellWidth, layout.cellHeight);
-    gl.uniform2f(this.#uniforms.origin, layout.originX, layout.originY);
-    gl.uniform1f(this.#uniforms.height, layout.height);
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    const { width, height } = this.canvas;
+    const u = this.#uniforms;
+    gl.viewport(0, 0, width, height);
+    gl.disable(gl.SCISSOR_TEST);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.enable(gl.SCISSOR_TEST);
+    gl.uniform1f(u.uHeight!, height);
+    for (const view of this.#views) {
+      const atlas = this.#atlasFor(view.cellWidth, view.cellHeight);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, atlas.texture);
+      gl.scissor(view.x, height - (view.y + view.height), view.width, view.height);
+      gl.uniform2f(u.uCell!, view.cellWidth, view.cellHeight);
+      gl.uniform2f(u.uAtlasCell!, atlas.cellWidth, atlas.cellHeight);
+      gl.uniform2f(u.uAtlasSize!, SHEET.cols * atlas.cellWidth, SHEET.rows * atlas.cellHeight);
+      gl.uniform2f(u.uOrigin!, view.originX, view.originY);
+      gl.uniform4i(u.uSrc!, view.src.x, view.src.y, view.src.width, view.src.height);
+      gl.uniform1f(u.uDim!, view.dim);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    gl.disable(gl.SCISSOR_TEST);
   }
 }

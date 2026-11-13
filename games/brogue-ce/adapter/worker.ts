@@ -63,7 +63,6 @@ let exited = false;
 const queue: BrogueEventTuple[] = [];
 let wake: (() => void) | null = null;
 let modifiers = { shift: false, ctrl: false };
-let textInput = false;
 
 // Flush requests from the host: queued until the game reaches a safe point.
 let pendingFlushIds: number[] = [];
@@ -192,8 +191,18 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
     print: (text: string) => post({ type: 'log', level: 'info', text }),
     printErr: (text: string) => post({ type: 'log', level: 'warn', text }),
     onAbort: (what: unknown) => reportFatal(new Error(`Brogue stopped unexpectedly: ${String(what)}`)),
-    raPresent(cells: Uint8Array, playerX: number, playerY: number, mode: number, inGame: number) {
-      post({ type: 'frame', cells, playerX, playerY, mode, inGame: inGame !== 0 }, [cells.buffer]);
+    raPresent(
+      cells: Uint8Array,
+      playerX: number,
+      playerY: number,
+      mode: number,
+      inGame: number,
+      state: Int32Array,
+    ) {
+      post({ type: 'frame', cells, playerX, playerY, mode, inGame: inGame !== 0, state }, [
+        cells.buffer,
+        state.buffer,
+      ]);
     },
     raPollEvent(): BrogueEventTuple | null {
       return queue.shift() ?? null;
@@ -232,12 +241,6 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
     },
     raGraphicsModeChanged(mode: number) {
       post({ type: 'graphics-mode', mode });
-    },
-    raSetTextInput(active: boolean) {
-      if (active !== textInput) {
-        textInput = active;
-        post({ type: 'text-input', active });
-      }
     },
     raGameExit(status: number) {
       running = false;

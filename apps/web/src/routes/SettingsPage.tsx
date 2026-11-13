@@ -48,6 +48,16 @@ const CHOICES = [
     ],
   },
   {
+    key: 'haptics',
+    label: 'Vibration',
+    description:
+      'A short buzz for touch controls, on devices that support it (most Android phones; not iPhone).',
+    options: [
+      { value: 'off', label: 'Off' },
+      { value: 'on', label: 'On' },
+    ],
+  },
+  {
     key: 'reducedMotion',
     label: 'Motion',
     description: 'Reduce interface animation. Game animations are part of each game.',

@@ -10,6 +10,7 @@ import {
   textToBrogue,
 } from '../adapter/input.ts';
 import { computeLayout } from '../adapter/renderer.ts';
+import { compactViews, hitTest, sheetSource } from '../adapter/views.ts';
 
 const none = { shift: false, ctrl: false, alt: false, meta: false };
 const key = (k: string, code = '', modifiers = none) => keyToBrogue({ type: 'key', key: k, code, modifiers });
@@ -52,7 +53,7 @@ describe('commands and text', () => {
   it('maps every touch command to its upstream key', () => {
     const ids = [
       ...Object.values(BROGUE_TOUCH_LAYOUT.directionPad!),
-      ...BROGUE_TOUCH_LAYOUT.actions,
+      ...BROGUE_TOUCH_LAYOUT.actions.map((action) => (typeof action === 'string' ? action : action.command)),
       ...BROGUE_TOUCH_LAYOUT.palette,
     ];
     for (const id of ids) if (id) expect(commandToBrogue(id), id).not.toBeNull();
@@ -165,5 +166,73 @@ describe('glyphRect', () => {
     expect(w).toBeLessThan(20);
     expect(x).toBeCloseTo((20 - w) / 2);
     expect(y).toBe(0);
+  });
+});
+
+describe('compact views', () => {
+  const base = {
+    width: 1688,
+    height: 780,
+    dpr: 2,
+    band: 90,
+    insets: { top: 0, right: 300, bottom: 0, left: 260 },
+    mapCellCss: 18,
+    pan: { x: 0, y: 0 },
+    player: { x: 60, y: 20 },
+    focus: null,
+    overlay: null,
+    overlayKind: 'none' as const,
+    drawer: null,
+  };
+
+  it('shows the map at a readable size, centered on the player', () => {
+    const [map] = compactViews(base);
+    expect(map!.name).toBe('map');
+    expect(map!.cellHeight).toBe(36);
+    const playerX = map!.originX + 60.5 * map!.cellWidth;
+    const freeCenter = 260 + (1688 - 260 - 300) / 2;
+    expect(Math.abs(playerX - freeCenter)).toBeLessThanOrEqual(map!.cellWidth);
+  });
+
+  it('lifts menus into a dimmed, modal sheet that dismisses on outside taps', () => {
+    const overlay = { x: 55, y: 4, width: 44, height: 9 };
+    const views = compactViews({ ...base, overlay, overlayKind: 'sheet' });
+    const sheet = views.find((view) => view.name === 'sheet')!;
+    expect(views[0]!.dim).toBeGreaterThan(0.5);
+    expect(sheet.src).toEqual(overlay);
+    expect(sheet.cellHeight).toBeGreaterThan(36);
+    expect(hitTest(views, sheet.x + 1, sheet.y + 1)).toMatchObject({
+      kind: 'cell',
+      x: 55,
+      y: 4,
+      view: 'sheet',
+    });
+    expect(hitTest(views, 5, 400)).toEqual({ kind: 'dismiss', view: 'sheet' });
+  });
+
+  it('extends large screens into the message area but leaves small boxes alone', () => {
+    expect(sheetSource({ x: 55, y: 3, width: 44, height: 9 })).toEqual({ x: 55, y: 3, width: 44, height: 9 });
+    expect(sheetSource({ x: 21, y: 3, width: 79, height: 29 })).toEqual({
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 32,
+    });
+  });
+
+  it('places a description card away from where the player is looking', () => {
+    const overlay = { x: 30, y: 5, width: 30, height: 8 };
+    const low = compactViews({ ...base, overlay, overlayKind: 'peek', focus: { x: 60, y: 30 } });
+    const high = compactViews({
+      ...base,
+      overlay,
+      overlayKind: 'peek',
+      focus: { x: 60, y: 4 },
+      player: { x: 60, y: 4 },
+    });
+    const cardLow = low.find((view) => view.name === 'peek')!;
+    const cardHigh = high.find((view) => view.name === 'peek')!;
+    expect(cardLow.y).toBeLessThan(cardHigh.y);
+    expect(cardLow.modal).toBe(false);
   });
 });

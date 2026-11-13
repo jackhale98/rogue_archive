@@ -93,6 +93,27 @@ export interface GameCommandDescriptor {
   description?: string;
 }
 
+/** Commands the shell handles itself; adapters may place them in layouts. */
+export const SHELL_COMMAND = {
+  /** Open the full command list. */
+  palette: 'shell:palette',
+  /** Open the device keyboard for typing to the game. */
+  keyboard: 'shell:keyboard',
+} as const;
+
+/** One touch button. */
+export interface TouchAction {
+  command: string;
+  /** Overrides the command's shortLabel/label for this context. */
+  label?: string;
+  /** Long-press fans these out; slide onto one and release to choose it. */
+  alternates?: string[];
+  /** Visually emphasized as the likely next action. */
+  emphasis?: 'primary';
+  /** Spans the full dock width (e.g. a lone "Continue"). */
+  wide?: boolean;
+}
+
 /** Declarative touch-control layout. The shell renders it; the adapter interprets it. */
 export interface TouchControlLayout {
   /** Command ids for an eight-way pad, clockwise from north-west; null for no button. */
@@ -107,8 +128,8 @@ export interface TouchControlLayout {
     s: string;
     se: string;
   };
-  /** Primary actions shown as buttons. */
-  actions: string[];
+  /** Primary actions shown as buttons (a bare string is a command id). */
+  actions: (string | TouchAction)[];
   /** Commands available from the "more" command palette. */
   palette: string[];
 }
@@ -147,6 +168,8 @@ export type GameEvent =
   | { type: 'input-context'; context: InputContext }
   | { type: 'save-state'; state: SaveState }
   | { type: 'setting-changed'; key: string; value: unknown }
+  /** The game's situation changed; show these touch controls (context is a label for tests and styling). */
+  | { type: 'touch-layout'; layout: TouchControlLayout; context: string }
   | { type: 'exit'; reason: 'user' | 'game-over' | 'error' };
 
 export interface GameLogger {
@@ -194,6 +217,13 @@ export interface GameCapabilities {
   audio: boolean;
 }
 
+export interface Presentation {
+  compact: boolean;
+  insets: { top: number; right: number; bottom: number; left: number };
+  /** Width (CSS px) of the shell's floating tools in the top-right corner, in compact mode. */
+  topRightReserve?: number;
+}
+
 /** Implemented by every game package. */
 export interface GameAdapter {
   readonly apiVersion: GameApiVersion;
@@ -217,6 +247,13 @@ export interface GameAdapter {
   /** Make progress durable now (page hidden, player leaving). Resolves when written. */
   persist(): Promise<void>;
   setVisible?(visible: boolean): void;
+  /**
+   * Tells the adapter how it is being presented. `compact` means a small touch
+   * screen where the shell overlays its controls on the game; the adapter may
+   * then use a layout designed for phones. `insets` are CSS pixels on each
+   * edge covered by shell controls, so important content can avoid them.
+   */
+  setPresentation?(presentation: Presentation): void;
   applySetting?(key: string, value: string | number): void;
   /** Adapter-defined view controls (e.g. zoom); returns the new label to display. */
   cycleView?(): string;
