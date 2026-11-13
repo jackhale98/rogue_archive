@@ -27,7 +27,7 @@ Dungeon Crawl Stone Soup already has a browser front end: **WebTiles**, the clie
   - Make variables: `EXTRA_LIBS=` drops `-pthread` (upstream only uses mutexes; the game is single-threaded), `NO_YACC=y` uses upstream's pregenerated level-compiler parser, and `prefix=/crawl DATADIR=data SAVEDIR=/saves` set the paths inside the browser's file system.
 - **Run.** The worker starts the game as a WebTiles server would: `-headless -webtiles-socket … -await-connection -name <player>`, then sends the client's `attach`. C++ exceptions (part of DCSS's control flow) use Emscripten's JavaScript exception handling, which Asyncify supports.
 - **Messages.** The game ends each message with a newline and splits long ones into 2 KB fragments; the worker joins them and posts each burst to the page. Messages starting with `*` are for the server: `flush_messages` ends a burst, `exit_reason` is kept for the start screen, and the rest (`client_path`, `milestone`, `dump`) only matter to a multi-user server.
-- **Saves.** `/saves` is an IDBFS mount with `autoPersist`, so every file the game closes is written to IndexedDB at once. DCSS saves when you change level and when you press `S`. The same directory holds its regenerable level and description caches (`des/`, `db/`, built on first launch), which exports skip.
+- **Saves.** `/saves` (DCSS's `SAVEDIR`; characters are `saves/<name>.cs`, with `morgue/` beside it) is an IDBFS mount with `autoPersist`, so every file the game closes is written to IndexedDB at once. DCSS saves when you change level and when you press `S`. The same directory holds its regenerable level and description caches (`des/`, `db/`, built on first launch), which exports skip.
 - **Game over.** When a game ends (death, save, quit) the process exits like a real DCSS process. The worker prepares a fresh instance, and the start screen comes back, as a WebTiles server returns to its lobby.
 - **Download.** `crawl.wasm` and the data package ship as `.gzip` files (6 MB and 3 MB) and are inflated in the worker after their SHA-256 check. (`.gz` would invite servers to add `Content-Encoding: gzip`, so the browser would inflate them before the check.)
 
@@ -45,7 +45,7 @@ Dungeon Crawl Stone Soup already has a browser front end: **WebTiles**, the clie
 
 ## The shell around it
 
-- **Start screen** (`launcher.ts`): lists saved characters (`*.cs` in the save directory) to continue, and starts new ones by name. Upstream WebTiles always starts the game with a name; without one, headless DCSS has no way to ask for it.
+- **Start screen** (`launcher.ts`): lists saved characters (`saves/*.cs`) to continue, and starts new ones by name. Upstream WebTiles always starts the game with a name; without one, headless DCSS has no way to ask for it.
 - **Context** (`state.ts`): follows `input_mode`, `ui-push`/`ui-pop`, `menu`/`close_menu`, `init_input`, `ui_state`, `layer` and the `--more--` flag. From these it decides whether the game is on the map, in a menu, a popup, a `--more--`, a yes/no question, an item prompt, a text field, targeting or the level map. Brief busy moments are debounced so the dock doesn't flicker during travel.
 - **Touch commands** (`input.ts`) are named shortcuts for DCSS's default keys. `tests/conformance/key-coverage.ts` checks each against `cmd-keys.h`. The action structure is described in [docs/design/mobile-play.md](../../docs/design/mobile-play.md#dcss).
 - **Message log** (`messages.ts`): `msgs` messages with DCSS's colour tags become coloured log entries; `rollback` (DCSS rewriting its last messages) is applied.
