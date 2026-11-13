@@ -94,11 +94,11 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 
 | Context | Dock |
 |---|---|
-| Title menu and character creation | The screen's lettered choices as buttons; on the title menu, **Continue *name*** for each saved character; OK, Back, Type |
+| Title menu and character creation | The screen's lettered choices as buttons; on the title menu, **Continue *name*** for each saved character; OK, Back, Type; the pad for Sil's arrow keys (up/down move, left/right lower or raise stats and skills), Enter in its centre |
 | "Open saved character" name prompt | The saved characters by name; Type a name, OK, Back |
 | Map | Rest (fan: hold, run, stealth, stairs, pick up) · Fire (fan: second quiver, throw, throw at nearest, sing) · Pack (fan: equipment, wear, take off, eat, drink, use, drop, staffs, instruments, examine) · Doors (fan: close, bash, disarm, tunnel, exchange places, alternate action) · Look (fan: monsters and objects in view, map, character, abilities, smithing, knowledge, messages) · More (every command), plus the pad with Hold in the centre |
 | Item prompt ("Drop which item?") | The item letters; **Show items** (`*`) names them; Worn/Pack (`/`), Floor (`-`) when offered; Cancel |
-| Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type |
+| Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type; the pad (abilities and smithing screens use arrow keys) |
 | `-more-` · yes/no | Continue, Skip · Yes, No, Cancel |
 | Direction | The pad; Nearest (`t`, fan: choose a target `*`), Cancel |
 | Look / target | The pad; Target, Next, Cancel |

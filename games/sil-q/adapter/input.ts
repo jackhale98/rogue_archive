@@ -456,6 +456,13 @@ export const PAD = {
   se: 'move-se',
 } as const;
 
+/**
+ * Menus and character creation: Sil reads 8/2 to move between lines and 4/6
+ * to lower or raise a value (stats, skills), so the pad works there too, with
+ * Enter in the centre.
+ */
+export const MENU_PAD = { ...PAD, center: 'confirm' } as const;
+
 export const PALETTE = SIL_COMMANDS.filter(
   (command) => !command.id.startsWith('move-') && command.category !== 'Keys',
 ).map((command) => command.id);
@@ -507,6 +514,7 @@ export function controlsFor(
       // Title and character creation: the screen's choices as large buttons;
       // on the main menu, saved characters can be continued directly.
       return {
+        directionPad: MENU_PAD,
         actions: [
           ...(choices.some((choice) => /Open saved character/.test(choice.label))
             ? saveButtons((name) => `Continue ${name}`)
@@ -588,6 +596,7 @@ export function controlsFor(
     case 'menu':
     case 'screen':
       return {
+        directionPad: MENU_PAD,
         actions: [
           ...choiceButtons,
           a('cancel', { label: 'Close' }),

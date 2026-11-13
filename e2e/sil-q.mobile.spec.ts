@@ -12,6 +12,8 @@ test('Sil-Q phone: title buttons, creation by tap, item prompt dock, continue a 
   for (const name of [/Tutorial/, /New character/, /Open saved character/])
     await expect(dock.getByRole('button', { name })).toBeVisible();
   await dock.getByRole('button', { name: /New character/ }).tap();
+  // Creation menus take arrow keys (stats and skills: left/right lowers/raises): the pad is shown.
+  await expect(page.getByRole('group', { name: 'Movement' })).toBeVisible();
   for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
     await page.waitForTimeout(400);
     if ((await silContext(page)) === 'map') break;
