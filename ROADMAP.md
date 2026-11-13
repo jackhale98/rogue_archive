@@ -33,6 +33,10 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Keyboard, mouse and touch input; preview-then-act taps; zoom that follows the player
 - [x] Saves with crash recovery; export/import
 - [x] Automated e2e coverage in desktop Chromium and mobile emulation
+- [x] Engine conformance in CI: upstream seed catalogs (3 variants) reproduced exactly; native-vs-WASM replay of saves; source-driven key coverage
+- [x] Saves interchangeable with desktop Brogue CE 1.15.1 (download/import plain `.broguesave`)
+- [x] Content-aware zoom (keeps descriptions, menus and dialogs in view) and a pinned message strip
+- [ ] Phone layout: show sidebar essentials (health, nutrition) while zoomed; consider an immersive mode that hides the shell bar
 - [ ] **Test on physical iOS Safari and Android Chrome**, then fill in the compatibility table
 - [ ] Test Firefox and desktop Safari
 - [ ] Measure peak memory and startup time on a mid-range phone

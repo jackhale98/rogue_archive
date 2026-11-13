@@ -36,6 +36,8 @@ export const Key = {
   RETURN: 0o12,
   DELETE: 0o177,
   TAB: 9,
+  PAGE_UP: 63276,
+  PAGE_DOWN: 63277,
 } as const;
 
 /** Source tile sheet (bin/assets/tiles.png) geometry, from upstream src/platform/tiles.c. */

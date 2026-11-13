@@ -71,6 +71,12 @@ function GameShell({ gameId }: { gameId: string }) {
     if (phase === 'exited') navigate(`/games/${game.id}`);
   }, [phase, game.id]);
 
+  // Give keyboard focus back to the game after shell UI (menu, toolbar) is used,
+  // so the next keystroke goes to the game rather than the last button pressed.
+  const focusGame = () => {
+    mountRef.current?.querySelector<HTMLElement>('canvas, [tabindex]')?.focus({ preventScroll: true });
+  };
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) void document.exitFullscreen();
     else void document.documentElement.requestFullscreen().catch(() => undefined);
@@ -95,7 +101,10 @@ function GameShell({ gameId }: { gameId: string }) {
             <button
               type="button"
               className="tool-button"
-              onClick={() => setViewLabel(adapter.cycleView!())}
+              onClick={() => {
+                setViewLabel(adapter.cycleView!());
+                focusGame();
+              }}
               aria-label="Change zoom"
             >
               <span aria-hidden="true">⤢</span>
@@ -108,6 +117,8 @@ function GameShell({ gameId }: { gameId: string }) {
               className="tool-button"
               onClick={() => keyboardRef.current?.open()}
               aria-label="Open keyboard"
+              // Highlighted (without moving the layout) while the game accepts typed text.
+              data-attention={session.inputContext.textEntry ? 'true' : undefined}
             >
               <span aria-hidden="true">⌨</span>
               <span className="tool-button__label">Keyboard</span>
@@ -117,7 +128,10 @@ function GameShell({ gameId }: { gameId: string }) {
             <button
               type="button"
               className="tool-button"
-              onClick={toggleFullscreen}
+              onClick={() => {
+                toggleFullscreen();
+                focusGame();
+              }}
               aria-label="Toggle full screen"
             >
               <span aria-hidden="true">⛶</span>
@@ -138,15 +152,6 @@ function GameShell({ gameId }: { gameId: string }) {
           ) : null}
         </div>
       </header>
-
-      {running && session.inputContext.textEntry ? (
-        <div className="text-entry-banner" role="status">
-          <span>The game is asking you to type.</span>
-          <button type="button" className="button button--small" onClick={() => keyboardRef.current?.open()}>
-            Open keyboard
-          </button>
-        </div>
-      ) : null}
 
       <div className="play__stage">
         {showTouch && running && adapter.touchLayout ? (
@@ -186,7 +191,10 @@ function GameShell({ gameId }: { gameId: string }) {
       {running && runtime ? (
         <ShellMenu
           open={menuOpen}
-          onClose={() => setMenuOpen(false)}
+          onClose={() => {
+            setMenuOpen(false);
+            focusGame();
+          }}
           onExit={() => void leave()}
           game={game}
           adapter={adapter}

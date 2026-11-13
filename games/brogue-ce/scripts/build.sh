@@ -101,6 +101,15 @@ wait
 rm -rf "$OUT" && mkdir -p "$OUT"
 emcc "${objects[@]}" "${LDFLAGS[@]}" -o "$OUT/brogue.mjs"
 
+# Conformance test harness: the SAME object files linked for Node with direct
+# filesystem access, so upstream's seed catalogs and recordings can be checked
+# against exactly the code we ship (see scripts/test-engine.sh). Not deployed.
+HARNESS="$WORK/harness-$UPSTREAM_COMMIT"
+rm -rf "$HARNESS" && mkdir -p "$HARNESS"
+emcc "${objects[@]}" -O2 -sASYNCIFY=1 -sASYNCIFY_STACK_SIZE=131072 -sSTACK_SIZE=8388608 \
+  -sINITIAL_MEMORY=67108864 -sALLOW_MEMORY_GROWTH=1 -sENVIRONMENT=node -sNODERAWFS=1 \
+  -sEXIT_RUNTIME=1 -lm -o "$HARNESS/brogue-node.cjs"
+
 # Runtime data used by the browser renderer (not by the WASM module).
 cp "$SRC/bin/assets/tiles.png" "$OUT/tiles.png"
 mkdir -p "$OUT/licenses"

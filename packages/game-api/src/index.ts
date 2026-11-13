@@ -202,6 +202,12 @@ export interface GameAdapter {
   readonly commands: readonly GameCommandDescriptor[];
   readonly touchLayout?: TouchControlLayout;
   readonly settings?: readonly GameSettingDescriptor[];
+  /**
+   * File extensions of the game's own save files (e.g. ".broguesave"). Files
+   * with these extensions can be downloaded individually and imported as-is,
+   * so saves move to and from the native desktop game.
+   */
+  readonly nativeSaveExtensions?: readonly string[];
   /** Shown after leaving mid-game: how to continue next time. */
   readonly resumeHint?: string;
 

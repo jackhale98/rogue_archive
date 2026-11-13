@@ -43,7 +43,10 @@ test.describe('Brogue CE', () => {
     await waitForScreenText(page, 'Save this game');
     await page.keyboard.press('Enter');
     await waitForScreenText(page, 'Save game as');
-    await expect(page.getByText('The game is asking you to type.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open keyboard' })).toHaveAttribute(
+      'data-attention',
+      'true',
+    );
     await page.keyboard.press('Enter');
     await waitForScreenText(page, 'Saved.');
     await page.keyboard.press(' ');
@@ -97,6 +100,47 @@ test.describe('Brogue CE', () => {
     await expect(dialog.getByText(/Imported \d+ file/)).toBeVisible();
     await dialog.getByRole('button', { name: 'Back to game' }).click();
     await expect(dialog).toBeHidden();
+  });
+
+  test('downloads a plain .broguesave for desktop Brogue and imports one back', async ({
+    page,
+  }, testInfo) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    await page.keyboard.press('Shift+S');
+    await waitForScreenText(page, 'Save this game');
+    await page.keyboard.press('Enter');
+    await waitForScreenText(page, 'Save game as');
+    await page.keyboard.press('Enter');
+    await waitForScreenText(page, 'Saved.');
+    await page.keyboard.press(' ');
+    await waitForScreenText(page, 'New Game');
+
+    await page.getByRole('button', { name: 'Menu' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Save files for desktop…' }).click();
+    const files = dialog.getByRole('list', { name: 'Save files' });
+    await expect(files).toContainText('.broguesave');
+    const downloadPromise = page.waitForEvent('download');
+    await files.getByRole('button', { name: 'Download' }).first().click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/\.broguesave$/);
+    const path = testInfo.outputPath(download.suggestedFilename());
+    await download.saveAs(path);
+
+    // The same raw file imports back (as a desktop save would), without overwriting the original.
+    await dialog.locator('input[type=file]').setInputFiles(path);
+    await expect(dialog.getByText(/Import the save file/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Import', exact: true }).click();
+    await expect(dialog.getByText(/Imported 1 file/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Back to game' }).click();
+    // Closing the menu hands keyboard focus back to the game.
+    await expect(page.locator('canvas.brogue-canvas')).toBeFocused();
+    await page.keyboard.press('p');
+    await page.keyboard.press('l');
+    // Brogue truncates long names in its list: "... at depth 1 (imp".
+    await waitForScreenText(page, '(imp');
   });
 
   test('shows an actionable error when the runtime is missing', async ({ page }) => {

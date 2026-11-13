@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { glyphRect } from '../adapter/atlas.ts';
+import { cameraFocus, findTextOverlay, messageLines } from '../adapter/camera.ts';
 import { COLS, EventType, Key, ROWS } from '../adapter/constants.ts';
 import {
   BROGUE_COMMANDS,
@@ -86,14 +87,73 @@ describe('computeLayout', () => {
     expect(layout.cellWidth).toBe(12);
   });
 
-  it('keeps the focused cell on screen when zoomed, clamped to the grid edges', () => {
-    const centered = computeLayout(400, 600, 1, 2.2, { x: 50, y: 17 });
+  it('keeps the focus rectangle on screen when zoomed, clamped to the grid edges', () => {
+    const cell = (x: number, y: number) => ({ x, y, width: 1, height: 1 });
+    const centered = computeLayout(400, 600, 1, 2.2, cell(50, 17));
+    expect(centered.zoom).toBeGreaterThan(2);
     const cx = centered.originX + 50.5 * centered.cellWidth;
     expect(Math.abs(cx - 200)).toBeLessThanOrEqual(1);
-    const edge = computeLayout(400, 600, 1, 2.2, { x: 0, y: 0 });
-    expect(edge.originX).toBe(0);
-    const far = computeLayout(400, 600, 1, 2.2, { x: COLS - 1, y: ROWS - 1 });
+    expect(computeLayout(400, 600, 1, 2.2, cell(0, 0)).originX).toBe(0);
+    const far = computeLayout(400, 600, 1, 2.2, cell(COLS - 1, ROWS - 1));
     expect(far.originX + COLS * far.cellWidth).toBe(400);
+  });
+
+  it('zooms out only as far as needed to keep a text overlay in view', () => {
+    const overlay = { x: 21, y: 3, width: 40, height: 20 };
+    const layout = computeLayout(844, 340, 1, 2.2, overlay, 54);
+    expect(layout.zoom).toBeLessThan(2.2);
+    const left = layout.originX + overlay.x * layout.cellWidth;
+    const right = layout.originX + (overlay.x + overlay.width) * layout.cellWidth;
+    const top = layout.originY + overlay.y * layout.cellHeight;
+    const bottom = layout.originY + (overlay.y + overlay.height) * layout.cellHeight;
+    expect(left).toBeGreaterThanOrEqual(0);
+    expect(right).toBeLessThanOrEqual(844);
+    expect(top).toBeGreaterThanOrEqual(54);
+    expect(bottom).toBeLessThanOrEqual(340);
+  });
+
+  it('falls back to the whole screen when the focus is too large to zoom', () => {
+    const layout = computeLayout(844, 340, 1, 2.2, { x: 0, y: 0, width: COLS, height: ROWS }, 54);
+    expect(layout).toMatchObject({ zoom: 1, inset: 0 });
+  });
+});
+
+function frame(text: Record<number, [number, string]>): Uint8Array {
+  const cells = new Uint8Array(COLS * ROWS * 8);
+  for (const [row, [col, line]] of Object.entries(text)) {
+    for (let i = 0; i < line.length; i++) {
+      const offset = (Number(row) * COLS + col + i) * 8;
+      cells[offset] = line.charCodeAt(i);
+      cells[offset + 2] = 200;
+    }
+  }
+  return cells;
+}
+
+describe('camera', () => {
+  it('finds text drawn over the map and ignores map glyphs and the sidebar', () => {
+    expect(findTextOverlay(frame({ 10: [40, '#..kk..#'], 11: [40, '##@..r##'] }))).toBeNull();
+    expect(findTextOverlay(frame({ 5: [0, 'Health Nutrition Strength'] }))).toBeNull();
+    const overlay = findTextOverlay(
+      frame({ 6: [25, 'A goblin conjurer'], 8: [25, 'has 50% chance to hit you'] }),
+    );
+    expect(overlay).toEqual({ x: 23, y: 4, width: 2 + 25 + 2, height: 7 });
+  });
+
+  it('keeps the player and any overlay in focus', () => {
+    expect(cameraFocus(null, null)).toBeNull();
+    const focus = cameraFocus({ x: 70, y: 20 }, { x: 23, y: 4, width: 29, height: 7 })!;
+    expect(focus.x).toBe(23);
+    expect(focus.x + focus.width).toBe(76);
+    expect(focus.y).toBe(4);
+    expect(focus.y + focus.height).toBe(24);
+  });
+
+  it('extracts colored message lines', () => {
+    const lines = messageLines(frame({ 0: [21, 'Welcome, adventurer!'] }));
+    expect(lines[0]!.map((run) => run.text).join('')).toBe('Welcome, adventurer!');
+    expect(lines[0]![0]!.color).toBe('rgb(200,0,0)');
+    expect(lines[1]).toEqual([]);
   });
 });
 

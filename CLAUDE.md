@@ -15,6 +15,7 @@ Guidance for Claude Code in this repository. The full agent rules are in [AGENTS
 pnpm install
 pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm validate:catalog
 pnpm build:brogue && pnpm stage:runtimes      # WASM build (installs pinned emsdk to ~/.cache/rogue-archive)
+pnpm test:engine                              # Brogue conformance: seed catalogs, native vs WASM replay, key coverage (~2 min)
 pnpm dev                                      # http://localhost:5173 (debug hook always on in dev)
 ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 ```

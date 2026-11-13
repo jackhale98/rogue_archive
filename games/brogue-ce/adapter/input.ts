@@ -18,6 +18,9 @@ const SPECIAL_KEYS: Record<string, number> = {
   Enter: Key.RETURN,
   Backspace: Key.DELETE,
   Tab: Key.TAB,
+  // Hotkeys for paging Brogue's file lists (upstream PAGE_UP_KEY / PAGE_DOWN_KEY).
+  PageUp: Key.PAGE_UP,
+  PageDown: Key.PAGE_DOWN,
 };
 
 function keystroke(code: number, ctrl: boolean, shift: boolean): BrogueEventTuple {

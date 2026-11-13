@@ -1,9 +1,10 @@
 import type { CatalogGame } from '@rogue-archive/catalog';
-import type { GameAdapter, GameSettingDescriptor } from '@rogue-archive/game-api';
+import type { GameAdapter, GameSettingDescriptor, SaveFile } from '@rogue-archive/game-api';
 import {
   SAVE_ARCHIVE_EXTENSION,
   decodeSaveArchive,
   encodeSaveArchive,
+  isSafeSavePath,
   type SaveArchive,
 } from '@rogue-archive/game-storage';
 import { useEffect, useRef, useState } from 'react';
@@ -21,8 +22,8 @@ interface Props {
   settings: Record<string, unknown>;
 }
 
-function downloadBytes(bytes: Uint8Array, filename: string): void {
-  const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/json' }));
+function downloadBytes(bytes: Uint8Array, filename: string, type = 'application/json'): void {
+  const url = URL.createObjectURL(new Blob([bytes as Uint8Array<ArrayBuffer>], { type }));
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -38,6 +39,10 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingImport, setPendingImport] = useState<SaveArchive | null>(null);
+  const [pendingIsNative, setPendingIsNative] = useState(false);
+  const [saveFiles, setSaveFiles] = useState<SaveFile[] | null>(null);
+  const nativeExtensions = adapter.nativeSaveExtensions ?? [];
+  const isNativeFile = (name: string) => nativeExtensions.some((ext) => name.toLowerCase().endsWith(ext));
   const [values, setValues] = useState<Record<string, unknown>>(settings);
 
   useEffect(() => {
@@ -56,7 +61,8 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
     setBusy(true);
     setMessage(null);
     try {
-      setMessage({ text: await task() });
+      const text = await task();
+      setMessage(text ? { text } : null);
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : String(error), error: true });
     } finally {
@@ -83,10 +89,36 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
       return `Exported ${files.length} ${files.length === 1 ? 'file' : 'files'}.`;
     });
 
+  const listFiles = () =>
+    run(async () => {
+      if (!adapter.exportSaves) throw new Error('This game does not support save export.');
+      const files = (await adapter.exportSaves()).filter((file) => isNativeFile(file.path));
+      setSaveFiles(files);
+      return files.length === 0 ? 'There are no save files yet.' : '';
+    });
+
   const chooseImport = async (file: File) => {
     setMessage(null);
     try {
-      const archive = await decodeSaveArchive(new Uint8Array(await file.arrayBuffer()), game.id);
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (isNativeFile(file.name)) {
+        // A save file from the desktop game (or downloaded from here), imported byte for byte.
+        if (!isSafeSavePath(file.name) || file.name.includes('/'))
+          throw new Error(`Unsupported file name: ${file.name}`);
+        if (bytes.length > 64 * 1024 * 1024) throw new Error('That file is too large to be a save.');
+        setPendingIsNative(true);
+        setPendingImport({
+          gameId: game.id,
+          gameVersion: 'unknown',
+          sourceRevision: 'unknown',
+          portBuildId: 'unknown',
+          exportedAt: new Date(file.lastModified || Date.now()).toISOString(),
+          files: [{ path: file.name, bytes, modifiedAt: file.lastModified || Date.now() }],
+        });
+        return;
+      }
+      const archive = await decodeSaveArchive(bytes, game.id);
+      setPendingIsNative(false);
       setPendingImport(archive);
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : String(error), error: true });
@@ -120,7 +152,12 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
     <dialog ref={dialogRef} className="shell-menu" aria-labelledby="shell-menu-title" onClose={onClose}>
       <div className="shell-menu__header">
         <h2 id="shell-menu-title">{game.title}</h2>
-        <button type="button" className="button button--quiet" onClick={onClose} autoFocus>
+        <button
+          type="button"
+          className="button button--quiet"
+          onClick={() => dialogRef.current?.close()}
+          autoFocus
+        >
           Back to game
         </button>
       </div>
@@ -140,7 +177,7 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
                       type="button"
                       className="command-list__button"
                       onClick={() => {
-                        onClose();
+                        dialogRef.current?.close();
                         adapter.sendInput({ type: 'command', commandId: command.id });
                       }}
                     >
@@ -159,6 +196,9 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
           <h3 id="menu-saves">Saved games</h3>
           <p className="muted">
             Saves live in this browser. Export them to keep a backup or move them to another device.
+            {nativeExtensions.length > 0
+              ? ` Individual save files (${nativeExtensions.join(', ')}) also work with the desktop game, in both directions.`
+              : ''}
           </p>
           <div className="button-row">
             <button type="button" className="button" disabled={busy} onClick={() => void exportSaves()}>
@@ -167,10 +207,15 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
             <button type="button" className="button" disabled={busy} onClick={() => fileRef.current?.click()}>
               Import saves…
             </button>
+            {nativeExtensions.length > 0 ? (
+              <button type="button" className="button" disabled={busy} onClick={() => void listFiles()}>
+                Save files for desktop…
+              </button>
+            ) : null}
             <input
               ref={fileRef}
               type="file"
-              accept={`${SAVE_ARCHIVE_EXTENSION},application/json`}
+              accept={[SAVE_ARCHIVE_EXTENSION, 'application/json', ...nativeExtensions].join(',')}
               hidden
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -179,7 +224,45 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
               }}
             />
           </div>
-          {pendingImport ? (
+          {saveFiles && saveFiles.length > 0 ? (
+            <ul className="save-file-list" aria-label="Save files">
+              {saveFiles.map((file) => (
+                <li key={file.path}>
+                  <span className="save-file-list__name">{file.path}</span>
+                  <span className="muted">{new Date(file.modifiedAt).toLocaleString()}</span>
+                  <button
+                    type="button"
+                    className="button button--small"
+                    onClick={() => downloadBytes(file.bytes, file.path, 'application/octet-stream')}
+                  >
+                    Download
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {pendingImport && pendingIsNative ? (
+            <div className="import-confirm">
+              <p>
+                Import the save file <strong>{pendingImport.files[0]!.path}</strong>? It will appear in the
+                game's own load menu. An existing file with the same name is kept.
+              </p>
+              <div className="button-row">
+                <button
+                  type="button"
+                  className="button button--primary"
+                  disabled={busy}
+                  onClick={() => void confirmImport()}
+                >
+                  Import
+                </button>
+                <button type="button" className="button button--quiet" onClick={() => setPendingImport(null)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {pendingImport && !pendingIsNative ? (
             <div className="import-confirm">
               <p>
                 Import {pendingImport.files.length} {pendingImport.files.length === 1 ? 'file' : 'files'}{' '}

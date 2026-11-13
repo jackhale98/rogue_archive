@@ -128,6 +128,8 @@ class BrogueAdapter implements GameAdapter {
       appliesOn: 'next-launch',
     },
   ];
+  /** Brogue saves and recordings are plain files that desktop Brogue CE 1.15.1 opens directly. */
+  readonly nativeSaveExtensions = ['.broguesave', '.broguerec'] as const;
   readonly resumeHint =
     'Brogue keeps your unfinished game as “LastGame”. Choose Load Saved Game on the title screen to continue it.';
 

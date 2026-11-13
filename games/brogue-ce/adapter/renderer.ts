@@ -9,6 +9,7 @@
  * pixels so text stays crisp.
  */
 import { buildAtlas, type SourceSheet } from './atlas.ts';
+import { cameraFocus, findTextOverlay, messageLines, type Rect } from './camera.ts';
 import { CELL_BYTES, COLS, MAP_ORIGIN_X, MAP_ORIGIN_Y, ROWS, SHEET } from './constants.ts';
 
 const VERTEX_SHADER = `#version 300 es
@@ -46,8 +47,14 @@ void main() {
 const MIN_CELL_RATIO = 0.42;
 const MAX_CELL_RATIO = 0.75;
 const MAX_CELL_HEIGHT = 160;
+/** CSS pixels: three 16px message lines plus padding. */
+const MESSAGE_STRIP_HEIGHT = 54;
 
 export interface Layout {
+  /** Zoom actually applied (1 = whole screen fits). */
+  zoom: number;
+  /** Device pixels at the top covered by the message strip (0 when it is hidden). */
+  inset: number;
   cellWidth: number;
   cellHeight: number;
   originX: number;
@@ -57,40 +64,64 @@ export interface Layout {
   dpr: number;
 }
 
-/** Pure layout computation, exported for tests. */
+/**
+ * Pure layout computation, exported for tests.
+ *
+ * Without zoom (or without a focus rectangle) the whole 100x34 screen fits.
+ * With zoom, cells grow by up to `zoom`, but never so much that `focus` (the
+ * player's surroundings plus any text Brogue is showing) would not fit below
+ * the `topInsetCss` message strip; the view is centered on `focus`.
+ */
 export function computeLayout(
   cssWidth: number,
   cssHeight: number,
   dpr: number,
   zoom: number,
-  focus: { x: number; y: number } | null,
+  focus: Rect | null,
+  topInsetCss = 0,
 ): Layout {
   const width = Math.max(1, Math.round(cssWidth * dpr));
   const height = Math.max(1, Math.round(cssHeight * dpr));
-  let cellWidth = Math.max(1, Math.floor(width / COLS));
-  let cellHeight = Math.max(1, Math.floor(height / ROWS));
-  if (cellWidth / cellHeight > MAX_CELL_RATIO)
-    cellWidth = Math.max(1, Math.floor(cellHeight * MAX_CELL_RATIO));
-  if (cellWidth / cellHeight < MIN_CELL_RATIO)
-    cellHeight = Math.max(1, Math.floor(cellWidth / MIN_CELL_RATIO));
-  if (zoom > 1) {
-    cellWidth = Math.floor(cellWidth * zoom);
-    cellHeight = Math.floor(cellHeight * zoom);
-  }
-  cellHeight = Math.min(cellHeight, MAX_CELL_HEIGHT);
-  cellWidth = Math.min(cellWidth, Math.floor(MAX_CELL_HEIGHT * MAX_CELL_RATIO));
+  let fitWidth = Math.max(1, Math.floor(width / COLS));
+  let fitHeight = Math.max(1, Math.floor(height / ROWS));
+  if (fitWidth / fitHeight > MAX_CELL_RATIO) fitWidth = Math.max(1, Math.floor(fitHeight * MAX_CELL_RATIO));
+  if (fitWidth / fitHeight < MIN_CELL_RATIO) fitHeight = Math.max(1, Math.floor(fitWidth / MIN_CELL_RATIO));
 
-  const axis = (viewport: number, cells: number, cell: number, focusCell: number | undefined) => {
+  const fit = (): Layout => ({
+    zoom: 1,
+    inset: 0,
+    cellWidth: fitWidth,
+    cellHeight: fitHeight,
+    originX: Math.floor((width - COLS * fitWidth) / 2),
+    originY: Math.floor((height - ROWS * fitHeight) / 2),
+    width,
+    height,
+    dpr,
+  });
+  if (zoom <= 1 || !focus) return fit();
+
+  const inset = Math.round(topInsetCss * dpr);
+  const available = height - inset;
+  const maxZoom = Math.min(width / (focus.width * fitWidth), available / (focus.height * fitHeight));
+  const applied = Math.min(zoom, maxZoom);
+  // Not worth zooming by a few percent: show everything instead.
+  if (applied < 1.15) return fit();
+
+  const cellHeight = Math.min(Math.floor(fitHeight * applied), MAX_CELL_HEIGHT);
+  const cellWidth = Math.min(Math.floor(fitWidth * applied), Math.floor(MAX_CELL_HEIGHT * MAX_CELL_RATIO));
+  const axis = (start: number, size: number, cells: number, cell: number, center: number) => {
     const grid = cells * cell;
-    if (grid <= viewport || focusCell === undefined) return Math.floor((viewport - grid) / 2);
-    const centered = Math.round(viewport / 2 - (focusCell + 0.5) * cell);
-    return Math.min(0, Math.max(viewport - grid, centered));
+    if (grid <= size) return start + Math.floor((size - grid) / 2);
+    const centered = Math.round(start + size / 2 - center * cell);
+    return Math.min(start, Math.max(start + size - grid, centered));
   };
   return {
+    zoom: applied,
+    inset,
     cellWidth,
     cellHeight,
-    originX: axis(width, COLS, cellWidth, focus?.x),
-    originY: axis(height, ROWS, cellHeight, focus?.y),
+    originX: axis(0, width, COLS, cellWidth, focus.x + focus.width / 2),
+    originY: axis(inset, available, ROWS, cellHeight, focus.y + focus.height / 2),
     width,
     height,
     dpr,
@@ -118,7 +149,11 @@ export class BrogueRenderer {
   #layout: Layout | null = null;
   #atlasSize = '';
   #zoom = 1;
-  #focus: { x: number; y: number } | null = null;
+  #focus: Rect | null = null;
+  #messageStrip: HTMLDivElement;
+  #messageSignature = '';
+  #lastCells: Uint8Array | null = null;
+  #player: { x: number; y: number } | null = null;
   #dirty = true;
   #cellsDirty = true;
   #frameRequest = 0;
@@ -145,6 +180,27 @@ export class BrogueRenderer {
       );
     this.#gl = gl;
     container.appendChild(this.canvas);
+    // While zoomed, Brogue's message lines may be off-screen; mirror them here.
+    this.#messageStrip = document.createElement('div');
+    this.#messageStrip.className = 'brogue-messages';
+    this.#messageStrip.setAttribute('aria-live', 'polite');
+    this.#messageStrip.setAttribute('aria-label', 'Messages');
+    this.#messageStrip.hidden = true;
+    this.#messageStrip.style.cssText = [
+      'position:absolute',
+      'top:0',
+      'left:0',
+      'right:0',
+      `height:${MESSAGE_STRIP_HEIGHT}px`,
+      'box-sizing:border-box',
+      'padding:3px 8px',
+      'overflow:hidden',
+      'white-space:pre',
+      'font:12px/16px ui-monospace,Menlo,Consolas,monospace',
+      'background:rgba(0,0,0,0.88)',
+      'border-bottom:1px solid rgba(255,255,255,0.12)',
+    ].join(';');
+    container.appendChild(this.#messageStrip);
     this.canvas.addEventListener('webglcontextlost', this.#onContextLost);
     this.canvas.addEventListener('webglcontextrestored', this.#onContextRestored);
     this.#initGl();
@@ -163,7 +219,14 @@ export class BrogueRenderer {
 
   setZoom(zoom: number): void {
     this.#zoom = zoom;
+    this.#focus = this.#computeFocus();
     this.#scheduleLayout();
+  }
+
+  #computeFocus(): Rect | null {
+    // Only zoomed play needs the camera; skip the frame scan otherwise.
+    if (this.#zoom <= 1 || !this.#lastCells) return null;
+    return cameraFocus(this.#player, findTextOverlay(this.#lastCells));
   }
 
   /** Updates the screen from a frame posted by the worker. */
@@ -180,11 +243,14 @@ export class BrogueRenderer {
       data[bgOffset + dst + 2] = cells[src + 7]!;
       data[bgOffset + dst + 3] = cells[src + 1]!;
     }
-    const focus = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
-    const focusChanged = focus?.x !== this.#focus?.x || focus?.y !== this.#focus?.y;
+    this.#lastCells = cells;
+    this.#player = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
+    const focus = this.#computeFocus();
+    const focusChanged = JSON.stringify(focus) !== JSON.stringify(this.#focus);
     this.#focus = focus;
     this.#cellsDirty = true;
-    if (focusChanged && this.#zoom > 1) this.#updateLayout();
+    if (focusChanged) this.#updateLayout();
+    this.#updateMessageStrip();
     this.#requestDraw();
   }
 
@@ -212,6 +278,7 @@ export class BrogueRenderer {
     gl.deleteProgram(this.#program);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
+    this.#messageStrip.remove();
   }
 
   #onContextLost = (event: Event) => {
@@ -287,16 +354,24 @@ export class BrogueRenderer {
   #updateLayout(): void {
     const rect = this.#container.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    // Zoom follows the player; menus and the title screen (no player) always fit.
-    const zoom = this.#focus ? this.#zoom : 1;
+    // Zoom follows the player (and any text Brogue shows); the title screen and
+    // other screens without a player always fit.
+    const stripHeight = MESSAGE_STRIP_HEIGHT;
     const layout = computeLayout(
       rect.width,
       rect.height,
       window.devicePixelRatio || 1,
-      zoom,
-      zoom > 1 ? this.#focus : null,
+      this.#zoom,
+      this.#focus,
+      stripHeight,
     );
     this.#layout = layout;
+    const showStrip = layout.zoom > 1;
+    if (this.#messageStrip.hidden === showStrip) {
+      this.#messageStrip.hidden = !showStrip;
+      this.#messageSignature = '';
+      this.#updateMessageStrip();
+    }
     if (this.canvas.width !== layout.width || this.canvas.height !== layout.height) {
       this.canvas.width = layout.width;
       this.canvas.height = layout.height;
@@ -322,6 +397,27 @@ export class BrogueRenderer {
     }
     this.#dirty = true;
     this.#requestDraw();
+  }
+
+  #updateMessageStrip(): void {
+    const cells = this.#lastCells;
+    if (this.#messageStrip.hidden || !cells) return;
+    const lines = messageLines(cells);
+    const signature = JSON.stringify(lines);
+    if (signature === this.#messageSignature) return;
+    this.#messageSignature = signature;
+    this.#messageStrip.replaceChildren(
+      ...lines.map((runs) => {
+        const line = document.createElement('div');
+        for (const run of runs) {
+          const span = document.createElement('span');
+          span.textContent = run.text;
+          span.style.color = run.color;
+          line.appendChild(span);
+        }
+        return line;
+      }),
+    );
   }
 
   #requestDraw(): void {

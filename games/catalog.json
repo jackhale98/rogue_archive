@@ -29,8 +29,15 @@
       },
       "interface": ["ascii", "tiles"],
       "renderMode": "tile-map",
-      "input": { "keyboard": true, "mouse": true, "touch": true },
-      "saves": { "local": true, "export": true },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": true
+      },
+      "saves": {
+        "local": true,
+        "export": true
+      },
       "offline": true,
       "tags": ["Classic", "Turn-based", "Permadeath", "Short runs"],
       "adapter": "brogue-ce",
@@ -43,22 +50,50 @@
         "height": 675
       },
       "controlsSummary": [
-        { "keys": "Arrow keys · hjklyubn · numpad", "action": "Move or attack; Shift to run" },
+        {
+          "keys": "Arrow keys · hjklyubn · numpad",
+          "action": "Move or attack; Shift to run"
+        },
         {
           "keys": "Mouse / tap",
           "action": "Hover or tap to inspect and show a path; click or tap again to travel"
         },
-        { "keys": "x", "action": "Explore automatically" },
-        { "keys": "> / <", "action": "Travel to stairs down / up" },
-        { "keys": "i · a · e · r · d · t", "action": "Inventory, apply, equip, remove, drop, throw" },
-        { "keys": "s · z · Z", "action": "Search, rest, rest until better" },
-        { "keys": "S", "action": "Save the game and return to the title screen" },
-        { "keys": "G", "action": "Cycle text, tiles and hybrid display" },
-        { "keys": "?", "action": "Full in-game help" }
+        {
+          "keys": "x",
+          "action": "Explore automatically"
+        },
+        {
+          "keys": "> / <",
+          "action": "Travel to stairs down / up"
+        },
+        {
+          "keys": "i · a · e · r · d · t",
+          "action": "Inventory, apply, equip, remove, drop, throw"
+        },
+        {
+          "keys": "s · z · Z",
+          "action": "Search, rest, rest until better"
+        },
+        {
+          "keys": "S",
+          "action": "Save the game and return to the title screen"
+        },
+        {
+          "keys": "G",
+          "action": "Cycle text, tiles and hybrid display"
+        },
+        {
+          "keys": "?",
+          "action": "Full in-game help"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download a save as a .broguesave that desktop Brogue CE 1.15.1 opens; desktop saves can be imported too"
+        }
       ],
       "knownLimitations": [
         "Not yet tested on physical iOS or Android devices; touch controls are verified only in desktop browser emulation.",
-        "The full 100×34 screen is small on phones; landscape orientation and the zoom control are recommended.",
+        "Brogue's full screen is 100×34 cells, which is small on phones. Use landscape, full screen and the zoom control; when zoomed, the sidebar (health, nearby monsters) is off-screen until you zoom out.",
         "The tile downscaler is a simplified version of Brogue's desktop renderer (no sub-pixel sharpening or wall-top shading), so very small sizes can look softer than on desktop.",
         "Screenshots (the desktop build's Print Screen command) are not supported in the browser."
       ],
@@ -73,9 +108,18 @@
           "result": "partial",
           "notes": "Tap and on-screen controls exercised; not a substitute for a real device."
         },
-        { "environment": "Firefox desktop", "result": "untested" },
-        { "environment": "Safari (macOS / iOS)", "result": "untested" },
-        { "environment": "Chrome for Android", "result": "untested" }
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
       ]
     },
     {
@@ -99,7 +143,11 @@
         "assets": "Tiles and other assets: audit pending"
       },
       "interface": ["ascii", "tiles"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Classic", "Turn-based", "Permadeath"],
       "glyph": "D"
     },
@@ -113,13 +161,20 @@
       "effort": "medium",
       "rationale": "Distinct tactical roguelike; existing browser/WASM work provides a useful starting point.",
       "authors": "Sil-Q maintainers, building on Sil by Dan Hutchison and Kanga",
-      "upstream": { "name": "Sil-Q", "repository": "https://github.com/sil-quirk/sil-q" },
+      "upstream": {
+        "name": "Sil-Q",
+        "repository": "https://github.com/sil-quirk/sil-q"
+      },
       "license": {
         "code": "Distinct licensing route; to be verified",
         "assets": "Existing browser build excludes certain graphics and sound; audit pending"
       },
       "interface": ["ascii"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Tactical", "Turn-based"],
       "glyph": "@"
     },
@@ -134,13 +189,20 @@
       "rationale": "Small, classic terminal roguelike; relatively straightforward integration.",
       "firstReleased": 1980,
       "authors": "Michael Toy, Glenn Wichman, Ken Arnold and later contributors",
-      "upstream": { "name": "Rogue 5.4.4", "repository": "https://github.com/Davidslv/rogue" },
+      "upstream": {
+        "name": "Rogue 5.4.4",
+        "repository": "https://github.com/Davidslv/rogue"
+      },
       "license": {
         "code": "BSD-style license of the later redistributable 5.4.4 source release (to be verified)",
         "assets": "Text-only; included notices to be audited"
       },
       "interface": ["ascii"],
-      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": false,
+        "touch": false
+      },
       "tags": ["Classic", "Historic"],
       "glyph": "R"
     },
@@ -159,9 +221,16 @@
         "website": "https://roguetemple.com/z/hyper/",
         "repository": "https://github.com/zenorogue/hyperrogue"
       },
-      "license": { "code": "To be verified", "assets": "To be verified" },
+      "license": {
+        "code": "To be verified",
+        "assets": "To be verified"
+      },
       "interface": ["graphical"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Puzzle", "Experimental"],
       "glyph": "∞"
     },
@@ -186,7 +255,11 @@
         "assets": "Text-only core; tiles to be audited separately"
       },
       "interface": ["ascii"],
-      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": false,
+        "touch": false
+      },
       "tags": ["Classic", "Turn-based", "Permadeath"],
       "glyph": "@"
     },
@@ -211,7 +284,11 @@
         "assets": "Graphics and sound to be audited separately"
       },
       "interface": ["ascii", "tiles"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Classic", "Turn-based"],
       "glyph": "A"
     },
@@ -226,13 +303,20 @@
       "rationale": "Distinctive Doom-inspired roguelike; Pascal runtime and asset considerations.",
       "firstReleased": 2002,
       "authors": "ChaosForge",
-      "upstream": { "name": "DRL", "repository": "https://github.com/chaosforgeorg/drl" },
+      "upstream": {
+        "name": "DRL",
+        "repository": "https://github.com/chaosforgeorg/drl"
+      },
       "license": {
         "code": "GPL-2.0 (source repository)",
         "assets": "Separate binary game data, graphics and audio; audit pending"
       },
       "interface": ["ascii", "graphical"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Action", "Turn-based"],
       "glyph": "D"
     },
@@ -250,9 +334,16 @@
         "name": "Allure of the Stars",
         "repository": "https://github.com/AllureOfTheStars/Allure"
       },
-      "license": { "code": "To be verified", "assets": "To be verified" },
+      "license": {
+        "code": "To be verified",
+        "assets": "To be verified"
+      },
       "interface": ["ascii"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Sci-fi", "Tactical"],
       "glyph": "*"
     },
@@ -277,7 +368,11 @@
         "assets": "Tilesets, fonts and sounds to be audited individually"
       },
       "interface": ["ascii", "tiles"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "tags": ["Survival", "Open world", "Crafting"],
       "glyph": "C"
     },
@@ -301,7 +396,11 @@
         "assets": "To be verified separately from code"
       },
       "interface": ["graphical"],
-      "input": { "keyboard": true, "mouse": true, "touch": true },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": true
+      },
       "tags": ["Pixel art", "Mobile-friendly"],
       "glyph": "P"
     },
@@ -315,10 +414,20 @@
       "effort": "high",
       "rationale": "Interesting traditional roguelike with a custom C++ engine.",
       "authors": "Timo Kiviluoto and the IVAN community",
-      "upstream": { "name": "IVAN", "repository": "https://github.com/Attnam/ivan" },
-      "license": { "code": "To be verified", "assets": "To be verified" },
+      "upstream": {
+        "name": "IVAN",
+        "repository": "https://github.com/Attnam/ivan"
+      },
+      "license": {
+        "code": "To be verified",
+        "assets": "To be verified"
+      },
       "interface": ["graphical"],
-      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": false,
+        "touch": false
+      },
       "tags": ["Classic", "Detailed combat"],
       "glyph": "I"
     },
@@ -332,10 +441,20 @@
       "effort": "high",
       "rationale": "Atmospheric roguelike; requires additional runtime and licensing investigation.",
       "authors": "Martin Törnqvist and contributors",
-      "upstream": { "name": "Infra Arcana", "repository": "https://github.com/InfraArcana/ia" },
-      "license": { "code": "To be investigated", "assets": "To be investigated" },
+      "upstream": {
+        "name": "Infra Arcana",
+        "repository": "https://github.com/InfraArcana/ia"
+      },
+      "license": {
+        "code": "To be investigated",
+        "assets": "To be investigated"
+      },
       "interface": ["ascii", "tiles"],
-      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": false,
+        "touch": false
+      },
       "tags": ["Horror", "Turn-based"],
       "glyph": "?"
     },
@@ -347,13 +466,20 @@
       "status": "blocked",
       "priority": 100,
       "authors": "DarkGod (Nicolas Casalini) and contributors",
-      "upstream": { "name": "Tales of Maj'Eyal", "website": "https://te4.org/" },
+      "upstream": {
+        "name": "Tales of Maj'Eyal",
+        "website": "https://te4.org/"
+      },
       "license": {
         "code": "GPL-3.0 (engine and game code)",
         "assets": "Official graphics, music and sound are licensed for use with Tales of Maj'Eyal only"
       },
       "interface": ["graphical"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "blockers": [
         "Official graphics, audio and music are granted for use with Tales of Maj'Eyal only; redistribution rights are unresolved."
       ],
@@ -367,10 +493,19 @@
       "status": "blocked",
       "priority": 101,
       "authors": "Joseph Hewitt",
-      "upstream": { "name": "GearHead" },
-      "license": { "code": "To be verified", "assets": "Noncommercial restrictions on assets" },
+      "upstream": {
+        "name": "GearHead"
+      },
+      "license": {
+        "code": "To be verified",
+        "assets": "Noncommercial restrictions on assets"
+      },
       "interface": ["ascii", "graphical"],
-      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "input": {
+        "keyboard": true,
+        "mouse": true,
+        "touch": false
+      },
       "blockers": [
         "Asset licenses carry noncommercial restrictions that are incompatible with open redistribution."
       ],

@@ -72,7 +72,7 @@ test('touch: the on-screen keyboard reaches text prompts', async ({ page }) => {
   await waitForScreenText(page, 'Save this game');
   await page.keyboard.press('Enter');
   await waitForScreenText(page, 'Save game as');
-  await page.getByRole('button', { name: 'Open keyboard' }).first().tap();
+  await page.getByRole('button', { name: 'Open keyboard' }).tap();
   const field = page.getByRole('textbox', { name: 'Type to the game' });
   await expect(field).toBeFocused();
   for (let i = 0; i < 60; i++) await field.press('Backspace');
@@ -80,4 +80,30 @@ test('touch: the on-screen keyboard reaches text prompts', async ({ page }) => {
   await waitForScreenText(page, 'mobile');
   await field.press('Enter');
   await waitForScreenText(page, 'Saved.');
+});
+
+test('touch: zoom never cuts off text Brogue shows over the map', async ({ page }) => {
+  await openBrogue(page);
+  await page.keyboard.press('n');
+  await waitInGame(page);
+  const zoom = page.getByRole('button', { name: 'Change zoom' });
+  // Cycle until the view is zoomed (portrait starts zoomed; landscape starts at fit).
+  for (let i = 0; i < 3 && !(await page.locator('.brogue-messages').isVisible()); i++) await zoom.tap();
+  await expect(page.locator('.brogue-messages')).toBeVisible();
+  await expect(page.locator('.brogue-messages')).toContainText('Dungeons of Doom');
+
+  await page.keyboard.press('i');
+  await waitForScreenText(page, 'more items');
+  const canvas = await page.locator('canvas.brogue-canvas').boundingBox();
+  const line = await findCell(page, 'more items');
+  expect(line).not.toBeNull();
+  const start = await cellCenter(page, { x: line!.x - 25, y: line!.y });
+  const end = await cellCenter(page, { x: line!.x + 'more items.'.length, y: line!.y });
+  for (const point of [start, end]) {
+    expect(point.x).toBeGreaterThanOrEqual(canvas!.x);
+    expect(point.x).toBeLessThanOrEqual(canvas!.x + canvas!.width);
+    expect(point.y).toBeGreaterThanOrEqual(canvas!.y);
+    expect(point.y).toBeLessThanOrEqual(canvas!.y + canvas!.height);
+  }
+  await page.keyboard.press('Escape');
 });
