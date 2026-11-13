@@ -30,6 +30,8 @@ test('phone layout: full-bleed map, status bar, thumb pad and preview-then-trave
   expect(await gameViews(page)).toEqual(['map']);
   await expect(page.locator('.brogue-hud')).toContainText('Depth 1');
   await expect(page.locator('.brogue-hud')).toContainText('Dungeons of Doom');
+  // Nothing is being described, so no "Read" chip is offered.
+  await expect(page.locator('.brogue-chip')).toBeHidden();
   const pad = page.getByRole('group', { name: 'Movement' });
   const dock = page.getByRole('group', { name: 'Actions' });
   await expect(dock.getByRole('button', { name: 'Explore (x)' })).toBeVisible();

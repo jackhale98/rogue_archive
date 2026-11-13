@@ -15,7 +15,7 @@ The shell is in *compact* mode when touch controls are shown and the viewport's 
 | Messages (3 lines) | Brogue's message rows | Colored lines in the status band; tap to open the message log |
 | Flavor line ("You see…") | Row 32 | Small pill above the bottom edge |
 | Text over the map: inventory, dialogs, menus | Detected per frame (`camera.ts`) | **Sheet**: lifted out, scaled up to 30 CSS-px rows, centred over a dimmed map; tap outside = Escape |
-| Descriptions, `--MORE--` boxes | Same detection | Compact, outlined **peek card** (≤ 18 CSS-px rows) placed top, bottom, left or right — whichever keeps the player and the described cell (Brogue's cursor) visible. Tap it to put it away until something new is described. Under a card or sheet the map shows the dungeon as it was before the box appeared, not the box's text |
+| Descriptions (monsters, items), `--MORE--` boxes | Same detection | Not drawn over the map. Brogue's box text is read out of the cells (gaps where map glyphs show through are dropped by comparing with the dungeon from before the box appeared), re-flowed into paragraphs with Brogue's colors, and shown in a full-screen **reader** at a large font. **Long-press** something to open the reader directly; when Brogue shows a description by itself (exploring, combat, a preview tap) a small **"ⓘ … Read" chip** appears under the status band instead, so play is never interrupted. Closing the reader (×, tap outside, Escape) sends nothing to the game. The map shows the dungeon underneath |
 | Sidebar (cols 0–19) | Brogue's screen | **Drawer**, rows in use only, scaled up; tap outside closes |
 | Bottom button row | — | Replaced by the dock |
 

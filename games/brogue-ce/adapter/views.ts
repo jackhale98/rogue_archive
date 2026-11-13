@@ -41,7 +41,12 @@ export interface Insets {
   left: number;
 }
 
-export type OverlayKind = 'none' | 'peek' | 'sheet';
+/**
+ * What to do with text Brogue draws over the map: nothing (title screen), a
+ * modal sheet, a peek card, or 'hidden' (the adapter shows it elsewhere, e.g.
+ * a reader; the map shows what was underneath).
+ */
+export type OverlayKind = 'none' | 'peek' | 'sheet' | 'hidden';
 
 export interface CompactInput {
   /** Canvas size in device pixels. */

@@ -32,7 +32,10 @@ import {
 } from './constants.ts';
 import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
 import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
+import { findTextOverlay } from './camera.ts';
+import { readDescription } from './describe.ts';
 import { BrogueHud } from './hud.ts';
+import { BrogueReader } from './reader.ts';
 import { toLogEntry } from './messages.ts';
 import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from './renderer.ts';
 import type { HitResult, OverlayKind } from './views.ts';
@@ -48,6 +51,8 @@ const ZOOM_STEPS = [
 
 const FLUSH_TIMEOUT_MS = 8000;
 const BUSY_DELAY_MS = 350;
+/** A description appearing this soon after a long-press opens the reader directly. */
+const INSPECT_WINDOW_MS = 2000;
 const LONG_PRESS_MS = 450;
 const TAP_SLOP_PX = 12;
 
@@ -162,6 +167,13 @@ class BrogueAdapter implements GameAdapter {
   #presentation: Presentation | null = null;
   #mount: HTMLElement | null = null;
   #hud: BrogueHud | null = null;
+  #reader: BrogueReader | null = null;
+  /** The description currently drawn by Brogue, and the one the player just read. */
+  #descriptionKey = '';
+  #readTitle: string | null = null;
+  #underlayCells: Uint8Array | null = null;
+  /** When the player last long-pressed to inspect something. */
+  #inspectRequestedAt = Number.NEGATIVE_INFINITY;
   #drawer = false;
   #lastCells: Uint8Array | null = null;
   #modifiers = { shift: false, ctrl: false };
@@ -307,6 +319,8 @@ class BrogueAdapter implements GameAdapter {
     if (!compact) {
       this.#hud?.destroy();
       this.#hud = null;
+      this.#reader?.destroy();
+      this.#reader = null;
       this.#drawer = false;
       renderer.setCompact(null);
       return;
@@ -326,10 +340,19 @@ class BrogueAdapter implements GameAdapter {
     );
     // Menus and dialogs are modal sheets; descriptions shown while exploring are peek cards.
     const context = this.#context;
-    // Menus and yes/no dialogs need an answer: modal sheets. Everything else
-    // (descriptions, --MORE-- prompts) is a card that leaves the map visible.
+    // Menus and yes/no dialogs need an answer: modal sheets. Descriptions and
+    // other boxes go to the reader (offered with a chip, or opened on long-press)
+    // so the map stays fully visible.
     const overlayKind: OverlayKind =
-      context === 'menu' || context === 'yesno' ? 'sheet' : context === 'title' ? 'none' : 'peek';
+      context === 'menu' || context === 'yesno' ? 'sheet' : context === 'title' ? 'none' : 'hidden';
+    if (!this.#reader) {
+      this.#reader = new BrogueReader(mount, (description) => {
+        // Don't offer the box being shown again until it goes away.
+        if (description) this.#readTitle = description.title;
+        this.#reader?.withdraw();
+        this.#renderer?.canvas.focus({ preventScroll: true });
+      });
+    }
     const cursor = this.#state?.cursor;
     renderer.setLook(cursor ? { x: MAP_ORIGIN_X + cursor.x, y: MAP_ORIGIN_Y + cursor.y } : null);
     const stored = Number(this.#settings.mapCellCss);
@@ -342,6 +365,38 @@ class BrogueAdapter implements GameAdapter {
       overlayKind,
       drawer: this.#drawer,
     });
+  }
+
+  /** Offers (or, right after a long-press, opens) a description Brogue drew over the map. */
+  #updateReader(cells: Uint8Array): void {
+    const reader = this.#reader;
+    if (!reader || !this.#hud || this.#renderer?.compact?.overlayKind !== 'hidden') {
+      reader?.withdraw();
+      this.#descriptionKey = '';
+      return;
+    }
+    const overlay = findTextOverlay(cells);
+    if (!overlay) {
+      // Remember the dungeon without a box, to tell a box's text from map glyphs showing through it.
+      this.#underlayCells = cells.slice();
+      reader.withdraw();
+      this.#descriptionKey = '';
+      this.#readTitle = null;
+      return;
+    }
+    const description = readDescription(cells, overlay, this.#underlayCells);
+    if (description.title === this.#readTitle) {
+      reader.withdraw();
+      return;
+    }
+    if (description.key === this.#descriptionKey) return;
+    this.#descriptionKey = description.key;
+    if (performance.now() - this.#inspectRequestedAt < INSPECT_WINDOW_MS) {
+      this.#inspectRequestedAt = Number.NEGATIVE_INFINITY;
+      reader.open(description);
+    } else {
+      reader.offer(description, this.#hud.height);
+    }
   }
 
   #setDrawer(open: boolean): void {
@@ -400,6 +455,8 @@ class BrogueAdapter implements GameAdapter {
     this.#worker = null;
     for (const cleanup of this.#cleanup.splice(0)) cleanup();
     clearTimeout(this.#busyTimer);
+    this.#reader?.destroy();
+    this.#reader = null;
     this.#hud?.destroy();
     this.#hud = null;
     this.#renderer?.destroy();
@@ -448,6 +505,7 @@ class BrogueAdapter implements GameAdapter {
         this.#applyCompact();
         if (this.#hud && message.inGame) {
           this.#hud.update(this.#state, message.cells);
+          this.#updateReader(message.cells);
           const covered = this.#renderer?.views.some((view) => view.name !== 'map') ?? false;
           this.#hud.setFlavorVisible(!covered);
         }
@@ -607,6 +665,7 @@ class BrogueAdapter implements GameAdapter {
           // Long press inspects a cell (hover) without acting on it.
           longPressTimer = setTimeout(() => {
             longPressed = true;
+            this.#inspectRequestedAt = performance.now();
             this.#lastHover = null;
             this.#hover(hit);
           }, LONG_PRESS_MS);
@@ -684,7 +743,13 @@ class BrogueAdapter implements GameAdapter {
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
     canvas.addEventListener('contextmenu', onContextMenu);
+    // Taps on the game are handled as pointer events; suppress the browser's
+    // follow-up compatibility click, which could land on UI that appeared
+    // under the finger in the meantime (e.g. the description chip).
+    const onTouchEnd = (event: TouchEvent) => event.preventDefault();
+    canvas.addEventListener('touchend', onTouchEnd, { passive: false });
     this.#cleanup.push(() => {
+      canvas.removeEventListener('touchend', onTouchEnd);
       clearTimeout(longPressTimer);
       canvas.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerdown', onPointerDown);

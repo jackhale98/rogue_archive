@@ -77,7 +77,7 @@ Decided with the project owner for Brogue and the default for every game (detail
 2. **Recompose the screen from the game's own cells**, don't redesign it:
    - main view (map) full-bleed at a readable size, pinch to resize, drag to look, camera on the player within the area not covered by controls;
    - status band (health etc. from the state snapshot) + latest messages;
-   - text the game draws over the main view: **modal sheet** when an answer is needed (menus, yes/no; tap outside = cancel), otherwise a **compact peek card** that never covers the player or what they're looking at, is tappable to dismiss, and hides the duplicated box from the main view (draw what was underneath);
+   - text the game draws over the main view: **modal sheet** when an answer is needed (menus, yes/no; tap outside = cancel); otherwise (descriptions) read the text out of the cells into a **reader** with large, re-flowed text — opened directly on long-press, offered with a small chip when the game shows it by itself — and draw what was underneath on the main view (Brogue: `adapter/describe.ts`, `reader.ts`). Closing the reader must not send input to the game;
    - side panels (Brogue's sidebar) as a drawer.
 3. **Controls:** context-aware **dock** (tap = main action, long-press fans related actions, slide-and-release to choose) and a floating **thumb pad** (press-and-slide, hold to repeat). Every control sends the game's original keys. Contexts at minimum: exploring, targeting, `--MORE--`-style acknowledgement, yes/no, menus/typing, busy (Stop).
 4. **Message log** from the engine's history.
@@ -126,7 +126,11 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Persist immediately**: periodic syncs lose saves on reload; use IDBFS `autoPersist` plus an explicit flush on hide/exit.
 - **"Text input" flags lie**: Brogue waits in text-input mode for every menu, not just typing. Derive context from several signals (flags + snapshot + on-screen prompts) and test each context.
 - **Text drawn over the main view is in the same buffer** as the map: lifting it into a card means also drawing what was underneath, or it appears twice.
-- **Cards must not hide the action**: place them using both the player's and the cursor's positions; keep them compact.
+- **Don't float text over the action**: Brogue shows descriptions by itself mid-fight. Offer them (chip) instead of opening them; open directly only when the player asked (long-press).
+- **Translucent boxes**: map glyphs show through a box's gaps; compare with the pre-box screen to separate text from map.
+- **`[hidden]` vs author CSS**: a class that sets `display` overrides the `hidden` attribute; add `[hidden]{display:none}` for every element you toggle.
+- **`performance.now()` starts at page load**: initialize "last time X happened" timestamps to `-Infinity`, not 0.
+- **Compatibility clicks**: after a touch, the browser may send a `click` to whatever is now under the finger; suppress it on the game surface (`touchend` → `preventDefault`) and ignore taps on just-appeared UI.
 - **Keys during transitions** are consumed by the game (Brogue's level fade-in): tests must wait for "waiting for input", not just "in game".
 - **Acknowledgement keys differ** per game (Brogue's `--MORE--` takes Space/Escape/click, not Enter).
 - **Focus**: after shell UI (menus, toolbar) return keyboard focus to the game; the shell must not treat the on-screen keyboard field as a shell control *and* forward its keys.
