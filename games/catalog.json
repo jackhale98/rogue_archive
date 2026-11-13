@@ -468,7 +468,7 @@
         },
         {
           "keys": "--More--",
-          "action": "Space continues; a move continues and moves (one key per blow in a fight)"
+          "action": "Continues by itself (Menu → --More-- prompts); with the original wait, Space continues and a move continues and moves"
         },
         {
           "keys": "Menu → Display",

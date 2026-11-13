@@ -127,6 +127,18 @@ class RogueAdapter implements GameAdapter {
       default: 'text',
       appliesOn: 'immediately',
     },
+    {
+      key: 'more',
+      label: '--More-- prompts',
+      description:
+        'Rogue stops with --More-- when a second message comes in the same turn (in a fight, after almost every blow) and waits for Space. Continue automatically skips the wait; every message stays in the status band and the message log.',
+      options: [
+        { value: 'auto', label: 'Continue automatically' },
+        { value: 'wait', label: 'Wait for a key (original)' },
+      ],
+      default: 'auto',
+      appliesOn: 'immediately',
+    },
   ];
   readonly resumeHint =
     'Rogue saves only when you press S (and keeps no save while you play, like the original). Continue a saved game from the start screen.';
@@ -164,6 +176,8 @@ class RogueAdapter implements GameAdapter {
   #pending = new Map<number, (message: FromWorker) => void>();
   #logId = 0;
   #lastMessage = '';
+  /** --More--: continue automatically (the message is logged first), or wait as the original. */
+  #autoMore = true;
   #cleanup: (() => void)[] = [];
   readonly debug: RogueDebugState;
 
@@ -196,6 +210,7 @@ class RogueAdapter implements GameAdapter {
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
     this.#defaultName = String(options.settings.lastName ?? '');
     this.#display = displayOf(options.settings.display);
+    this.#autoMore = options.settings.more !== 'wait';
     this.#runtimeFiles = runtime.files;
     this.#runtimeBaseUrl = runtimeBaseUrl;
 
@@ -381,6 +396,11 @@ class RogueAdapter implements GameAdapter {
   }
 
   applySetting(key: string, value: unknown): void {
+    if (key === 'more') {
+      this.#autoMore = value !== 'wait';
+      if (this.#autoMore && this.#context === 'more') this.#send([32]);
+      return;
+    }
     if (key !== 'display') return;
     this.#display = displayOf(value);
     if (this.#display !== 'text') void this.#loadTiles(this.#display);
@@ -482,6 +502,8 @@ class RogueAdapter implements GameAdapter {
         this.#logMessage(grid);
         this.#publishContext();
         this.#layout();
+        // Each frame is a new screen: at most one Space per --More-- shown.
+        if (this.#autoMore && this.#context === 'more' && this.#state.waiting) this.#send([32]);
         break;
       }
       case 'exit': {

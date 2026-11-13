@@ -65,6 +65,10 @@ test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction p
         (window as unknown as { __rogueArchive: { adapter: { debug: { tileStyle: string | null } } } })
           .__rogueArchive.adapter.debug.tileStyle,
     );
+  // --More-- continues by itself unless the original wait is chosen.
+  await page.getByRole('button', { name: 'Menu' }).tap();
+  await expect(page.getByLabel('--More-- prompts')).toHaveValue('auto');
+  await page.keyboard.press('Escape');
   for (const style of ['tiles', 'one-bit', 'text']) {
     await page.getByRole('button', { name: 'Menu' }).tap();
     await page.getByLabel('Display').selectOption(style);
