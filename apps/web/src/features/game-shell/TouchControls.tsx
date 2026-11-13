@@ -286,7 +286,8 @@ export function ActionDock({
           >
             <button
               type="button"
-              className={`dock-button${action.emphasis === 'primary' ? ' dock-button--primary' : ''}${isOpen ? ' dock-button--open' : ''}`}
+              className={`dock-button${action.emphasis === 'primary' ? ' dock-button--primary' : ''}${isOpen ? ' dock-button--open' : ''}${action.active ? ' dock-button--active' : ''}`}
+              aria-pressed={action.active === undefined ? undefined : action.active}
               aria-label={`${label}${command?.shortcut ? ` (${command.shortcut})` : ''}`}
               aria-haspopup={alternates.length > 0 ? 'menu' : undefined}
               aria-expanded={alternates.length > 0 ? isOpen : undefined}

@@ -25,7 +25,14 @@ const STYLE = `
 .brogue-reader__bar{display:flex;justify-content:flex-end;padding:8px 8px 0}
 .brogue-reader__close{min-width:44px;min-height:44px;border-radius:999px;border:1px solid rgba(236,227,207,.18);background:#1e1a15;
   color:#ece3cf;font-size:20px;line-height:1;cursor:pointer}
-.brogue-reader__body{overflow-y:auto;overscroll-behavior:contain;padding:0 22px 22px;
+.brogue-reader__body{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  padding:0 22px 22px;touch-action:pan-y;
+  /* Soft shadows at the top/bottom edge appear only when there is more text to scroll to. */
+  background:linear-gradient(#16130f 30%,rgba(22,19,15,0)) center top,linear-gradient(rgba(22,19,15,0),#16130f 70%) center bottom,
+    radial-gradient(farthest-side at 50% 0,rgba(0,0,0,.6),rgba(0,0,0,0)) center top,
+    radial-gradient(farthest-side at 50% 100%,rgba(0,0,0,.6),rgba(0,0,0,0)) center bottom;
+  background-repeat:no-repeat;background-size:100% 36px,100% 36px,100% 14px,100% 14px;
+  background-attachment:local,local,scroll,scroll;background-color:#16130f;
   font:clamp(16px,2.3vmin + 8px,19px)/1.55 ui-monospace,Menlo,Consolas,monospace}
 .brogue-reader__body p{margin:0 0 .8em}
 .brogue-reader__body p:first-child{font-weight:700}

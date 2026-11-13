@@ -123,6 +123,8 @@ export interface TouchAction {
   emphasis?: 'primary';
   /** Spans the full dock width (e.g. a lone "Continue"). */
   wide?: boolean;
+  /** For toggles (e.g. a latching Shift): whether it is currently on. */
+  active?: boolean;
 }
 
 /** Declarative touch-control layout. The shell renders it; the adapter interprets it. */

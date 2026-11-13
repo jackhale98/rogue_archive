@@ -160,15 +160,29 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
     category: 'Prompts',
   },
   { id: 'next-target', label: 'Next target', shortcut: 'Tab', keyCode: Key.TAB, category: 'Prompts' },
+  {
+    id: 'shift',
+    label: 'Shift (next action)',
+    shortLabel: 'Shift',
+    shortcut: '⇧',
+    keyCode: -1,
+    category: 'Prompts',
+    description:
+      'Sends the next tap, menu choice or move with Shift: item details in menus, running on the map.',
+  },
   { id: 'yes', label: 'Yes', shortcut: 'y', keyCode: k('y'), category: 'Prompts' },
   { id: 'no', label: 'No', shortcut: 'n', keyCode: k('n'), category: 'Prompts' },
 ];
 
 const COMMANDS_BY_ID = new Map(BROGUE_COMMANDS.map((command) => [command.id, command]));
 
-export function commandToBrogue(commandId: string): BrogueEventTuple | null {
+/** Commands handled by the adapter itself rather than sent as a key. */
+export const ADAPTER_COMMANDS = new Set(['shift']);
+
+export function commandToBrogue(commandId: string, shift = false): BrogueEventTuple | null {
   const command = COMMANDS_BY_ID.get(commandId);
-  return command ? keystroke(command.keyCode, false, false) : null;
+  if (!command || command.keyCode < 0) return null;
+  return keystroke(command.keyCode, false, shift);
 }
 
 export const BROGUE_TOUCH_LAYOUT: TouchControlLayout = {

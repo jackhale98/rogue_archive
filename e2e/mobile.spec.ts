@@ -192,3 +192,22 @@ test('tapping the messages opens the scrollable message log', async ({ page }) =
   await log.getByRole('button', { name: 'Back to game' }).tap();
   await expect(log).toBeHidden();
 });
+
+test('Shift latches for one action: Shift + tap in a menu shows item details instead of using it', async ({
+  page,
+}) => {
+  await newGame(page);
+  await page.keyboard.press('a');
+  await expect.poll(() => gameContext(page)).toBe('menu');
+  await waitForScreenText(page, 'shift for more info');
+  const shift = page.getByRole('button', { name: /^Shift ⓘ/ });
+  await shift.tap();
+  await expect(shift).toHaveAttribute('aria-pressed', 'true');
+
+  // Every new game starts with food in slot a; without Shift, tapping it would eat it.
+  const food = (await findCell(page, 'Some food'))!;
+  const point = await cellCenter(page, { x: food.x + 2, y: food.y });
+  await page.touchscreen.tap(point.x, point.y);
+  await waitForScreenText(page, 'A ration of food');
+  await expect(page.getByRole('button', { name: /^Shift ⓘ/ })).toHaveAttribute('aria-pressed', 'false');
+});

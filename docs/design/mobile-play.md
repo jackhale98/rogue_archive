@@ -29,7 +29,7 @@ All pieces show Brogue's own cells (glyphs, tiles, colours) rendered from the sa
 | Targeting | `<tab>` targeting prompt, or Brogue's keyboard cursor mode | Confirm · Next · Cancel | ✓ (moves the cursor) |
 | `--MORE--` | Shown on screen | One wide Continue | — |
 | Yes/No | Text-input wait with a Yes/No box | Yes · No | — |
-| Menus, typing | Text-input wait (Brogue uses it for every menu) | Back · OK · Type | — |
+| Menus, typing | Text-input wait (Brogue uses it for every menu) | Back · Shift ⓘ · OK · Type | — |
 | Busy (auto-explore, travel, animation) | Engine not waiting for input for >350 ms | Stop | — |
 
 The game-state snapshot (HP, max HP, nutrition, strength, depth, gold, cursor, stairs, input flags) is read in `port/rogue-archive-platform.c` and never written back. Engine conformance tests confirm the game is unchanged.
@@ -38,10 +38,14 @@ The game-state snapshot (HP, max HP, nutrition, strength, depth, gold, cursor, s
 
 A scrollable log of Brogue's full message history (from its own `messageArchive`, read-only), grouped by turn, keeping Brogue's colors and repeat counts. It opens from the Log button (all devices) or by tapping the messages in the status band. It follows new messages while you're at the bottom and stays put while you scroll back, with a "Latest" button. It's a platform feature: any adapter can emit `message-log` events.
 
+## Shift
+
+A latching **Shift** for touch: tap it (it lights up), and the next tap, menu choice, pad direction or command is sent with Shift held, exactly as on a keyboard; then it releases (tap again to cancel). Brogue uses Shift for **item details in menus** ("Apply what? (a-z, shift for more info…)"), **running** (Shift + direction) and cycling targets backwards. It's in the menu dock, as a long-press option on Explore (the slot then shows "Run ⇧" while latched) and on Next when targeting. The game also sees Shift as held while it's latched (`modifierHeld`).
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad**: press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.
-- **ActionDock**: tap = main action. Long-press (340 ms) fans out alternates; slide onto one and release to choose, release on the button to keep the fan open for tapping, release elsewhere to cancel. Optional vibration (Settings → Vibration, off by default).
+- **ActionDock**: toggles (`TouchAction.active`) render as pressed buttons (`aria-pressed`). Tap = main action. Long-press (340 ms) fans out alternates; slide onto one and release to choose, release on the button to keep the fan open for tapping, release elsewhere to cancel. Optional vibration (Settings → Vibration, off by default).
 - Shell commands `shell:palette` and `shell:keyboard` let adapters place "More" and "Type" buttons.
 
 ## Not yet done

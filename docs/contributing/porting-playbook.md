@@ -79,7 +79,7 @@ Decided with the project owner for Brogue and the default for every game (detail
    - status band (health etc. from the state snapshot) + latest messages;
    - text the game draws over the main view: **modal sheet** when an answer is needed (menus, yes/no; tap outside = cancel); otherwise (descriptions) read the text out of the cells into a **reader** with large, re-flowed text — opened directly on long-press, offered with a small chip when the game shows it by itself — and draw what was underneath on the main view (Brogue: `adapter/describe.ts`, `reader.ts`). Closing the reader must not send input to the game;
    - side panels (Brogue's sidebar) as a drawer.
-3. **Controls:** context-aware **dock** (tap = main action, long-press fans related actions, slide-and-release to choose) and a floating **thumb pad** (press-and-slide, hold to repeat). Every control sends the game's original keys. Contexts at minimum: exploring, targeting, `--MORE--`-style acknowledgement, yes/no, menus/typing, busy (Stop).
+3. **Controls:** context-aware **dock** (tap = main action, long-press fans related actions, slide-and-release to choose) and a floating **thumb pad** (press-and-slide, hold to repeat). Every control sends the game's original keys. Contexts at minimum: exploring, targeting, `--MORE--`-style acknowledgement, yes/no, menus/typing, busy (Stop). Modifiers the game uses (Shift, Ctrl) are **latching toggles** that apply to the next action only (Brogue: `#setStickyShift` in `adapter/index.ts`).
 4. **Message log** from the engine's history.
 5. Safe areas: apply `env(safe-area-inset-*)` **once** (the compact shell is edge-to-edge; controls inset themselves).
 

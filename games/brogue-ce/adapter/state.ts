@@ -117,7 +117,10 @@ export function controlsFor(
   context: BrogueContext,
   state: BrogueState,
   palette: string[],
+  shift = false,
 ): TouchControlLayout {
+  // A latching Shift: tap it, then the next action is sent with Shift held.
+  const shiftAction = (label: string) => a('shift', { label, active: shift });
   switch (context) {
     case 'title':
       return { actions: [], palette };
@@ -134,6 +137,8 @@ export function controlsFor(
       return {
         actions: [
           a('cancel', { label: 'Back' }),
+          // In item menus, Shift + choosing an item shows its details instead of using it.
+          shiftAction('Shift ⓘ'),
           a('confirm', { label: 'OK' }),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
         ],
@@ -144,7 +149,7 @@ export function controlsFor(
         directionPad: PAD,
         actions: [
           a('confirm', { label: 'Confirm', emphasis: 'primary' }),
-          a('next-target', { label: 'Next' }),
+          a('next-target', { label: 'Next', alternates: ['shift'] }),
           a('cancel', { label: 'Cancel' }),
         ],
         palette,
@@ -158,7 +163,8 @@ export function controlsFor(
       return {
         directionPad: PAD,
         actions: [
-          a('explore', { alternates: ['descend', 'ascend'] }),
+          // Shift + a move runs until something interesting happens; while latched, show it.
+          shift ? shiftAction('Run ⇧') : a('explore', { alternates: ['descend', 'ascend', 'shift'] }),
           rest,
           a('inventory', { label: 'Pack', alternates: ['apply', 'equip', 'throw', 'unequip', 'drop'] }),
           a(SHELL_COMMAND.palette, { label: 'More' }),

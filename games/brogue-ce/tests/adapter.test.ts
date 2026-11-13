@@ -3,12 +3,15 @@ import { glyphRect } from '../adapter/atlas.ts';
 import { cameraFocus, findTextOverlay, messageLines } from '../adapter/camera.ts';
 import { COLS, EventType, Key, ROWS } from '../adapter/constants.ts';
 import {
+  ADAPTER_COMMANDS,
   BROGUE_COMMANDS,
   BROGUE_TOUCH_LAYOUT,
   commandToBrogue,
   keyToBrogue,
   textToBrogue,
 } from '../adapter/input.ts';
+import { controlsFor, parseState } from '../adapter/state.ts';
+import type { TouchAction } from '@rogue-archive/game-api';
 import { computeLayout } from '../adapter/renderer.ts';
 import { compactViews, hitTest, sheetSource } from '../adapter/views.ts';
 
@@ -56,7 +59,7 @@ describe('commands and text', () => {
       ...BROGUE_TOUCH_LAYOUT.actions.map((action) => (typeof action === 'string' ? action : action.command)),
       ...BROGUE_TOUCH_LAYOUT.palette,
     ];
-    for (const id of ids) if (id) expect(commandToBrogue(id), id).not.toBeNull();
+    for (const id of ids) if (id && !ADAPTER_COMMANDS.has(id)) expect(commandToBrogue(id), id).not.toBeNull();
     expect(commandToBrogue('explore')?.[1]).toBe('x'.charCodeAt(0));
     expect(commandToBrogue('move-nw')?.[1]).toBe('y'.charCodeAt(0));
     expect(commandToBrogue('nope')).toBeNull();
@@ -287,5 +290,32 @@ describe('description card placement', () => {
   it('keeps description text compact', () => {
     const views = compactViews({ ...base, player: { x: 60, y: 20 }, focus: null });
     expect(views.find((view) => view.name === 'peek')!.cellHeight).toBeLessThanOrEqual(18 * 2);
+  });
+});
+
+const shiftOf = (actions: (string | TouchAction)[]) =>
+  actions.find((action) => typeof action === 'object' && action.command === 'shift');
+
+describe('latching Shift', () => {
+  const state = parseState(new Int32Array([20, 30, 1800, 12, 1, 1, 0, -1, -1, 0, 0, 0, 0, 0, 0, 1, 0, 1]));
+
+  it('sends a command with Shift when asked (e.g. running with a move)', () => {
+    expect(commandToBrogue('move-e', true)).toEqual([0, 'l'.charCodeAt(0), 0, 0, 1]);
+    expect(commandToBrogue('shift')).toBeNull();
+  });
+
+  it('offers Shift in menus and shows whether it is latched', () => {
+    const off = shiftOf(controlsFor('menu', state, [], false).actions);
+    const on = shiftOf(controlsFor('menu', state, [], true).actions);
+    expect(off).toMatchObject({ active: false });
+    expect(on).toMatchObject({ active: true });
+  });
+
+  it('shows Run while Shift is latched on the map', () => {
+    const first = controlsFor('map', state, [], true).actions[0];
+    expect(first).toMatchObject({ command: 'shift', label: 'Run ⇧', active: true });
+    const normal = controlsFor('map', state, [], false).actions[0];
+    expect(normal).toMatchObject({ command: 'explore' });
+    expect(typeof normal === 'object' ? normal.alternates : []).toContain('shift');
   });
 });

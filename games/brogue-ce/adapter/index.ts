@@ -177,6 +177,7 @@ class BrogueAdapter implements GameAdapter {
   #drawer = false;
   #lastCells: Uint8Array | null = null;
   #modifiers = { shift: false, ctrl: false };
+  #stickyShift = false;
   #cleanup: (() => void)[] = [];
   readonly debug: BrogueDebugState;
 
@@ -280,17 +281,35 @@ class BrogueAdapter implements GameAdapter {
 
   sendInput(input: GameInput): void {
     let events: BrogueEventTuple[] = [];
+    if (input.type === 'command' && input.commandId === 'shift') {
+      this.#setStickyShift(!this.#stickyShift);
+      return;
+    }
     if (input.type === 'key') {
       this.#setModifiers(input.modifiers.shift, input.modifiers.ctrl);
       const event = keyToBrogue(input);
-      if (event) events = [event];
+      if (event) events = [this.#withStickyShift(event)];
     } else if (input.type === 'text') {
       events = textToBrogue(input.text);
     } else if (input.type === 'command') {
       const event = commandToBrogue(input.commandId);
-      if (event) events = [event];
+      if (event) events = [this.#withStickyShift(event)];
     }
     for (const event of events) this.#post({ type: 'event', event });
+  }
+
+  /** Latching Shift for touch: the next key, command or tap is sent with Shift, then it releases. */
+  #setStickyShift(on: boolean): void {
+    if (on === this.#stickyShift) return;
+    this.#stickyShift = on;
+    this.#post({ type: 'modifiers', shift: on || this.#modifiers.shift, ctrl: this.#modifiers.ctrl });
+    if (this.#context && this.#state) this.#publishContext(this.#context, this.#state);
+  }
+
+  #withStickyShift(event: BrogueEventTuple): BrogueEventTuple {
+    if (!this.#stickyShift) return event;
+    this.#setStickyShift(false);
+    return [event[0], event[1], event[2], event[3], 1];
   }
 
   async persist(): Promise<void> {
@@ -561,7 +580,7 @@ class BrogueAdapter implements GameAdapter {
   }
 
   #publishContext(context: BrogueContext, state: BrogueState): void {
-    const layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette);
+    const layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift);
     const signature = `${context}:${JSON.stringify(layout.actions)}`;
     const contextChanged = context !== this.#context;
     this.#context = context;
@@ -576,10 +595,13 @@ class BrogueAdapter implements GameAdapter {
   }
 
   #sendPointer(type: number, cell: { x: number; y: number }): void {
+    const shift = this.#modifiers.shift || this.#stickyShift;
     this.#post({
       type: 'event',
-      event: [type, cell.x, cell.y, this.#modifiers.ctrl ? 1 : 0, this.#modifiers.shift ? 1 : 0],
+      event: [type, cell.x, cell.y, this.#modifiers.ctrl ? 1 : 0, shift ? 1 : 0],
     });
+    // A latched Shift applies to one whole click (down + up), then releases.
+    if (type === EventType.MOUSE_UP && this.#stickyShift) this.#setStickyShift(false);
   }
 
   #hover(cell: { x: number; y: number }): void {
