@@ -65,6 +65,9 @@ importers:
       '@rogue-archive/game-dcss':
         specifier: workspace:*
         version: link:../../games/dcss
+      '@rogue-archive/game-sil-q':
+        specifier: workspace:*
+        version: link:../../games/sil-q
       '@rogue-archive/game-storage':
         specifier: workspace:*
         version: link:../../packages/game-storage
@@ -100,6 +103,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/game-api
 
+  games/sil-q:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+      '@rogue-archive/term-view':
+        specifier: workspace:*
+        version: link:../../packages/term-view
+
   packages/catalog:
     dependencies:
       zod:
@@ -116,6 +128,8 @@ importers:
       idb:
         specifier: 8.0.4
         version: 8.0.4
+
+  packages/term-view: {}
 
 packages:
 

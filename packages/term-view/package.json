@@ -1,0 +1,11 @@
+{
+  "name": "@rogue-archive/term-view",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Character-grid rendering, views and touch gestures for terminal-style game adapters.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

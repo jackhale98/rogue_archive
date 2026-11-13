@@ -255,7 +255,7 @@
       "title": "Sil-Q",
       "subtitle": "Tactical descent into Angband",
       "description": "A tactical roguelike set in Tolkien's First Age, where stealth, positioning and a single run to steal a Silmaril matter more than loot.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 2,
       "effort": "medium",
       "rationale": "Distinct tactical roguelike; existing browser/WASM work provides a useful starting point.",
@@ -265,17 +265,28 @@
         "repository": "https://github.com/sil-quirk/sil-q"
       },
       "license": {
-        "code": "Distinct licensing route; to be verified",
-        "assets": "Existing browser build excludes certain graphics and sound; audit pending"
+        "code": "GPL-2.0-only (Sil-Q is dual-licensed: GPL-2.0 or the Angband licence; distributed here under GPL-2.0)",
+        "assets": "No graphics, sounds or fonts are shipped: the game is drawn as text with the browser's monospace font",
+        "report": "games/sil-q/LICENSES.md"
       },
       "interface": ["ascii"],
       "input": {
         "keyboard": true,
-        "mouse": true,
-        "touch": false
+        "mouse": false,
+        "touch": true
       },
       "tags": ["Tactical", "Turn-based"],
-      "glyph": "@"
+      "glyph": "@",
+      "version": "1.5.0",
+      "sourceRevision": "09a53ab8b167660742add9ed7842b4c2301737fd",
+      "renderMode": "terminal-fit",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "sil-q",
+      "runtimeManifest": "runtime/sil-q/runtime-manifest.json"
     },
     {
       "id": "rogue",

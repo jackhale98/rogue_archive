@@ -16,6 +16,7 @@
     "@rogue-archive/game-api": "workspace:*",
     "@rogue-archive/game-brogue-ce": "workspace:*",
     "@rogue-archive/game-dcss": "workspace:*",
+    "@rogue-archive/game-sil-q": "workspace:*",
     "@rogue-archive/game-storage": "workspace:*",
     "react": "19.3.1",
     "react-dom": "19.3.1"
