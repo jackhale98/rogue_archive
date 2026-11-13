@@ -36,6 +36,7 @@ import { findTextOverlay } from './camera.ts';
 import { readDescription } from './describe.ts';
 import { BrogueHud } from './hud.ts';
 import { BrogueReader } from './reader.ts';
+import { BrogueTitlePanel, readTitleScreen, showsDungeon } from './title.ts';
 import { toLogEntry } from './messages.ts';
 import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from './renderer.ts';
 import type { HitResult, OverlayKind } from './views.ts';
@@ -168,6 +169,9 @@ class BrogueAdapter implements GameAdapter {
   #mount: HTMLElement | null = null;
   #hud: BrogueHud | null = null;
   #reader: BrogueReader | null = null;
+  #titlePanel: BrogueTitlePanel | null = null;
+  /** Brogue is showing its title screen (see the frame handler). */
+  #atTitle = false;
   /** The description currently drawn by Brogue, and the one the player just read. */
   #descriptionKey = '';
   #readTitle: string | null = null;
@@ -386,6 +390,24 @@ class BrogueAdapter implements GameAdapter {
     });
   }
 
+  /** Phones: the title screen's menu and file picker as large buttons (title.ts). */
+  #updateTitlePanel(cells: Uint8Array): void {
+    const mount = this.#mount;
+    if (!mount) return;
+    if (!this.#presentation?.compact || this.#inGame) {
+      this.#titlePanel?.hide();
+      return;
+    }
+    this.#titlePanel ??= new BrogueTitlePanel(mount, (keys) => {
+      const none = { shift: false, ctrl: false, alt: false, meta: false };
+      for (const key of keys) {
+        const event = keyToBrogue({ type: 'key', key, code: '', modifiers: none });
+        if (event) this.#post({ type: 'event', event });
+      }
+    });
+    this.#titlePanel.update(readTitleScreen(cells));
+  }
+
   /** Offers (or, right after a long-press, opens) a description Brogue drew over the map. */
   #updateReader(cells: Uint8Array): void {
     const reader = this.#reader;
@@ -476,6 +498,8 @@ class BrogueAdapter implements GameAdapter {
     clearTimeout(this.#busyTimer);
     this.#reader?.destroy();
     this.#reader = null;
+    this.#titlePanel?.destroy();
+    this.#titlePanel = null;
     this.#hud?.destroy();
     this.#hud = null;
     this.#renderer?.destroy();
@@ -510,25 +534,35 @@ class BrogueAdapter implements GameAdapter {
   #onWorkerMessage(message: FromWorker): void {
     const host = this.#host;
     switch (message.type) {
-      case 'frame':
-        this.#inGame = message.inGame;
+      case 'frame': {
+        // Brogue's own flags stay "in game" after saving and returning to the
+        // title (saveGame sets gameHasEnded; the title clears it again). The
+        // title menu on screen ends the game for us; the dungeon's depth line
+        // starts it again.
+        const title = readTitleScreen(message.cells);
+        if (title.kind === 'main') this.#atTitle = true;
+        else if (this.#atTitle && message.inGame && showsDungeon(message.cells)) this.#atTitle = false;
+        const inGame = message.inGame && !this.#atTitle;
+        this.#inGame = inGame;
         this.debug.cells = message.cells;
-        this.debug.inGame = message.inGame;
+        this.debug.inGame = inGame;
         this.debug.playerX = message.playerX;
         this.debug.playerY = message.playerY;
         this.debug.graphicsMode = message.mode;
-        this.#renderer?.setFrame(message.cells, message.playerX, message.playerY, message.inGame);
+        this.#renderer?.setFrame(message.cells, message.playerX, message.playerY, inGame);
         this.#state = parseState(message.state);
         this.#lastCells = message.cells;
-        this.debug.context = this.#updateContext(message.inGame, this.#state, message.cells);
+        this.#updateTitlePanel(message.cells);
+        this.debug.context = this.#updateContext(inGame, this.#state, message.cells);
         this.#applyCompact();
-        if (this.#hud && message.inGame) {
+        if (this.#hud && inGame) {
           this.#hud.update(this.#state, message.cells);
           this.#updateReader(message.cells);
           const covered = this.#renderer?.views.some((view) => view.name !== 'map') ?? false;
           this.#hud.setFlavorVisible(!covered);
         }
         break;
+      }
       case 'status':
         host?.emit({ type: 'status', status: message.status });
         break;
@@ -580,7 +614,9 @@ class BrogueAdapter implements GameAdapter {
   }
 
   #publishContext(context: BrogueContext, state: BrogueState): void {
-    const layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift);
+    let layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift);
+    // The title panel has its own large buttons (and Back where it applies).
+    if (context === 'title' && this.#titlePanel?.visible) layout = { ...layout, actions: [] };
     const signature = `${context}:${JSON.stringify(layout.actions)}`;
     const contextChanged = context !== this.#context;
     this.#context = context;

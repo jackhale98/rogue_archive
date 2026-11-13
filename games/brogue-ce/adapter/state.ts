@@ -123,7 +123,16 @@ export function controlsFor(
   const shiftAction = (label: string) => a('shift', { label, active: shift });
   switch (context) {
     case 'title':
-      return { actions: [], palette };
+      // Phones show the title menu as large buttons (title.ts); other title
+      // screens (high scores, the seed prompt) get Back, OK and typing.
+      return {
+        actions: [
+          a('cancel', { label: 'Back' }),
+          a('confirm', { label: 'OK' }),
+          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+        ],
+        palette,
+      };
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop', emphasis: 'primary' })], palette };
     case 'more':

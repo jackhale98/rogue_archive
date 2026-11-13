@@ -16,10 +16,8 @@ const MAP_Y = 3;
 
 async function newGame(page: import('@playwright/test').Page) {
   await openBrogue(page);
-  const newGameCell = await findCell(page, 'New Game');
-  expect(newGameCell).not.toBeNull();
-  const title = await cellCenter(page, { x: newGameCell!.x + 2, y: newGameCell!.y });
-  await page.touchscreen.tap(title.x, title.y);
+  // Phones show Brogue's title menu as large buttons.
+  await page.locator('.brogue-title').getByRole('button', { name: 'New game' }).tap();
   await waitInGame(page);
   await expect.poll(() => gameContext(page)).toBe('map');
 }
@@ -210,4 +208,32 @@ test('Shift latches for one action: Shift + tap in a menu shows item details ins
   await page.touchscreen.tap(point.x, point.y);
   await waitForScreenText(page, 'A ration of food');
   await expect(page.getByRole('button', { name: /^Shift ⓘ/ })).toHaveAttribute('aria-pressed', 'false');
+});
+
+test('title screen: large buttons start, save and load a game', async ({ page }) => {
+  await newGame(page);
+  await expect(page.locator('.brogue-title')).toBeHidden();
+  const before = await player(page);
+  // Save with S: confirm, keep the suggested name, acknowledge.
+  await page.keyboard.press('Shift+S');
+  await waitForScreenText(page, 'Save this game');
+  await page.keyboard.press('Enter');
+  await waitForScreenText(page, 'Save game as');
+  await page.keyboard.press('Enter');
+  await waitForScreenText(page, 'Saved.');
+  await page.keyboard.press(' ');
+
+  // Back at the title, the saved games are a list of large buttons.
+  const panel = page.locator('.brogue-title');
+  await expect(panel.getByRole('button', { name: 'Load saved game' })).toBeVisible();
+  await expect.poll(() => gameContext(page)).toBe('title');
+  await panel.getByRole('button', { name: 'Load saved game' }).tap();
+  await expect(panel.getByRole('heading', { name: 'Saved games' })).toBeVisible();
+  const save = panel.getByRole('button', { name: /Saved CE 1\.15\.1/ });
+  await expect(save).toHaveCount(1);
+  const box = (await save.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  await save.tap();
+  await waitInGame(page);
+  await expect.poll(() => player(page)).toMatchObject({ x: before.x, y: before.y });
 });

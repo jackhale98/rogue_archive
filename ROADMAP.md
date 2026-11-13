@@ -43,6 +43,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Porting playbook (docs/contributing/porting-playbook.md) capturing the Brogue patterns as the standard for future games
 - [x] Descriptions on phones: full-screen reader with re-flowed, colored text (long-press opens; Brogue-initiated boxes offer a "Read" chip instead of covering the map)
 - [x] Latching Shift on touch (item details in menus, running, reverse target cycling); scrollable reader with edge shadows
+- [x] Phone title screen: large buttons for new game, loading saves (a list with dates), recordings, scores, variant and mode
 - [ ] Try it on real phones; tune default map size, dock contents and fan timing from that feedback
 - [ ] iPhone: one-time "Add to Home Screen" hint for full screen
 - [x] Update safety: build reads upstream's Makefile; drift check; weekly canary against latest release and development branch
