@@ -20,6 +20,7 @@ import {
   type GameHost,
   type GameInput,
   type GameModule,
+  type GameSettingDescriptor,
   type InitializeOptions,
   type LogEntry,
   type Presentation,
@@ -33,6 +34,7 @@ import {
   fittedView,
   followView,
   rowText,
+  fitCell,
   type Grid,
   type Rect,
   type View,
@@ -47,6 +49,7 @@ import {
   type RogueContext,
 } from './input.ts';
 import type { FromWorker, SavedGame, ToWorker } from './protocol.ts';
+import { RogueTiles } from './tiles.ts';
 import {
   MESSAGE_ROW,
   STATUS_ROW,
@@ -71,6 +74,8 @@ const STANDOUT = 1;
 export interface RogueDebugState {
   context: RogueContext | null;
   inGame: boolean;
+  /** The map is drawn with tiles now. */
+  tiled: boolean;
   state: RogueState | null;
   saves: string[];
   screenText(): string;
@@ -99,6 +104,20 @@ class RogueAdapter implements GameAdapter {
   };
   readonly commands = ROGUE_COMMANDS;
   readonly touchLayout = ROGUE_TOUCH_LAYOUT;
+  readonly settings: readonly GameSettingDescriptor[] = [
+    {
+      key: 'display',
+      label: 'Display',
+      description:
+        "Text is Rogue's own screen. Tiles draws the map with pictures from the public-domain RLTiles (as Dungeon Crawl Stone Soup's tiles); messages and lists stay text.",
+      options: [
+        { value: 'text', label: 'Text (original)' },
+        { value: 'tiles', label: 'Tiles' },
+      ],
+      default: 'text',
+      appliesOn: 'immediately',
+    },
+  ];
   readonly resumeHint =
     'Rogue saves only when you press S (and keeps no save while you play, like the original). Continue a saved game from the start screen.';
 
@@ -113,6 +132,13 @@ class RogueAdapter implements GameAdapter {
   #playing = false;
   #name = '';
   #defaultName = '';
+  #display: 'text' | 'tiles' = 'text';
+  #tiles: RogueTiles | null = null;
+  #tilesLoading: Promise<void> | null = null;
+  #runtimeFiles: readonly RuntimeFile[] = [];
+  #runtimeBaseUrl = '';
+  /** Whether the map is drawn with tiles for the current screen (worked out in #layout). */
+  #tiledNow = false;
   #saves: SavedGame[] = [];
   #layoutSignature = '';
   #busyTimer: ReturnType<typeof setTimeout> | undefined;
@@ -135,6 +161,7 @@ class RogueAdapter implements GameAdapter {
     this.debug = {
       context: null,
       inGame: false,
+      tiled: false,
       state: null,
       saves: [],
       rowText: row,
@@ -156,6 +183,9 @@ class RogueAdapter implements GameAdapter {
     const stored = Number(options.settings.mapCellCss);
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
     this.#defaultName = String(options.settings.lastName ?? '');
+    this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.#runtimeFiles = runtime.files;
+    this.#runtimeBaseUrl = runtimeBaseUrl;
 
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'rogue' });
     this.#worker = worker;
@@ -184,7 +214,10 @@ class RogueAdapter implements GameAdapter {
     await ready;
     if (signal.aborted) return;
 
-    const renderer = new TermRenderer(options.mount, { inverse: (color) => color === STANDOUT });
+    const renderer = new TermRenderer(options.mount, {
+      inverse: (color) => color === STANDOUT,
+      tile: (code, x, y, view) => this.#tileFor(code, x, y, view),
+    });
     renderer.canvas.classList.add('rogue-canvas');
     renderer.canvas.setAttribute('role', 'img');
     renderer.canvas.setAttribute('aria-label', 'Rogue game screen');
@@ -199,7 +232,34 @@ class RogueAdapter implements GameAdapter {
         pinch: (scale) => this.#zoomBy(scale),
       }),
     );
+    if (this.#display === 'tiles') await this.#loadTiles();
     host.emit({ type: 'status', status: { stage: 'ready' } });
+  }
+
+  /** Downloads the tiles once (when Tiles is first chosen). */
+  #loadTiles(): Promise<void> {
+    this.#tilesLoading ??= RogueTiles.load(this.#runtimeFiles, this.#runtimeBaseUrl)
+      .then((tiles) => {
+        this.#tiles = tiles;
+        this.#layout();
+      })
+      .catch((error: unknown) => {
+        this.#tilesLoading = null;
+        this.#host?.logger.warn('Could not load the tiles; showing text', error);
+      });
+    return this.#tilesLoading;
+  }
+
+  /** Whether the map is drawn with tiles now (chosen, loaded, in a game, no list over it). */
+  #tiled(): boolean {
+    const grid = this.#grid;
+    if (this.#display !== 'tiles' || !this.#tiles || !grid || !this.#state?.inGame) return false;
+    return this.#context === 'map' || !(listBox(grid) ?? mapOverlay(grid));
+  }
+
+  #tileFor(code: number, _x: number, y: number, view: string): readonly CanvasImageSource[] | null {
+    if (view !== 'map' || y < MESSAGE_ROW + 1 || y >= STATUS_ROW || !this.#tiledNow) return null;
+    return this.#tiles?.images(code) ?? null;
   }
 
   async start(): Promise<void> {
@@ -294,7 +354,12 @@ class RogueAdapter implements GameAdapter {
     this.#layout();
   }
 
-  applySetting(): void {}
+  applySetting(key: string, value: unknown): void {
+    if (key !== 'display') return;
+    this.#display = value === 'tiles' ? 'tiles' : 'text';
+    if (this.#display === 'tiles' && !this.#tiles) void this.#loadTiles();
+    this.#layout();
+  }
 
   async exportSaves(): Promise<SaveFile[]> {
     const reply = await this.#request<'exported'>((id) => ({ type: 'export', id }), FLUSH_TIMEOUT_MS * 2);
@@ -496,13 +561,38 @@ class RogueAdapter implements GameAdapter {
     const renderer = this.#renderer;
     const grid = this.#grid;
     if (!renderer || !grid) return;
+    this.#tiledNow = this.#tiled();
+    this.debug.tiled = this.#tiledNow;
     const { width, height } = renderer.size;
     const dpr = renderer.dpr;
     const whole: Rect = { x: 0, y: 0, width: grid.cols, height: grid.rows };
     const presentation = this.#presentation;
     if (!presentation?.compact) {
       this.#setBand(null);
-      renderer.setViews([fittedView('screen', whole, { x: 0, y: 0, width, height })]);
+      if (!this.#tiledNow) {
+        renderer.setViews([fittedView('screen', whole, { x: 0, y: 0, width, height })]);
+        return;
+      }
+      // Tiles: the message and status lines as text, the map between them in square cells.
+      const text = fitCell(whole, width, height);
+      const line = (y: number): Rect => ({ x: 0, y, width: grid.cols, height: 1 });
+      renderer.setViews([
+        fittedView('top', line(MESSAGE_ROW), { x: 0, y: 0, width, height: text.cellHeight }),
+        fittedView(
+          'map',
+          mapRect(grid),
+          { x: 0, y: text.cellHeight, width, height: height - 2 * text.cellHeight },
+          Infinity,
+          {},
+          1,
+        ),
+        fittedView('status', line(STATUS_ROW), {
+          x: 0,
+          y: height - text.cellHeight,
+          width,
+          height: text.cellHeight,
+        }),
+      ]);
       return;
     }
     const state = this.#state;
@@ -519,7 +609,15 @@ class RogueAdapter implements GameAdapter {
       renderer.setViews([fittedView('screen', whole, area)]);
       return;
     }
-    const map = followView('map', mapRect(grid), area, this.#mapCellCss * dpr, heroCell(state), this.#pan);
+    const map = followView(
+      'map',
+      mapRect(grid),
+      area,
+      this.#mapCellCss * dpr,
+      heroCell(state),
+      this.#pan,
+      this.#tiledNow ? 1 : undefined,
+    );
     const views: View[] = [map];
     // Lists (with their "a) " labels), or other text drawn over the map.
     const overlay = this.#context !== 'map' ? (listBox(grid) ?? mapOverlay(grid)) : null;

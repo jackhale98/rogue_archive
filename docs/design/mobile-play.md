@@ -113,7 +113,7 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 
 ## Rogue
 
-Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses standout in reverse video); a start screen (`packages/start-screen`) names the character or continues a saved game.
+Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses standout in reverse video), or with Display: Tiles the map in RLTiles pictures at a readable size; a start screen (`packages/start-screen`) names the character or continues a saved game.
 
 - **Layout on phones:** a status band (Rogue's status line and its message line; tap for the message log), the map at a readable size following the hero (pinch to zoom, drag to look around), lists (inventory, discoveries) as a sheet with tappable lines; long press on the map identifies the symbol there (`/`).
 

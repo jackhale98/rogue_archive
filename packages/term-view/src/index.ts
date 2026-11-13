@@ -53,11 +53,17 @@ export type HitResult =
 /** Width of a character cell relative to its height for typical monospace fonts. */
 export const CELL_RATIO = 0.6;
 
-/** The largest whole-pixel cell that fits `src` inside a box. */
-export function fitCell(src: Rect, width: number, height: number, maxCellHeight = Infinity) {
-  let cellHeight = Math.floor(Math.min(height / src.height, width / src.width / CELL_RATIO, maxCellHeight));
+/** The largest whole-pixel cell that fits `src` inside a box (`ratio`: cell width / height; 1 for tiles). */
+export function fitCell(
+  src: Rect,
+  width: number,
+  height: number,
+  maxCellHeight = Infinity,
+  ratio = CELL_RATIO,
+) {
+  let cellHeight = Math.floor(Math.min(height / src.height, width / src.width / ratio, maxCellHeight));
   cellHeight = Math.max(4, cellHeight);
-  return { cellWidth: Math.max(2, Math.round(cellHeight * CELL_RATIO)), cellHeight };
+  return { cellWidth: Math.max(2, Math.round(cellHeight * ratio)), cellHeight };
 }
 
 /** `src` scaled to fit inside `box` (device pixels) and centred in it. */
@@ -67,8 +73,9 @@ export function fittedView(
   box: Rect,
   maxCellHeight = Infinity,
   extra: Partial<View> = {},
+  ratio = CELL_RATIO,
 ): View {
-  const { cellWidth, cellHeight } = fitCell(src, box.width, box.height, maxCellHeight);
+  const { cellWidth, cellHeight } = fitCell(src, box.width, box.height, maxCellHeight, ratio);
   const width = src.width * cellWidth;
   const height = src.height * cellHeight;
   const x = Math.round(box.x + (box.width - width) / 2);
@@ -99,10 +106,11 @@ export function followView(
   cellHeight: number,
   focus: { x: number; y: number } | null,
   pan: { x: number; y: number } = { x: 0, y: 0 },
+  ratio = CELL_RATIO,
 ): View {
-  const fit = fitCell(src, area.width, area.height);
+  const fit = fitCell(src, area.width, area.height, Infinity, ratio);
   const height = Math.max(fit.cellHeight, Math.round(cellHeight));
-  const width = Math.max(fit.cellWidth, Math.round(height * CELL_RATIO));
+  const width = Math.max(fit.cellWidth, Math.round(height * ratio));
   const axis = (
     start: number,
     size: number,
@@ -161,6 +169,12 @@ export interface RendererOptions {
    * the glyph in the background colour), e.g. curses standout.
    */
   inverse?: (color: number) => boolean;
+  /**
+   * Tiles: the images to draw for a cell instead of its glyph (drawn in
+   * order, e.g. a floor then a monster), or null to draw the glyph. Called
+   * for every non-blank cell of every view.
+   */
+  tile?: (code: number, x: number, y: number, view: string) => readonly CanvasImageSource[] | null;
 }
 
 const DEFAULT_FONT = "'DejaVu Sans Mono', Menlo, Consolas, 'Liberation Mono', monospace";
@@ -184,6 +198,7 @@ export class TermRenderer {
       background: options.background ?? '#000',
       frameColor: options.frameColor ?? 'rgba(224,170,74,0.55)',
       inverse: options.inverse ?? (() => false),
+      tile: options.tile ?? (() => null),
     };
     this.canvas = document.createElement('canvas');
     this.canvas.style.cssText =
@@ -289,6 +304,8 @@ export class TermRenderer {
 
   #paint(): void {
     const ctx = this.#ctx;
+    // Pixel-art tiles stay crisp when scaled.
+    ctx.imageSmoothingEnabled = false;
     const grid = this.#grid;
     ctx.fillStyle = this.#options.background;
     ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -324,6 +341,12 @@ export class TermRenderer {
         const offset = (y * grid.cols + x) * 2;
         const code = grid.cells[offset]!;
         const color = grid.cells[offset + 1]!;
+        const images = code === 32 || code === 0 ? null : this.#options.tile(code, x, y, view.name);
+        if (images) {
+          const px = view.originX + x * view.cellWidth;
+          for (const image of images) ctx.drawImage(image, px, py, view.cellWidth, view.cellHeight);
+          continue;
+        }
         if (this.#options.inverse(color)) {
           ctx.fillStyle = this.#palette[color] ?? '#fff';
           ctx.fillRect(view.originX + x * view.cellWidth, py, view.cellWidth, view.cellHeight);

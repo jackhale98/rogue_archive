@@ -102,6 +102,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Engine conformance: key coverage against `command.c`; native vs WebAssembly replay (screens, scoreboard and savefiles identical)
 - [x] e2e: desktop (moves, inventory, item prompt, log, save, reload, continue) and phone (band, pad, dock, sheet, direction prompt)
 - [x] CI build, deploy, weekly canary
+- [x] Display: Tiles setting (CC0 RLTiles-based tiles from crawl/tiles, pinned; each tile listed in LICENSES.md)
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass
 

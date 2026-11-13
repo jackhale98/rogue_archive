@@ -11,7 +11,8 @@
 #    port/curses.h + curses-web.c (a small curses that hands the screen to the
 #    page) and port/platform.c (the browser's "user", for the home directory).
 # 4. Writes games/rogue/dist with runtime-manifest.json, and links the same
-#    objects for Node as the conformance harness (not deployed).
+#    objects for Node as the conformance harness (not deployed). Copies the
+#    tiles tiles/tiles.json names from the pinned CC0 crawl/tiles export.
 set -euo pipefail
 
 GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -97,6 +98,31 @@ emcc "${game_objects[@]}" "$OBJ/curses-web.o" "${COMMON_LDFLAGS[@]}" \
 
 mkdir -p "$OUT/licenses"
 cp "$SRC/LICENSE.TXT" "$OUT/licenses/Rogue-LICENSE.txt"
+
+# Display: Tiles. The files tiles/tiles.json names, from the pinned CC0 export
+# of Dungeon Crawl Stone Soup's tiles (upstream.env TILES_*), copied as they are.
+TILES="$WORK/tiles-$TILES_COMMIT"
+if [ ! -d "$TILES/.git" ]; then
+  rm -rf "$TILES" && mkdir -p "$TILES"
+  git -C "$TILES" init --quiet
+  git -C "$TILES" remote add origin "$TILES_REPO"
+  git -C "$TILES" fetch --quiet --depth 1 origin "$TILES_COMMIT"
+  git -C "$TILES" checkout --quiet FETCH_HEAD
+fi
+if [ "$(git -C "$TILES" rev-parse HEAD)" != "$TILES_COMMIT" ]; then
+  echo "error: tiles checkout is not at $TILES_COMMIT" >&2
+  exit 1
+fi
+node -e '
+  const map = require(process.argv[1]);
+  const paths = new Set([map.floor, ...Object.values(map.symbols)]);
+  console.log([...paths].join("\n"));
+' "$GAME_DIR/tiles/tiles.json" | while read -r tile; do
+  mkdir -p "$OUT/tiles/$(dirname "$tile")"
+  cp "$TILES/$TILES_RELEASE/$tile" "$OUT/tiles/$tile"
+done
+cp "$TILES/README.md" "$OUT/licenses/crawl-tiles-README.md"
+cp "$TILES/ARTISTS.md" "$OUT/licenses/crawl-tiles-ARTISTS.md"
 
 # Conformance harness: the same game objects for Node, with the curses host
 # bridge written in C (tests/conformance/replay-platform.c) instead of

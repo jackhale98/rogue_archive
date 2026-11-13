@@ -394,10 +394,10 @@
       },
       "license": {
         "code": "BSD-3-Clause (Rogue 5.4.4 source release; state.c and mdport.c by Nicholas J. Kisseberth, xcrypt.c by David Burren, under the same terms)",
-        "assets": "No graphics, sounds or fonts are shipped: the game is drawn as text with the browser's monospace font",
+        "assets": "Optional tiles: CC0 1.0 (Dungeon Crawl Stone Soup's tile export, based on the public-domain RLTiles); otherwise text in the browser's monospace font",
         "report": "games/rogue/LICENSES.md"
       },
-      "interface": ["ascii"],
+      "interface": ["ascii", "tiles"],
       "input": {
         "keyboard": true,
         "mouse": false,
@@ -459,6 +459,10 @@
         {
           "keys": "Phone",
           "action": "Context dock (long-press for related actions), thumb pad, lists and prompts as buttons, More lists every command"
+        },
+        {
+          "keys": "Menu → Display",
+          "action": "Text (original) or Tiles (RLTiles pictures for the map)"
         },
         {
           "keys": "Menu → Save files for desktop",
