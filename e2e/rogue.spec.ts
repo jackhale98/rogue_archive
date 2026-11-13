@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { rogueContext, screenText, startRogue, waitForContext } from './rogue-helpers.ts';
+import { screenText, settle, startRogue, waitForContext } from './rogue-helpers.ts';
 
 test.describe.configure({ timeout: 180_000 });
 
@@ -12,11 +12,12 @@ test('Rogue: new character, moves, inventory, message log, save and continue aft
 
   // Arrow keys move (as hjkl); walking into walls and searching leaves messages.
   for (const key of ['ArrowLeft', 'ArrowLeft', 'ArrowUp', 'ArrowRight', 'ArrowDown']) {
+    await settle(page);
     await page.keyboard.press(key);
-    if ((await rogueContext(page)) === 'more') await page.keyboard.press(' ');
   }
 
   // The inventory is a list; Space closes it.
+  await settle(page);
   await page.keyboard.press('i');
   await waitForContext(page, 'menu');
   await expect.poll(() => screenText(page)).toContain('Some food');
@@ -24,12 +25,14 @@ test('Rogue: new character, moves, inventory, message log, save and continue aft
   await waitForContext(page, 'map');
 
   // An item prompt, cancelled.
+  await settle(page);
   await page.keyboard.press('q');
   await waitForContext(page, 'item');
   await page.keyboard.press('Escape');
   await waitForContext(page, 'map');
 
   // Rogue repeats its last message with Ctrl+P; the shell's log keeps them all.
+  await settle(page);
   await page.keyboard.press('v');
   await expect.poll(() => screenText(page)).toContain('ersion 5.4.4');
   await page.getByRole('button', { name: 'Message log' }).click();
@@ -39,6 +42,7 @@ test('Rogue: new character, moves, inventory, message log, save and continue aft
 
   // Save (S, y): the game ends and the start screen offers to continue it.
   await page.locator('canvas').first().click();
+  await settle(page);
   await page.keyboard.press('Shift+S');
   await waitForContext(page, 'yesno');
   await page.keyboard.press('y');

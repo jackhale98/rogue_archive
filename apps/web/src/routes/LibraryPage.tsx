@@ -13,6 +13,7 @@ import { GameCard } from '../components/GameCard.tsx';
 import { GameCover } from '../components/GameCover.tsx';
 import { StatusBadge } from '../components/StatusBadge.tsx';
 import { EMPTY_FILTERS, librarySections, type LibraryFilters } from '../features/library/filter.ts';
+import { DownloadAll } from '../features/offline/OfflineControls.tsx';
 import { relativeTime } from '../lib/relative-time.ts';
 
 const INTERFACE_LABELS: Record<InterfaceStyle, string> = {
@@ -192,6 +193,9 @@ export function LibraryPage() {
               ? `${resultCount} ${resultCount === 1 ? 'game matches' : 'games match'}`
               : `${all.playable.length} games ready to play · ${catalog.games.length} catalogued`}
           </p>
+        </div>
+        <div className="library-offline">
+          <DownloadAll games={all.playable} />
         </div>
         {showFilters ? <Filters filters={filters} onChange={setFilters} /> : null}
         {sections.playable.length > 0 ? (

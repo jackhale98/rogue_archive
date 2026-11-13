@@ -40,7 +40,8 @@ test('Sil-Q: new character, prompts, message log, save and continue after reload
   }
   await page.getByRole('button', { name: 'Message log' }).click();
   const log = page.getByRole('dialog', { name: 'Messages' });
-  await expect(log).toContainText(/wall in the way|You have found/);
+  // Walking into the dungeon's edges: a wall, a secret door found, or a locked door.
+  await expect(log).toContainText(/wall in the way|You have found|the lock|door/);
   await log.getByRole('button', { name: 'Back to game' }).click();
 
   // Save and quit (Ctrl+X): back at Sil's title menu after the scores.

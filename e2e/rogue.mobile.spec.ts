@@ -17,12 +17,18 @@ test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction p
   // list on screen; settle() gets back to the map before each step.
   const pad = page.getByRole('group', { name: 'Movement' });
   const settle = async () => {
-    for (let i = 0; i < 20; i++) {
+    // The map must be seen twice in a row: the context lags a tap by a moment.
+    let maps = 0;
+    for (let i = 0; i < 40 && maps < 2; i++) {
+      await page.waitForTimeout(150);
       const context = await rogueContext(page);
-      if (context === 'map') return;
+      if (context === 'map') {
+        maps++;
+        continue;
+      }
+      maps = 0;
       if (context === 'more') await dock.getByRole('button', { name: /Continue/ }).tap();
       else if (context !== 'busy') await page.keyboard.press('Escape');
-      await page.waitForTimeout(200);
     }
     await waitForContext(page, 'map', 5_000);
   };

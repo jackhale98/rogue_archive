@@ -1,5 +1,6 @@
 import { isLaunchable, type CatalogGame } from '@rogue-archive/catalog';
 import { href } from '../app/router.ts';
+import { OfflineButton } from '../features/offline/OfflineControls.tsx';
 import { GameCover } from './GameCover.tsx';
 import { StatusBadge } from './StatusBadge.tsx';
 
@@ -37,6 +38,7 @@ export function GameCard({ game }: { game: CatalogGame }) {
             <a className="button button--quiet button--small" href={details}>
               Details<span className="visually-hidden"> about {game.title}</span>
             </a>
+            <OfflineButton game={game} />
           </div>
         ) : null}
       </div>

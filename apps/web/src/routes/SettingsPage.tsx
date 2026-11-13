@@ -6,7 +6,9 @@ import {
   storageStatus,
   type StorageStatus,
 } from '../app/durable-storage.ts';
+import { catalog } from '../app/catalog.ts';
 import { useSettings, type PlatformSettings } from '../app/settings.tsx';
+import { DownloadAll } from '../features/offline/OfflineControls.tsx';
 
 interface Choice<K extends keyof PlatformSettings> {
   key: K;
@@ -182,6 +184,13 @@ export function SettingsPage() {
           </label>
         ))}
       </div>
+
+      <h2 className="section-title">Offline play</h2>
+      <p>
+        A game you have opened once works without a connection. To have them all ready, download them now;
+        each game's card in the library also has a download button.
+      </p>
+      <DownloadAll games={catalog.games} />
 
       <KeepingSaves />
 

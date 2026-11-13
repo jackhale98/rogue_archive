@@ -38,3 +38,26 @@ export async function startRogue(page: Page, name: string): Promise<void> {
   await start.getByRole('button', { name: 'Start' }).click();
   await waitForContext(page, 'map');
 }
+
+/**
+ * Back to the map before the next step. The dungeon is random: a monster can
+ * interrupt with --More-- (Space), and a trap or item can leave a question or
+ * list on screen (Escape). Rogue ignores other keys at --More--. The context
+ * lags a key press by a moment (the game has not answered yet), so the map
+ * must be seen twice in a row, 150 ms apart.
+ */
+export async function settle(page: Page): Promise<void> {
+  let maps = 0;
+  for (let i = 0; i < 40 && maps < 2; i++) {
+    await page.waitForTimeout(150);
+    const context = await rogueContext(page);
+    if (context === 'map') {
+      maps++;
+      continue;
+    }
+    maps = 0;
+    if (context === 'more') await page.keyboard.press(' ');
+    else if (context !== 'busy') await page.keyboard.press('Escape');
+  }
+  await waitForContext(page, 'map', 5_000);
+}

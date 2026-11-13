@@ -46,8 +46,11 @@ test('Sil-Q phone: title buttons, creation by tap, item prompt dock, continue a 
   const menu = page.getByRole('dialog');
   await expect(menu).toBeVisible();
   await menu.getByRole('button', { name: /Save and quit/ }).tap();
-  for (let i = 0; i < 8 && !(await screenText(page)).includes('b) New character'); i++) {
+  // Acknowledge -more- and the scores' "press any key" only while one is on screen: the title
+  // menu can appear between a check and a tap, and OK there would choose its first item (the tutorial).
+  for (let i = 0; i < 16 && !(await screenText(page)).includes('b) New character'); i++) {
     await page.waitForTimeout(500);
+    if (!/-more-|press any key/.test(await screenText(page))) continue;
     const ok = dock.getByRole('button', { name: /^OK|^Continue \(/ }).first();
     if (await ok.isVisible()) await ok.tap();
   }

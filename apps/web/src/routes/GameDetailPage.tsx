@@ -10,13 +10,7 @@ import { gameSettingsScope } from '../app/settings.tsx';
 import { getStore } from '../app/store.ts';
 import { GameCover } from '../components/GameCover.tsx';
 import { StatusBadge } from '../components/StatusBadge.tsx';
-import {
-  downloadForOffline,
-  getOfflineState,
-  offlineSupported,
-  removeOfflineCopy,
-  type OfflineState,
-} from '../features/game-details/offline.ts';
+import { downloadOffline, removeOffline, useOfflineStatus } from '../features/offline/offline-store.ts';
 import {
   formatBytes,
   loadRuntime,
@@ -37,21 +31,12 @@ function yesNo(value: boolean | undefined): string {
   return value ? 'Yes' : 'No';
 }
 
-function OfflineControl({ runtime }: { runtime: LoadedRuntime }) {
-  const [state, setState] = useState<OfflineState | 'checking'>('checking');
-  const [progress, setProgress] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+function OfflineControl({ game, runtime }: { game: CatalogGame; runtime: LoadedRuntime }) {
+  const status = useOfflineStatus(game);
+  const size = formatBytes(runtimeDownloadSize(runtime.manifest));
 
-  useEffect(() => {
-    let cancelled = false;
-    void getOfflineState(runtime).then((next) => !cancelled && setState(next));
-    return () => {
-      cancelled = true;
-    };
-  }, [runtime]);
-
-  if (state === 'checking') return null;
-  if (state === 'unsupported' || !offlineSupported()) {
+  if (status.kind === 'checking') return null;
+  if (status.kind === 'unsupported') {
     return (
       <p className="muted">
         Offline play becomes available after the site has finished installing in this browser.
@@ -59,56 +44,40 @@ function OfflineControl({ runtime }: { runtime: LoadedRuntime }) {
     );
   }
 
-  const download = async () => {
-    setError(null);
-    try {
-      await downloadForOffline(runtime, (done, total) => setProgress(`${done} of ${total} files`));
-      setState(await getOfflineState(runtime));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setState(await getOfflineState(runtime));
-    } finally {
-      setProgress(null);
-    }
-  };
-
-  const remove = async () => {
-    await removeOfflineCopy(runtime);
-    setState(await getOfflineState(runtime));
-  };
-
   return (
     <div className="offline-control">
-      {state === 'downloaded' ? (
+      {status.kind === 'downloaded' ? (
         <>
           <p>
-            <span aria-hidden="true">✓ </span>Available offline (
-            {formatBytes(runtimeDownloadSize(runtime.manifest))}).
+            <span aria-hidden="true">✓ </span>Available offline ({size}).
           </p>
-          <button type="button" className="button button--quiet" onClick={() => void remove()}>
+          <button type="button" className="button button--quiet" onClick={() => void removeOffline(game)}>
             Remove offline copy
           </button>
         </>
       ) : (
         <>
           <p>
-            {state === 'partial' ? 'Partly downloaded. ' : ''}Download{' '}
-            {formatBytes(runtimeDownloadSize(runtime.manifest))} to play without a connection. Saved games are
-            unaffected.
+            {status.kind === 'partial' ? 'Partly downloaded. ' : ''}Download {size} to play without a
+            connection. Saved games are unaffected.
           </p>
           <button
             type="button"
             className="button"
-            disabled={progress !== null}
-            onClick={() => void download()}
+            disabled={status.kind === 'queued' || status.kind === 'downloading'}
+            onClick={() => void downloadOffline(game)}
           >
-            {progress ? `Downloading… ${progress}` : 'Download for offline play'}
+            {status.kind === 'downloading'
+              ? `Downloading… ${status.done} of ${status.total} files`
+              : status.kind === 'queued'
+                ? 'Waiting to download…'
+                : 'Download for offline play'}
           </button>
         </>
       )}
-      {error ? (
+      {status.kind === 'error' ? (
         <p role="alert" className="error-text">
-          {error}
+          {status.message}
         </p>
       ) : null}
     </div>
@@ -299,7 +268,7 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
             Saved games are stored in this browser only. Use <strong>Export saves</strong> from the in-game
             menu to back them up or move them to another device.
           </p>
-          <OfflineControl runtime={runtime} />
+          <OfflineControl game={game} runtime={runtime} />
         </section>
       ) : null}
 

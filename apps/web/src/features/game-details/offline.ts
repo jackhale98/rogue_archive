@@ -1,9 +1,7 @@
 import type { LoadedRuntime } from '../game-shell/runtime.ts';
 
 /** Must match RUNTIME_CACHE in public/sw.js. */
-const RUNTIME_CACHE = 'ra-runtime-v1';
-
-export type OfflineState = 'unsupported' | 'not-downloaded' | 'partial' | 'downloaded';
+export const RUNTIME_CACHE = 'ra-runtime-v1';
 
 function runtimeUrls(runtime: LoadedRuntime): string[] {
   return runtime.manifest.files.map((file) => new URL(file.path, runtime.baseUrl).href);
@@ -11,17 +9,6 @@ function runtimeUrls(runtime: LoadedRuntime): string[] {
 
 export function offlineSupported(): boolean {
   return 'caches' in window && 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null;
-}
-
-export async function getOfflineState(runtime: LoadedRuntime): Promise<OfflineState> {
-  if (!offlineSupported()) return 'unsupported';
-  const cache = await caches.open(RUNTIME_CACHE);
-  const urls = runtimeUrls(runtime);
-  const hits = (await Promise.all(urls.map((url) => cache.match(url, { ignoreVary: true })))).filter(
-    Boolean,
-  ).length;
-  if (hits === 0) return 'not-downloaded';
-  return hits === urls.length ? 'downloaded' : 'partial';
 }
 
 /** Fetches every runtime file through the service worker, which stores them in the runtime cache. */
