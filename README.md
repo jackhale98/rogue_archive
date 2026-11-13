@@ -6,7 +6,8 @@
 |---|---|---|
 | [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Experimental** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. Not yet verified on physical phones. |
 | [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Experimental** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. Not yet verified on physical phones. |
-| Sil-Q, Rogue 5.4.4, HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
+| [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Experimental** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. Not yet verified on physical phones. |
+| Rogue 5.4.4, HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works
 
@@ -25,6 +26,7 @@ Requirements: Node ≥ 22.12, pnpm 10, git and python3 (for the Emscripten SDK, 
 pnpm install
 pnpm build:brogue        # build the Brogue CE WebAssembly runtime (≈1 min)
 pnpm build:dcss          # build the DCSS WebAssembly runtime (≈15–20 min the first time; needs python3-yaml, libpng-dev)
+pnpm build:sil           # build the Sil-Q WebAssembly runtime (<1 min)
 pnpm stage:runtimes      # make built runtimes available to the web app
 pnpm dev                 # http://localhost:5173
 ```

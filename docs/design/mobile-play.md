@@ -84,11 +84,34 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
 
 Upstream's own touch-friendly pieces stay. Tapping the map travels there, the action panel above the map offers one-tap use of consumables, and every menu item and creation choice is tappable. `games/dcss/tests/conformance/key-coverage.ts` checks that each touch command sends the key upstream binds to that command.
 
+## Sil-Q
+
+Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `packages/term-view`).
+
+- **Layout on phones:** a status band (health, voice, depth, the newest message) replaces Sil's sidebar; tapping it opens the message log. The map is drawn at a readable cell size following the player; pinch to zoom, drag to look around (it recentres when the player moves). The title screen and character creation are fitted whole.
+- **Text over the map** (inventory, item lists, menus, the character sheet) opens as a sheet over the dimmed map; tap a line to choose it, tap outside to close (Escape).
+- **Long-press on the map** looks around (`l`).
+
+| Context | Dock |
+|---|---|
+| Title menu and character creation | The screen's lettered choices as buttons; on the title menu, **Continue *name*** for each saved character; OK, Back, Type |
+| "Open saved character" name prompt | The saved characters by name; Type a name, OK, Back |
+| Map | Rest (fan: hold, run, stealth, stairs, pick up) · Fire (fan: second quiver, throw, throw at nearest, sing) · Pack (fan: equipment, wear, take off, eat, drink, use, drop, staffs, instruments, examine) · Doors (fan: close, bash, disarm, tunnel, exchange places, alternate action) · Look (fan: monsters and objects in view, map, character, abilities, smithing, knowledge, messages) · More (every command), plus the pad with Hold in the centre |
+| Item prompt ("Drop which item?") | The item letters; **Show items** (`*`) names them; Worn/Pack (`/`), Floor (`-`) when offered; Cancel |
+| Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type |
+| `-more-` · yes/no | Continue, Skip · Yes, No, Cancel |
+| Direction | The pad; Nearest (`t`, fan: choose a target `*`), Cancel |
+| Look / target | The pad; Target, Next, Cancel |
+| Text field | Type, OK, Cancel |
+
+`games/sil-q/tests/conformance/key-coverage.ts` checks that each command sends the key Sil's `process_command` binds to that action.
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad**: press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.
 - **ActionDock**: toggles (`TouchAction.active`) render as pressed buttons (`aria-pressed`). Tap = main action. Long-press (340 ms) fans out alternates; slide onto one and release to choose, release on the button to keep the fan open for tapping, release elsewhere to cancel. Optional vibration (Settings → Vibration, off by default).
 - Shell commands `shell:palette` and `shell:keyboard` let adapters place "More" and "Type" buttons.
+- Dock buttons cancel `touchend`, so the browser's follow-up click can't land on what the action just opened (e.g. a command in the menu "More" opens under the finger).
 
 ## Not yet done
 

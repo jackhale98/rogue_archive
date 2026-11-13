@@ -79,6 +79,7 @@ for source in "${SOURCES[@]}" ; do
 done
 emcc "${CPPFLAGS[@]}" "${CFLAGS[@]}" -c "$GAME_DIR/port/main-web.c" -o "$OBJ/main-web.o" &
 wait
+game_objects=("${objects[@]}")
 objects+=("$OBJ/main-web.o")
 
 # Game data: lib/ as upstream ships it, minus what the browser build does not
@@ -112,19 +113,24 @@ emcc "${objects[@]}" "${COMMON_LDFLAGS[@]}" \
 
 mkdir -p "$OUT/licenses"
 cp "$SRC/LICENSE.md" "$OUT/licenses/Sil-Q-LICENSE.md"
-cp "$SRC/lib/docs/copying.txt" "$OUT/licenses/Sil-copying.txt"
 
-# Conformance harness: the same objects for Node, with the game data mounted
-# from the stage and a key script standing in for the browser
-# (tests/conformance/replay-hooks.js). Not deployed.
+# Conformance harness: the same game objects for Node, with the display
+# module's host bridge written in C (tests/conformance/replay-platform.c)
+# instead of JavaScript, and the game data mounted from a directory
+# (replay-hooks.js). scripts/test-engine.sh links the same files natively.
+# Not deployed.
 HARNESS="$WORK/harness-$UPSTREAM_COMMIT"
-if [ "${ROGUE_ARCHIVE_HARNESS:-1}" != "0" ] && [ -f "$GAME_DIR/tests/conformance/replay-hooks.js" ]; then
+if [ "${ROGUE_ARCHIVE_HARNESS:-1}" != "0" ]; then
   rm -rf "$HARNESS" && mkdir -p "$HARNESS"
-  emcc "${objects[@]}" "${COMMON_LDFLAGS[@]}" \
+  emcc "${CPPFLAGS[@]}" "${CFLAGS[@]}" -DRA_REPLAY -c "$GAME_DIR/port/main-web.c" -o "$HARNESS/main-web-replay.o"
+  emcc "${CFLAGS[@]}" -c "$GAME_DIR/tests/conformance/replay-platform.c" -o "$HARNESS/replay-platform.o"
+  emcc "${game_objects[@]}" "$HARNESS/main-web-replay.o" "$HARNESS/replay-platform.o" \
+    -O2 -sSTACK_SIZE=4194304 -sINITIAL_MEMORY=67108864 -sALLOW_MEMORY_GROWTH=1 \
     -sENVIRONMENT=node -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lnodefs.js \
-    -sEXPORTED_RUNTIME_METHODS=FS,NODEFS \
+    -sEXPORTED_RUNTIME_METHODS=FS,NODEFS,ENV \
     --pre-js "$GAME_DIR/tests/conformance/replay-hooks.js" \
     -o "$HARNESS/sil-node.cjs"
+  cp -r "$STAGE/lib" "$HARNESS/lib"
 fi
 
 node "$ROOT/tools/write-runtime-manifest.mjs" \

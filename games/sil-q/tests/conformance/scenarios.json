@@ -1,0 +1,40 @@
+{
+  "$comment": "Key scripts replayed by replay.mjs in the native and WebAssembly builds from the same fixed seed. Keys: literal characters, plus {CR} {ESC} {TAB} {SPACE} {BS} and {^X} for Ctrl+X. `expect`: text that must appear in the native output, so a script that goes astray is noticed.",
+  "scenarios": [
+    {
+      "name": "default-character-explore",
+      "keys": [
+        "b{CR}{CR}{CR}{CR}{CR}{CR}{CR}{CR}",
+        "i{ESC}e{ESC}@{ESC}{TAB}{ESC}{^P}{ESC}M{ESC}",
+        ".6.2.4.81111333377779999",
+        "666666222222444444888888",
+        "z{CR}Z{CR}Z&{CR}",
+        "l{ESC}[{ESC}]{ESC}",
+        "33333333111111117777777799999999",
+        "{^S}"
+      ],
+      "expect": ["Orc skirmisher", "50 ft"]
+    },
+    {
+      "name": "random-character-descend",
+      "keys": [
+        "b*{CR}*{CR}{CR}{CR}{CR}{CR}{TAB}{CR}{CR}",
+        ".4.6.8.2.1.3.7.9",
+        "4444444466666666888888882222222211111111333333337777777799999999",
+        "g{ESC}i{ESC}>{CR}",
+        ".4.6.8.2"
+      ],
+      "expect": ["Edain", "50 ft"]
+    },
+    {
+      "name": "tutorial",
+      "keys": ["a{SPACE}{SPACE}{SPACE}", "66666666444444448888888822222222", "l{ESC}x{ESC}s{ESC}{^P}{ESC}"],
+      "expect": ["Laurilfea"]
+    },
+    {
+      "name": "save-and-continue",
+      "keys": ["b{CR}{CR}{CR}{CR}{CR}{CR}{CR}{CR}66", "{^X}{SPACE}{SPACE}", "cnameless{CR}", "44n4488"],
+      "expect": ["Saving game... done.", "Names of the Fallen"]
+    }
+  ]
+}

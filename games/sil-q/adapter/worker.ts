@@ -54,6 +54,32 @@ let wake: (() => void) | null = null;
 let pendingFlushes: number[] = [];
 let syncChain: Promise<void> = Promise.resolve();
 
+let lastSaves = '';
+
+/** Saved characters: Sil names savefiles "<uid>.<name>" (lib/save). */
+function postSaves(): void {
+  if (!mod) return;
+  const { FS } = mod;
+  const dir = `${LIB}/save`;
+  if (!FS.analyzePath(dir).exists) return;
+  const saves: { name: string; mtime: number }[] = [];
+  for (const file of FS.readdir(dir)) {
+    const match = /^\d+\.(.+)$/.exec(file);
+    if (!match) continue;
+    const stat = FS.stat(`${dir}/${file}`);
+    if (!FS.isFile(stat.mode)) continue;
+    saves.push({
+      name: match[1]!,
+      mtime: stat.mtime instanceof Date ? stat.mtime.getTime() : Number(stat.mtime),
+    });
+  }
+  const names = saves.sort((a, b) => b.mtime - a.mtime).map((save) => save.name);
+  const signature = names.join('\n');
+  if (signature === lastSaves) return;
+  lastSaves = signature;
+  post({ type: 'saves', names });
+}
+
 function wakeGame(): void {
   const resolve = wake;
   wake = null;
@@ -178,6 +204,8 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
       cursor: number,
       state: Int32Array,
     ) {
+      // At the title screen (not in the dungeon), keep the list of saved characters current.
+      if (state[0] === 0) postSaves();
       post({ type: 'frame', cols, rows, cells, cursor: { x: cx, y: cy, visible: cursor !== 0 }, state }, [
         cells.buffer,
         state.buffer,
@@ -212,8 +240,8 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
     raPalette(table: Uint8Array) {
       post({ type: 'palette', table }, [table.buffer]);
     },
-    raMessage(_age: number, text: string, color: number) {
-      post({ type: 'message', text, color });
+    raMessage(repeat: boolean, text: string, color: number) {
+      post({ type: 'message', text, color, repeat });
     },
   });
 

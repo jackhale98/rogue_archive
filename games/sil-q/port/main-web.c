@@ -17,7 +17,6 @@
 #include "angband.h"
 #include "main.h"
 
-#include <emscripten.h>
 #include <string.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -64,7 +63,13 @@ static int state[ST_FIELDS];
 static bool waiting = FALSE;
 
 /* ------------------------------------------------------------------------- */
-/* JavaScript bridge. The worker installs these hooks on `Module`. */
+/*
+ * The host bridge. In the browser the worker installs these hooks on
+ * `Module`; the conformance harness (RA_REPLAY) defines them in C instead
+ * (tests/conformance/replay-platform.c), so the same module runs natively.
+ */
+#ifndef RA_REPLAY
+#include <emscripten.h>
 
 EM_JS(void, ra_present, (const byte *cells, int cols, int rows, int cx, int cy, int cursor,
                          const int *state, int stateLen), {
@@ -89,17 +94,49 @@ EM_JS(void, ra_palette, (const byte *table, int count), {
     Module.raPalette(HEAPU8.slice(table, table + count * 4));
 });
 
-EM_JS(void, ra_message, (int index, const char *text, int color), {
-    Module.raMessage(index, UTF8ToString(text), color);
+/* A new message, or (repeat) a new text for the newest one. */
+EM_JS(void, ra_message, (int repeat, const char *text, int color), {
+    Module.raMessage(repeat !== 0, UTF8ToString(text), color);
 });
+#else
+void ra_present(const byte *cells, int cols, int rows, int cx, int cy, int cursor,
+                const int *state, int stateLen);
+int ra_poll_key(void);
+void ra_wait_for_key(void);
+void ra_flush_keys(void);
+void ra_sleep(int ms);
+void ra_service(void);
+void ra_palette(const byte *table, int count);
+void ra_message(int repeat, const char *text, int color);
+#endif
 
 /* ------------------------------------------------------------------------- */
 
-/* Sends messages added since the last refresh (Sil keeps up to MESSAGE_MAX). */
+/* Length of a message without the " <Nx>" Sil appends to repeats. */
+static size_t message_base_len(cptr text)
+{
+    size_t len = strlen(text);
+    cptr mark = strrchr(text, '<');
+    if (mark && mark > text && mark[-1] == ' ' && len >= 2 && text[len - 1] == '>' && text[len - 2] == 'x')
+        return (size_t)(mark - 1 - text);
+    return len;
+}
+
+static bool same_message(cptr a, cptr b)
+{
+    size_t len = message_base_len(a);
+    return len == message_base_len(b) && strncmp(a, b, len) == 0;
+}
+
+/*
+ * Sends messages added since the last refresh (Sil keeps up to MESSAGE_MAX).
+ * A message repeating the newest one is merged by Sil ("... <2x>"); it is
+ * sent as a replacement for the newest entry.
+ */
 static void send_messages(void)
 {
     static s16b last_count = 0;
-    static char last_newest[256] = "";
+    static char last_newest[1024] = "";
     s16b count = message_num();
     int fresh = 0;
 
@@ -109,13 +146,20 @@ static void send_messages(void)
     }
     else if (count > 0 && strcmp(message_str(0), last_newest) != 0)
     {
-        /* The ring is full (count stays at its maximum): find the newest
-         * message we already sent. */
-        int age;
-        for (age = 0; age < count && age < 64; age++)
-            if (strcmp(message_str(age), last_newest) == 0)
-                break;
-        fresh = age;
+        if (same_message(message_str(0), last_newest))
+        {
+            ra_message(1, message_str(0), message_color(0));
+        }
+        else
+        {
+            /* The ring is full (count stays at its maximum): find the newest
+             * message we already sent. */
+            int age;
+            for (age = 0; age < count && age < 64; age++)
+                if (same_message(message_str(age), last_newest))
+                    break;
+            fresh = age;
+        }
     }
     if (count > 0)
         my_strcpy(last_newest, message_str(0), sizeof(last_newest));
@@ -123,12 +167,13 @@ static void send_messages(void)
     if (fresh > 64)
         fresh = 64;
     for (int age = fresh - 1; age >= 0; age--)
-        ra_message(age, message_str(age), message_color(age));
+        ra_message(0, message_str(age), message_color(age));
 }
 
 static void present(void)
 {
-    state[ST_IN_DUNGEON] = character_dungeon ? 1 : 0;
+    /* character_dungeon stays set at the title menu after a game ends. */
+    state[ST_IN_DUNGEON] = (character_dungeon && p_ptr->playing) ? 1 : 0;
     state[ST_HP] = p_ptr->chp;
     state[ST_MAX_HP] = p_ptr->mhp;
     state[ST_VOICE] = p_ptr->csp;

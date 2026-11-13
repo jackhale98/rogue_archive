@@ -353,6 +353,10 @@ export function ActionDock({
                 }
               }}
               onContextMenu={(event) => event.preventDefault()}
+              // The action runs on pointerup. Cancelling the touch stops the browser's
+              // follow-up click, which would otherwise land on whatever the action
+              // opened under the finger (e.g. a command in the menu "More" opens).
+              onTouchEnd={(event) => event.preventDefault()}
             >
               <span className="dock-button__label">{label}</span>
               {command?.shortcut ? <kbd className="dock-button__key">{command.shortcut}</kbd> : null}

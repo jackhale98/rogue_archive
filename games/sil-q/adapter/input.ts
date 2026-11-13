@@ -201,14 +201,6 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
     keys: [ctrl('t')],
     category: 'Combat',
   },
-  {
-    id: 'target',
-    label: 'Target a monster or place',
-    shortLabel: 'Target',
-    shortcut: '*',
-    keys: k('*'),
-    category: 'Combat',
-  },
   { id: 'sing', label: 'Sing a song', shortLabel: 'Sing', shortcut: 's', keys: k('s'), category: 'Combat' },
 
   { id: 'inventory', label: 'Inventory', shortLabel: 'Pack', shortcut: 'i', keys: k('i'), category: 'Items' },
@@ -269,6 +261,14 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
   },
 
   {
+    id: 'fletchery',
+    label: 'Make arrows (fletchery)',
+    shortLabel: 'Fletch',
+    shortcut: '-',
+    keys: k('-'),
+    category: 'Items',
+  },
+  {
     id: 'look',
     label: 'Look around',
     shortLabel: 'Look',
@@ -290,6 +290,22 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
     shortLabel: 'Locate',
     shortcut: 'L',
     keys: k('L'),
+    category: 'Information',
+  },
+  {
+    id: 'monsters',
+    label: 'Monsters in view',
+    shortLabel: 'Monsters',
+    shortcut: '[',
+    keys: k('['),
+    category: 'Information',
+  },
+  {
+    id: 'objects',
+    label: 'Objects in view',
+    shortLabel: 'Objects',
+    shortcut: ']',
+    keys: k(']'),
     category: 'Information',
   },
   {
@@ -381,6 +397,22 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
   { id: 'yes', label: 'Yes', shortLabel: 'Yes', shortcut: 'y', keys: k('y'), category: 'Keys' },
   { id: 'no', label: 'No', shortLabel: 'No', shortcut: 'n', keys: k('n'), category: 'Keys' },
   {
+    id: 'switch-items',
+    label: 'Switch between pack and worn items',
+    shortLabel: 'Worn/Pack',
+    shortcut: '/',
+    keys: k('/'),
+    category: 'Keys',
+  },
+  {
+    id: 'floor-item',
+    label: 'The item on the floor',
+    shortLabel: 'Floor',
+    shortcut: '-',
+    keys: k('-'),
+    category: 'Keys',
+  },
+  {
     id: 'next-target',
     label: 'Next target',
     shortLabel: 'Next',
@@ -435,31 +467,65 @@ export const SIL_TOUCH_LAYOUT: TouchControlLayout = {
 };
 
 export type SilContext =
-  'title' | 'map' | 'more' | 'yesno' | 'direction' | 'targeting' | 'menu' | 'text' | 'screen' | 'busy';
+  | 'title'
+  | 'load'
+  | 'map'
+  | 'more'
+  | 'yesno'
+  | 'direction'
+  | 'targeting'
+  | 'item'
+  | 'menu'
+  | 'text'
+  | 'screen'
+  | 'busy';
 
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
 /** A lettered choice on screen, as a dock button (its key is sent). */
 export const CHOOSE = 'choose:';
+/** A saved character, as a dock button (its name is typed). */
+export const LOAD = 'load:';
 
 /** The dock for each context. `choices` are lettered options shown on screen. */
 export function controlsFor(
   context: SilContext,
   state: { hp: number; maxHp: number; run: boolean },
   choices: { key: string; label: string }[] = [],
+  item: { canShow: boolean; switchTo: string | null; floor: boolean } | null = null,
+  saves: readonly string[] = [],
 ): TouchControlLayout {
+  const saveButtons = (label: (name: string) => string) =>
+    saves.slice(0, 4).map((name) => a(`${LOAD}${name}`, { label: label(name), wide: true }));
   const choiceButtons = choices
     .slice(0, 8)
-    .map((choice) => a(`${CHOOSE}${choice.key}`, { label: `${choice.key}) ${choice.label}` }));
+    .map((choice) =>
+      a(`${CHOOSE}${choice.key}`, { label: choice.label ? `${choice.key}) ${choice.label}` : choice.key }),
+    );
   switch (context) {
     case 'title':
-      // Title and character creation: the screen's choices as large buttons.
+      // Title and character creation: the screen's choices as large buttons;
+      // on the main menu, saved characters can be continued directly.
       return {
         actions: [
+          ...(choices.some((choice) => /Open saved character/.test(choice.label))
+            ? saveButtons((name) => `Continue ${name}`)
+            : []),
           ...choiceButtons,
           a('confirm', { label: 'OK', emphasis: 'primary' }),
           a('cancel', { label: 'Back' }),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+        ],
+        palette: PALETTE,
+      };
+    case 'load':
+      // "Open saved character": the saved characters by name.
+      return {
+        actions: [
+          ...saveButtons((name) => name),
+          a(SHELL_COMMAND.keyboard, { label: 'Type a name', emphasis: saves.length ? undefined : 'primary' }),
+          a('confirm', { label: 'OK' }),
+          a('cancel', { label: 'Back' }),
         ],
         palette: PALETTE,
       };
@@ -488,7 +554,7 @@ export function controlsFor(
       return {
         directionPad: PAD,
         actions: [
-          a('select-target', { label: 'At target', alternates: ['list'] }),
+          a('select-target', { label: 'Nearest', emphasis: 'primary', alternates: ['list'] }),
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
@@ -499,6 +565,22 @@ export function controlsFor(
         actions: [
           a('select-target', { emphasis: 'primary' }),
           a('next-target'),
+          a('cancel', { label: 'Cancel' }),
+        ],
+        palette: PALETTE,
+      };
+    case 'item':
+      // "Drop which item?": the items as buttons (named once the list is shown).
+      return {
+        actions: [
+          ...choiceButtons,
+          ...(item?.canShow && choices.every((choice) => choice.label.length <= 1)
+            ? [a('list', { label: 'Show items', emphasis: 'primary' as const })]
+            : []),
+          ...(item?.switchTo
+            ? [a('switch-items', { label: item.switchTo === 'Equip' ? 'Worn' : 'Pack' })]
+            : []),
+          ...(item?.floor ? [a('floor-item', { label: 'Floor' })] : []),
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
@@ -526,7 +608,7 @@ export function controlsFor(
                 ...(wounded ? { emphasis: 'primary' as const } : {}),
                 alternates: ['hold', 'run', 'stealth', 'downstairs', 'upstairs', 'pickup'],
               }),
-          a('fire', { alternates: ['fire-2', 'throw', 'throw-nearest', 'target', 'sing'] }),
+          a('fire', { alternates: ['fire-2', 'throw', 'throw-nearest', 'sing'] }),
           a('inventory', {
             alternates: [
               'equipment',
@@ -545,7 +627,18 @@ export function controlsFor(
             label: 'Doors',
             alternates: ['close', 'bash', 'disarm', 'tunnel', 'exchange', 'alternate'],
           }),
-          a('look', { alternates: ['map', 'character', 'abilities', 'smithing', 'knowledge', 'messages'] }),
+          a('look', {
+            alternates: [
+              'monsters',
+              'objects',
+              'map',
+              'character',
+              'abilities',
+              'smithing',
+              'knowledge',
+              'messages',
+            ],
+          }),
           a(SHELL_COMMAND.palette, { label: 'More' }),
         ],
         palette: PALETTE,

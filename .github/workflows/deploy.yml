@@ -47,6 +47,10 @@ jobs:
         run: pnpm build:dcss
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
+      - name: Build Sil-Q runtime
+        run: pnpm build:sil
+        env:
+          ROGUE_ARCHIVE_HARNESS: '0'
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

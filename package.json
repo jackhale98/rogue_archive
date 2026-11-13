@@ -14,7 +14,9 @@
     "preview": "pnpm --filter @rogue-archive/web preview",
     "build:dcss": "bash games/dcss/scripts/build.sh",
     "test:engine:dcss": "bash games/dcss/scripts/test-engine.sh",
+    "test:engine:sil": "bash games/sil-q/scripts/test-engine.sh",
     "build:brogue": "games/brogue-ce/scripts/build.sh",
+    "build:sil": "bash games/sil-q/scripts/build.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
     "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
     "typecheck": "tsc -p tsconfig.json",
@@ -26,7 +28,8 @@
     "e2e": "playwright test",
     "test:engine": "games/brogue-ce/scripts/test-engine.sh",
     "canary:dcss": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/dcss/scripts/build.sh && games/dcss/scripts/test-engine.sh\"",
-    "canary:brogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/brogue-ce/scripts/build.sh && games/brogue-ce/scripts/test-engine.sh\""
+    "canary:brogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/brogue-ce/scripts/build.sh && games/brogue-ce/scripts/test-engine.sh\"",
+    "canary:sil": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/sil-q/scripts/build.sh && games/sil-q/scripts/test-engine.sh\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

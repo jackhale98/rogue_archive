@@ -259,7 +259,7 @@
       "priority": 2,
       "effort": "medium",
       "rationale": "Distinct tactical roguelike; existing browser/WASM work provides a useful starting point.",
-      "authors": "Sil-Q maintainers, building on Sil by Dan Hutchison and Kanga",
+      "authors": "Sil-Q maintainers, building on Sil by half and Kanga",
       "upstream": {
         "name": "Sil-Q",
         "repository": "https://github.com/sil-quirk/sil-q"
@@ -286,7 +286,97 @@
       },
       "offline": true,
       "adapter": "sil-q",
-      "runtimeManifest": "runtime/sil-q/runtime-manifest.json"
+      "runtimeManifest": "runtime/sil-q/runtime-manifest.json",
+      "about": [
+        "Sil is a tactical roguelike by half and Kanga, set in Tolkien's First Age: you descend into Morgoth's fortress of Angband to steal a Silmaril from his crown. There is no town and no shopping; experience comes largely from discovery rather than killing, and stealth, light, positioning and a strong combat model decide fights. Sil-Q is the community continuation of Sil.",
+        "This port compiles the official Sil-Q source to WebAssembly without changing any game code; only a browser display module is added, as upstream has for curses, X11, Windows and macOS. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "Arrow keys · numpad · 1–9",
+          "action": "Move or attack; Shift+direction to run"
+        },
+        {
+          "keys": "z · Z · S",
+          "action": "Hold still a turn, rest, toggle stealth mode"
+        },
+        {
+          "keys": "f · F · t",
+          "action": "Fire the first or second quiver, throw"
+        },
+        {
+          "keys": "i · e · g · w · r · d",
+          "action": "Inventory, equipment, pick up, wear, take off, drop"
+        },
+        {
+          "keys": "E · q · u · p · s",
+          "action": "Eat, drink, use, play an instrument, sing"
+        },
+        {
+          "keys": "o · c · b · D · T",
+          "action": "Open, close, bash, disarm, tunnel"
+        },
+        {
+          "keys": "l · [ · ] · M · @ · Tab",
+          "action": "Look, monsters and objects in view, map, character, abilities"
+        },
+        {
+          "keys": "> · <",
+          "action": "Take the stairs (Sil saves when you do)"
+        },
+        {
+          "keys": "Ctrl+S · Ctrl+X",
+          "action": "Save · save and return to Sil's title menu"
+        },
+        {
+          "keys": "?",
+          "action": "Full in-game command list"
+        },
+        {
+          "keys": "Phone",
+          "action": "Context dock (long-press for related actions), thumb pad, lists and item prompts as buttons, More lists every command"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download the save, apex and user folders; desktop Sil-Q 1.5 savefiles can be imported too"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Text only: Sil's optional tile graphics are not included.",
+        "No sound (upstream's sounds have no clear licence and are not shipped).",
+        "The 80×24 screen is shown whole on desktop; on phones the map is zoomed around the player and the sidebar is replaced by a status band."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "New character, item prompts, message log, save, reload and continue verified by end-to-end tests."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Title buttons, character creation by tap, status band, item prompt dock and continuing a saved character exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ],
+      "cover": {
+        "src": "covers/sil-q.webp",
+        "alt": "Sil-Q's title screen: a verse about the young world, the welcome to Sil in the First Age of Middle-earth, and the menu: Tutorial, New character, Open saved character, Quit.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "rogue",

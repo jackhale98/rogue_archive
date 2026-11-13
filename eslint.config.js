@@ -43,7 +43,7 @@ export default tseslint.config(
     files: ['games/*/tests/**/*-hooks.js'],
     languageOptions: {
       sourceType: 'script',
-      globals: { ...globals.node, Module: 'writable', FS: 'readonly', NODEFS: 'readonly' },
+      globals: { ...globals.node, Module: 'writable', FS: 'readonly', NODEFS: 'readonly', ENV: 'readonly' },
     },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },

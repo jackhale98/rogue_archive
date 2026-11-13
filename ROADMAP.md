@@ -73,6 +73,22 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Test on physical phones, Firefox and Safari; measure memory and startup
 - [ ] Promote to `playable` once the above pass
 
+## Phase 6a — Sil-Q 🟡 experimental
+
+- [x] Feasibility report: docs/games/sil-q-feasibility.md
+- [x] License/provenance report (GPL-2.0-only of upstream's GPL-2.0-or-Angband-licence offer; graphics, sounds and fonts with other terms not shipped)
+- [x] WASM build of v1.5.0 with no patches: a browser display module for Sil's term interface, selected through upstream's unchanged `main.c`
+- [x] Shared terminal renderer for text-grid games (`packages/term-view`, MIT): views, follow-the-player map, hit-testing, tap/long-press/pan/pinch
+- [x] Saves in IndexedDB (lib/save, apex, user), export/import; savefiles interchangeable with desktop Sil-Q 1.5
+- [x] Phone layout: status band, map around the player with pinch zoom, lists as tappable sheets
+- [x] Context docks: title and creation choices as buttons, saved characters as Continue buttons, item prompts (letters, then named items), -more-, yes/no, direction, look/target, text, menus
+- [x] Message log (Sil's repeated messages merged, not duplicated)
+- [x] Engine conformance: key coverage against `process_command` and the keymaps; native vs WebAssembly replay of seeded games (screens, messages and savefiles identical)
+- [x] e2e: desktop (new character, item prompt, log, save, reload, continue) and phone (title buttons, tap creation, item dock, palette, continue)
+- [x] CI build, deploy, weekly canary
+- [ ] Test on physical phones, Firefox and Safari
+- [ ] Promote to `playable` once the above pass
+
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
@@ -81,5 +97,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-Sil-Q → Rogue 5.4.4 → HyperRogue → NetHack 5.0.0 → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → Rogue 5.4.4 → HyperRogue → NetHack 5.0.0 → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

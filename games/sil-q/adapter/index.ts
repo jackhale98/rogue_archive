@@ -36,6 +36,7 @@ import {
   SIL_TOUCH_LAYOUT,
   controlsFor,
   CHOOSE,
+  LOAD,
   findCommand,
   keyToSil,
   type SilContext,
@@ -43,6 +44,7 @@ import {
 import type { FromWorker, ToWorker } from './protocol.ts';
 import {
   detectContext,
+  itemPrompt,
   mapOverlay,
   mapRect,
   parseState,
@@ -54,6 +56,8 @@ import {
 export const GAME_ID = 'sil-q';
 const FLUSH_TIMEOUT_MS = 8000;
 const BUSY_DELAY_MS = 350;
+/** Where main.c's "Open saved character" name prompt starts (Term_gotoxy(50, 21)). */
+const LOAD_PROMPT_X = 50;
 const DEFAULT_MAP_CELL_CSS = 20;
 
 export interface SilDebugState {
@@ -110,6 +114,8 @@ class SilAdapter implements GameAdapter {
   #requestId = 0;
   #pending = new Map<number, (message: FromWorker) => void>();
   #logId = 0;
+  #log: LogEntry[] = [];
+  #saves: string[] = [];
   #cleanup: (() => void)[] = [];
   readonly debug: SilDebugState;
 
@@ -209,6 +215,20 @@ class SilAdapter implements GameAdapter {
       return;
     }
     if (input.type !== 'command') return;
+    if (input.commandId.startsWith(LOAD)) {
+      // From the main menu, choose "Open saved character" first. At its name
+      // prompt, clear whatever was typed (the default "<name>" goes on the first key).
+      const fromMenu = this.#context === 'title';
+      const typed = !fromMenu && this.#grid?.cursor ? Math.max(0, this.#grid.cursor.x - LOAD_PROMPT_X) : 0;
+      const name = input.commandId.slice(LOAD.length);
+      this.#send([
+        ...(fromMenu ? ['c'.charCodeAt(0)] : []),
+        ...Array<number>(typed).fill(8),
+        ...[...name].map((char) => char.charCodeAt(0)),
+        13,
+      ]);
+      return;
+    }
     if (input.commandId.startsWith(CHOOSE)) {
       this.#send([input.commandId.charCodeAt(CHOOSE.length)]);
       return;
@@ -350,11 +370,21 @@ class SilAdapter implements GameAdapter {
         break;
       }
       case 'message': {
+        // Sil's log has blank lines and a "====" rule between games; the
+        // shell's log is per session, so they are left out.
+        if (/^\s*$|^=+$/.test(message.text.trim())) break;
         const entry: LogEntry = {
           id: ++this.#logId,
           runs: [{ text: message.text, color: this.#palette[message.color] ?? '#fff' }],
         };
-        host?.emit({ type: 'message-log', reset: false, entries: [entry] });
+        if (message.repeat && this.#log.length > 0) {
+          this.#log[this.#log.length - 1] = entry;
+          host?.emit({ type: 'message-log', reset: true, entries: [...this.#log] });
+        } else {
+          this.#log.push(entry);
+          if (this.#log.length > 1000) this.#log.splice(0, this.#log.length - 1000);
+          host?.emit({ type: 'message-log', reset: false, entries: [entry] });
+        }
         break;
       }
       case 'status':
@@ -381,6 +411,10 @@ class SilAdapter implements GameAdapter {
         }
         break;
       }
+      case 'saves':
+        this.#saves = message.names;
+        if (this.#context === 'load') this.#publishContext(true);
+        break;
       case 'ready':
         break;
     }
@@ -405,13 +439,23 @@ class SilAdapter implements GameAdapter {
     const state = this.#state;
     const grid = this.#grid;
     // Lettered choices: on title and creation screens anywhere, in menus within the list.
-    const overlay = grid && context === 'menu' ? mapOverlay(grid) : null;
-    const choices =
-      grid && (context === 'title' || context === 'menu') ? screenChoices(grid, overlay ?? undefined) : [];
+    const overlay = grid && (context === 'menu' || context === 'item') ? mapOverlay(grid) : null;
+    let choices =
+      grid && (context === 'title' || context === 'menu' || context === 'item')
+        ? screenChoices(grid, overlay ?? undefined)
+        : [];
+    const item = grid && context === 'item' ? itemPrompt(rowText(grid, 0)) : null;
+    // Before the list is shown, an item prompt only names its letters.
+    if (item) {
+      const named = new Map(choices.map((choice) => [choice.key, choice.label]));
+      choices = item.letters.map((key) => ({ key, label: named.get(key) ?? '' }));
+    }
     const layout = controlsFor(
       context,
       { hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run },
       choices,
+      item,
+      this.#saves,
     );
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature) return;
@@ -419,7 +463,7 @@ class SilAdapter implements GameAdapter {
     this.#host?.emit({ type: 'touch-layout', layout, context });
     this.#host?.emit({
       type: 'input-context',
-      context: { textEntry: context === 'text' || context === 'title', mode: context },
+      context: { textEntry: context === 'text' || context === 'title' || context === 'load', mode: context },
     });
   }
 

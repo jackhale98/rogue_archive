@@ -90,15 +90,56 @@ export function screenChoices(grid: Grid, region?: Rect): Choice[] {
   return choices;
 }
 
+/** An item prompt on the top line, e.g. "(Inven: a-b, * to see, / for Equip, ESC) Drop which item?" */
+export interface ItemPrompt {
+  /** The letters that can be chosen now. */
+  letters: string[];
+  /** The list is not shown yet ('*' shows it). */
+  canShow: boolean;
+  /** The other item set '/' switches to, if offered ("Equip" or "Inven"). */
+  switchTo: string | null;
+  /** '-' picks the item on the floor. */
+  floor: boolean;
+}
+
+export function itemPrompt(top: string): ItemPrompt | null {
+  const match = /^\((Inven|Equip|Floor):([^)]*)\)/.exec(top.trimStart());
+  if (!match) return null;
+  const options = match[2]!;
+  const letters: string[] = [];
+  const range = /\b([a-z])-([a-z])\b/.exec(options);
+  if (range) {
+    for (let c = range[1]!.charCodeAt(0); c <= range[2]!.charCodeAt(0); c++)
+      letters.push(String.fromCharCode(c));
+  }
+  return {
+    letters,
+    canShow: /\* to see/.test(options),
+    switchTo: /\/ for (Equip|Inven)/.exec(options)?.[1] ?? null,
+    floor: /- for floor/.test(options),
+  };
+}
+
+/** The title menu asking for the name of the saved character to open. */
+export function isLoadPrompt(grid: Grid): boolean {
+  const cursor = grid.cursor;
+  return !!cursor?.visible && /Open saved character/.test(rowText(grid, cursor.y, 0, cursor.x));
+}
+
+/** The look/target prompt: "You see an Orc [(t)arget, (m)anual, <dir>]". */
+const TARGETING = /\[[^\]]*(<dir>|\(t\)arget|\(m\)anual|ESC)[^\]]*\]\s*$/;
+
 export function detectContext(grid: Grid, state: SilState): SilContext {
   if (!state.waiting) return 'busy';
   const top = rowText(grid, 0);
   if (/-more-/.test(top)) return 'more';
-  if (/\[y\/n\]|\(y\/n\)/i.test(top)) return 'yesno';
-  if (/Direction|direction\?/.test(top)) return 'direction';
-  if (/\bESC\b.*\b(t|target)\b|\btarget\b.*\[/i.test(top)) return 'targeting';
-  if (!state.inDungeon) return 'title';
-  if (grid.cursor?.visible && /:\s*$/.test(top.trimEnd() + ' ') === false && /: /.test(top)) return 'text';
+  if (/\[y\/n\]/i.test(top)) return 'yesno';
+  if (/^\s*Direction\b/.test(top)) return 'direction';
+  if (TARGETING.test(top.trimEnd())) return 'targeting';
+  if (itemPrompt(top)) return 'item';
+  if (!state.inDungeon) return isLoadPrompt(grid) ? 'load' : 'title';
+  // A text field (inscriptions, notes, quantities): the cursor waits on the prompt line.
+  if (grid.cursor?.visible && grid.cursor.y === 0 && top.trim().length > 0) return 'text';
   if (mapOverlay(grid)) return 'menu';
   return 'map';
 }

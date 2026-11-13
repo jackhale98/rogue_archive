@@ -66,6 +66,10 @@ jobs:
         run: pnpm test:engine:dcss
       - name: Engine conformance (seed catalogs, native vs WASM replay, key coverage)
         run: pnpm test:engine
+      - name: Build Sil-Q runtime
+        run: pnpm build:sil
+      - name: Sil-Q engine conformance (key coverage, native vs WASM replay)
+        run: pnpm test:engine:sil
       - name: Report runtime sizes
         run: |
           echo "### Runtime sizes" >> "$GITHUB_STEP_SUMMARY"

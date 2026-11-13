@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [brogue-ce, dcss]
+        game: [brogue-ce, dcss, sil-q]
         ref: [latest-release, master]
     env:
       ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
@@ -48,4 +48,4 @@ jobs:
         run: node tools/stage-runtimes.mjs && pnpm --filter @rogue-archive/web build
       - run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end tests (this game)
-        run: pnpm e2e ${{ matrix.game == 'brogue-ce' && 'brogue' || 'dcss' }}
+        run: pnpm e2e ${{ matrix.game == 'brogue-ce' && 'brogue' || matrix.game }}

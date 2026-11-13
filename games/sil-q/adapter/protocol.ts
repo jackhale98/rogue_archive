@@ -33,8 +33,14 @@ export type FromWorker =
     }
   /** Angband's colour table: 256 entries of [kv, r, g, b]. */
   | { type: 'palette'; table: Uint8Array }
-  /** A new message (oldest first); `color` is an Angband colour index. */
-  | { type: 'message'; text: string; color: number }
+  /**
+   * A new message (oldest first), or with `repeat` the newest message's new
+   * text after Sil merged a repeat of it ("... <2x>"). `color` is an Angband
+   * colour index.
+   */
+  | { type: 'message'; text: string; color: number; repeat: boolean }
+  /** Characters with a savefile (lib/save), most recently played first; sent at the title screen. */
+  | { type: 'saves'; names: string[] }
   | { type: 'exit'; status: number }
   | { type: 'flushed'; id: number; error?: string }
   | { type: 'exported'; id: number; files: SaveFile[]; error?: string }

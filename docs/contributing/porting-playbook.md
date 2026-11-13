@@ -153,3 +153,14 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Upstream test suites may need debug builds.** Native-vs-WebAssembly replay of seeded games through the same platform interface (key script in, message stream out) is a strong, cheap alternative.
 - **Service workers answer navigations with the app shell.** A runtime page loaded in a frame (DCSS's client) is a navigation too; the shared worker serves runtime paths as runtime files first. Tests that start without the worker in control pass even with this bug, so run the full suite against a production build.
 - **Know where the game keeps saves.** DCSS uses `SAVEDIR/saves/<name>.cs`, not `SAVEDIR` itself; a save downloaded or imported on its own goes back there.
+
+### From Sil-Q
+
+- **Angband-family games have a front-end interface** (`z-term.c`'s term hooks). Writing one more front end (`port/main-web.c`) beats patching: select it through upstream's own `main.c` with build flags (`-DUSE_GCU -Dinit_gcu=init_web`) so not even `main.c` changes.
+- **Write the host bridge so it can also be C.** Guarding the `EM_JS` bridge with `#ifndef RA_REPLAY` let the same display module link natively with a C replay host; native vs WebAssembly then compares every screen, message and savefile.
+- **Fix what the game seeds from**, in the harness only: link-time `time()`, `getpid()` (and natively `getpwuid()`/`getuid()`, which name characters and savefiles) give both builds the same seed and files.
+- **Startup privilege drops fail in Emscripten** (`setregid` etc. report errors and Unix builds quit); link-time definitions that succeed fix it.
+- **Merged repeats in message logs**: Sil rewrites its newest message as "… <2x>" instead of adding one. Send that as a replacement, or the log is resent.
+- **"In the dungeon" flags can outlive the game**: `character_dungeon` stays set at the title menu after a game ends; combine it with `p_ptr->playing`.
+- **Verify every command's key against the source.** The key-coverage check found `*` (target) commented out of Sil-Q's command switch.
+- **Ghost clicks after opening UI from a touch**: an action run on pointerup that opens a dialog receives the touch's compatibility click on whatever is now under the finger. The shared dock now cancels `touchend`; do the same for any custom touch button that opens UI.
