@@ -355,54 +355,19 @@ main {
 /* Library ------------------------------------------------------------- */
 
 .hero {
-  padding: var(--space-6) 0 var(--space-6);
-  max-width: 44rem;
+  padding: var(--space-5) 0 var(--space-6);
+  max-width: 46rem;
 }
 .hero__title {
-  font-size: clamp(2.3rem, 6vw, 4rem);
+  font-size: clamp(1.9rem, 4.6vw, 3.1rem);
   font-weight: 520;
   letter-spacing: -0.025em;
   margin-bottom: var(--space-4);
 }
 .hero__lede {
-  font-size: clamp(1.05rem, 2vw, 1.2rem);
+  font-size: clamp(1rem, 1.8vw, 1.12rem);
   color: var(--text-muted);
   max-width: 38rem;
-}
-
-.featured {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: var(--space-6);
-  align-items: center;
-  padding: var(--space-5);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-l);
-  background: var(--surface);
-  margin-bottom: var(--space-7);
-}
-.featured__art .game-cover {
-  box-shadow: var(--shadow-panel);
-}
-.featured__title {
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-}
-.featured__subtitle {
-  display: block;
-  font-size: 0.5em;
-  color: var(--text-muted);
-  font-weight: 450;
-  letter-spacing: 0;
-  margin-top: var(--space-1);
-}
-.featured__description {
-  color: var(--text-muted);
-}
-.featured__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
 }
 
 .library-section {
@@ -500,31 +465,31 @@ main {
 
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr));
   gap: var(--space-5);
 }
-.game-card__link {
-  display: block;
-  height: 100%;
-  color: inherit;
-  text-decoration: none;
+.game-card {
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius-l);
   background: var(--surface);
   overflow: hidden;
-  transition:
-    border-color var(--motion),
-    transform var(--motion);
+  transition: border-color var(--motion);
 }
-.game-card__link:hover {
+.game-card:hover {
   border-color: var(--accent);
-  color: inherit;
-  transform: translateY(-2px);
+}
+.game-card__art {
+  display: block;
 }
 .game-card__cover {
   border-radius: 0;
 }
 .game-card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   padding: var(--space-4) var(--space-5) var(--space-5);
 }
 .game-card__meta {
@@ -538,12 +503,26 @@ main {
   font-size: 1.45rem;
   margin-bottom: 0;
 }
+.game-card__title a {
+  color: inherit;
+  text-decoration: none;
+}
+.game-card__title a:hover {
+  color: var(--accent);
+}
 .game-card__subtitle {
   color: var(--text-muted);
   margin-bottom: var(--space-3);
 }
 .game-card__description {
   font-size: 0.95rem;
+  flex: 1;
+}
+.game-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
 }
 .tag-list {
   display: flex;
@@ -561,36 +540,61 @@ main {
   color: var(--text-muted);
 }
 
-.recent-list {
-  display: flex;
-  flex-wrap: wrap;
+.resume-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
   gap: var(--space-3);
   list-style: none;
   padding: 0;
   margin: 0;
 }
-.recent-chip {
-  display: inline-flex;
+.resume-card {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
-  min-height: 3rem;
-  padding: 0 var(--space-5) 0 var(--space-2);
-  border-radius: 999px;
+  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
   border: 1px solid var(--line);
+  border-radius: var(--radius-l);
   background: var(--surface);
   color: var(--text);
   text-decoration: none;
-  font-weight: 560;
+  transition: border-color var(--motion);
 }
-.recent-chip__glyph {
-  display: inline-grid;
-  place-items: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  background: var(--ink-0);
+.resume-card:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.resume-card__cover {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-m);
+}
+.resume-card__cover .game-cover__title {
+  display: none;
+}
+.resume-card__cover .game-cover__glyph {
+  font-size: 1.6rem;
+}
+.resume-card__text {
+  display: grid;
+  min-width: 0;
+}
+.resume-card__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.resume-card__when {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.resume-card__go {
   color: var(--accent);
-  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.92rem;
+  white-space: nowrap;
 }
 
 .roadmap {
@@ -645,6 +649,19 @@ main {
   font-size: 0.82rem;
   color: var(--text-muted);
   text-align: right;
+}
+.roadmap-more {
+  margin-top: var(--space-4);
+}
+.roadmap-more > summary {
+  cursor: pointer;
+  width: fit-content;
+  padding: var(--space-2) 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+.roadmap-more[open] > summary {
+  margin-bottom: var(--space-3);
 }
 .watchlist {
   padding-left: 1.2rem;
@@ -819,7 +836,6 @@ main {
 }
 
 @media (max-width: 760px) {
-  .featured,
   .detail__header {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -842,6 +858,50 @@ main {
   }
   .site-header {
     flex-wrap: wrap;
+  }
+}
+
+/* Phones: library cards as compact rows (a square cover beside the text). */
+@media (max-width: 600px) {
+  .game-card {
+    display: grid;
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
+  .game-card__art {
+    padding: var(--space-3) 0 var(--space-3) var(--space-3);
+  }
+  .game-card__cover {
+    aspect-ratio: 1;
+    border-radius: var(--radius-m);
+  }
+  .game-card__cover .game-cover__title {
+    display: none;
+  }
+  .game-card__body {
+    padding: var(--space-3) var(--space-4) var(--space-4) var(--space-3);
+  }
+  .game-card__title {
+    font-size: 1.2rem;
+  }
+  .game-card__subtitle {
+    font-size: 0.88rem;
+    margin-bottom: var(--space-2);
+  }
+  .game-card__description {
+    font-size: 0.88rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .game-card .tag-list {
+    display: none;
+  }
+  .game-card__actions {
+    margin-top: var(--space-3);
+  }
+  .resume-card {
+    grid-template-columns: 4.5rem minmax(0, 1fr) auto;
   }
 }
 

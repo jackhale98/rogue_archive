@@ -405,6 +405,12 @@
       },
       "tags": ["Classic", "Historic"],
       "glyph": "R",
+      "cover": {
+        "src": "covers/rogue.webp",
+        "alt": "Rogue in text mode: the adventurer, shown as @, in a lit room with two scrolls; a passage leads to a second room with food and a potion.",
+        "width": 1200,
+        "height": 675
+      },
       "version": "5.4.4",
       "sourceRevision": "cf9bd26d564a72fac4cf56b55c96c2435270d29a",
       "renderMode": "terminal-fit",

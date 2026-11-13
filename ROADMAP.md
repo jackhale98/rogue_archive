@@ -11,7 +11,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 1 — Product shell and design system ✅
 
-- [x] Library: featured game, search, interface/touch filters, recently played, roadmap, watchlist
+- [x] Library: continue playing (last played), game cards with Play and Details (compact rows on phones), the next roadmap games with the full roadmap and watchlist folded; search and interface/touch filters once eight or more games are playable
 - [x] Game detail: provenance, controls, preferences, offline download, compatibility, limitations
 - [x] Settings: theme, text size, on-screen controls, handedness, motion, clear local data
 - [x] PWA manifest, icons, service worker (offline app shell and per-game runtime cache)

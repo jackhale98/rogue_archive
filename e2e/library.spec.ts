@@ -12,24 +12,34 @@ test('landing page lists games without downloading any game runtime', async ({ p
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Classic roguelikes');
   await expect(page.getByRole('link', { name: 'Play Brogue' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Dungeon Crawl Stone Soup', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'On the roadmap' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Coming next' })).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(runtimeRequests).toEqual([]);
   expect(errors).toEqual([]);
 });
 
-test('search and filters narrow the archive', async ({ page }) => {
+test('cards play directly; the full roadmap and watchlist fold away', async ({ page }) => {
   await page.goto('');
-  const search = page.getByRole('searchbox', { name: 'Search games' });
-  await search.fill('nethack');
-  await expect(page.getByText('1 game matches')).toBeVisible();
-  await expect(page.getByRole('link', { name: /NetHack/ })).toBeVisible();
-  await expect(page.getByText('No playable games match these filters.')).toBeVisible();
-  await search.fill('');
-  await page.getByRole('checkbox', { name: 'Touch controls' }).check();
-  await expect(page.getByRole('heading', { name: 'Brogue', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'On the roadmap' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Play Rogue' })).toHaveAttribute('href', /#\/play\/rogue$/);
+  await expect(page.getByRole('link', { name: 'Details about Rogue' })).toHaveAttribute(
+    'href',
+    /#\/games\/rogue$/,
+  );
+  // The next three roadmap games are listed; the rest and the watchlist are folded.
+  await expect(page.getByRole('link', { name: /HyperRogue/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeHidden();
+  await page.getByText(/The full roadmap/).click();
+  await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Infra Arcana/ })).toBeVisible();
+});
+
+test('recently played games can be continued from the library', async ({ page }) => {
+  await page.goto('#/play/rogue');
+  await expect(page.locator('.ra-start')).toBeVisible({ timeout: 120_000 });
+  await page.goto('');
+  const resume = page.getByRole('link', { name: /Rogue Played/ });
+  await expect(resume).toBeVisible();
+  await expect(resume).toHaveAttribute('href', /#\/play\/rogue$/);
 });
 
 test('game detail shows provenance, controls and limitations', async ({ page }) => {
