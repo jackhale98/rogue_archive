@@ -39,13 +39,23 @@ test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction p
   await settle();
   await expect.poll(() => screenText(page)).toContain('Level: 1');
 
-  // Pack: the inventory as a sheet, closed from the dock.
+  // Pack: the inventory as a sheet (read only: Rogue's lists take no letters), closed from the dock.
   await settle();
   await dock.getByRole('button', { name: /^Pack/ }).tap();
   await waitForContext(page, 'menu');
-  await expect(dock.getByRole('button', { name: /Some food/ })).toBeVisible();
+  await expect.poll(() => screenText(page)).toContain('Some food');
+  await expect(dock.getByRole('button', { name: /Some food/ })).toHaveCount(0);
   await dock.getByRole('button', { name: /^Close/ }).tap();
   await waitForContext(page, 'map');
+
+  // An item prompt answered by taps alone: Eat, Show items, then the food.
+  await settle();
+  await page.keyboard.press('e');
+  await waitForContext(page, 'item');
+  await dock.getByRole('button', { name: /^Show items/ }).tap();
+  await dock.getByRole('button', { name: /Some food/ }).tap();
+  await expect.poll(() => screenText(page)).not.toContain('(* for list)');
+  await settle();
 
   // Fight asks for a direction: the pad answers it, Cancel backs out.
   await settle();

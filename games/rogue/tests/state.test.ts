@@ -49,6 +49,8 @@ describe('Rogue state', () => {
     expect(detectContext(grid(MAP), raw([1, 7, 12, 3, 40, 11, 15, 0]))).toBe('busy');
     expect(detectContext(grid(MAP), playing)).toBe('map');
     expect(detectContext(withTop('The bat bites you.  --More--'), playing)).toBe('more');
+    // --More-- over another window (a detection overlay, help) is read, then closed.
+    expect(detectContext(withTop('--More--'), { ...playing, overlay: true })).toBe('menu');
     expect(detectContext(withTop('Which direction? '), playing)).toBe('direction');
     // The question stays on screen after Escape; the cursor is back on the hero.
     expect(detectContext(withTop('Which direction? ', { x: 40, y: 11, visible: true }), playing)).toBe('map');

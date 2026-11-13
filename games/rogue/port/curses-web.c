@@ -45,6 +45,9 @@ enum
     ST_HERO_Y,
     ST_GOLD,
     ST_WAITING,
+    /* 1 when the window last shown is not stdscr: a list, help or a
+       detection overlay (show_win), not the message line. */
+    ST_OVERLAY,
     ST_FIELDS
 };
 static int state[ST_FIELDS];
@@ -99,6 +102,7 @@ static void present(void)
     state[ST_HERO_Y] = hero.y;
     state[ST_GOLD] = purse;
     state[ST_WAITING] = waiting ? 1 : 0;
+    state[ST_OVERLAY] = (focus && focus != stdscr) ? 1 : 0;
     WINDOW *w = focus ? focus : stdscr;
     int cx = w ? w->_begx + w->_curx : 0;
     int cy = w ? w->_begy + w->_cury : 0;

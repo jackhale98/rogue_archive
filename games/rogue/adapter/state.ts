@@ -21,6 +21,8 @@ export interface RogueState {
   heroY: number;
   gold: number;
   waiting: boolean;
+  /** A window other than the main screen is in front: a list, help, or a detection overlay. */
+  overlay: boolean;
 }
 
 /** Mirrors the ST_* order in port/curses-web.c. */
@@ -34,6 +36,7 @@ export function parseState(raw: Int32Array): RogueState {
     heroY: raw[5] ?? 0,
     gold: raw[6] ?? 0,
     waiting: raw[7] === 1,
+    overlay: raw[8] === 1,
   };
 }
 
@@ -118,8 +121,10 @@ export function detectContext(grid: Grid, state: RogueState): RogueContext {
   // The tombstone and the scores end with "[Press return to continue]".
   if (anyRow(grid, /\[Press return to continue\]/)) return 'enter';
   if (/--More--/.test(top) || anyRow(grid, /--Press space to continue--/)) {
-    // An inventory or list shown with "--Press space...": its letters are tappable.
-    return listBox(grid) ? 'menu' : 'more';
+    // A list, help, Discoveries or a detection overlay (another window in
+    // front) is read, then closed: a sheet. Only the message line's
+    // --More-- is a plain acknowledgement.
+    return listBox(grid) || state.overlay ? 'menu' : 'more';
   }
   // Prompts wait with the cursor after the question on the message line. A
   // question can stay on screen after it is answered or cancelled (get_dir

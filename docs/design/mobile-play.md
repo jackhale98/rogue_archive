@@ -121,7 +121,7 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 |---|---|
 | Map | Search (fan: rest, run, pick up, step over, identify trap, repeat) · Fight (fan: fight to the death, throw, zap) · Pack (fan: eat, quaff, read, wield, wear, take off, ring on/off, drop, call, one item) · Stairs (fan: up) · Look (fan: discoveries, last message, weapon, armor, rings, help) · More, plus the pad with Search in the centre |
 | `--More--` | By default not shown: Menu → `--More--` prompts → Continue automatically (the default) sends Space as soon as Rogue shows it; the message stays in the band and the log. With Wait for a key (original): Continue, plus the pad: a move or search continues first, then acts (Rogue ignores every key but Space at `--More--`, which in a fight comes after almost every blow) |
-| "Press space to continue" (lists) | The list's lines, Close |
+| "Press space to continue", or `--More--` over another window (lists, help, Discoveries, detection overlays; `ST_OVERLAY`) | Close; never continued automatically. A list opened from an item prompt (`*`) offers its items: a tap sends Space (closing the list) and the letter (answering the prompt). The plain inventory offers none, since Rogue's lists take no letters |
 | Tombstone and scores ("Press return") | Continue (Enter) |
 | "which direction?" | The pad; Cancel |
 | Item prompt ("(* for list)") | Show items, Cancel, Type; with the list shown, its items |

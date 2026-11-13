@@ -178,6 +178,8 @@ class RogueAdapter implements GameAdapter {
   #lastMessage = '';
   /** --More--: continue automatically (the message is logged first), or wait as the original. */
   #autoMore = true;
+  /** The list on screen was opened from an item prompt, so its items answer it. */
+  #listFromPrompt = false;
   #cleanup: (() => void)[] = [];
   readonly debug: RogueDebugState;
 
@@ -350,7 +352,7 @@ class RogueAdapter implements GameAdapter {
     }
     if (input.type !== 'command') return;
     if (input.commandId.startsWith(CHOOSE)) {
-      this.#send([input.commandId.charCodeAt(CHOOSE.length)]);
+      this.#choose(input.commandId.charCodeAt(CHOOSE.length));
       return;
     }
     if (input.commandId === 'run') {
@@ -583,11 +585,16 @@ class RogueAdapter implements GameAdapter {
   }
 
   #emitContext(context: RogueContext): void {
+    // A list opened from an item prompt can be chosen from; any other list
+    // (the inventory, Discoveries) is only read.
+    if (context === 'menu') this.#listFromPrompt ||= this.#context === 'item';
+    else if (context !== 'busy') this.#listFromPrompt = false;
     this.#context = context;
     this.debug.context = context;
     const state = this.#state;
     const grid = this.#grid;
-    const list = grid && (context === 'menu' || context === 'item') ? listBox(grid) : null;
+    const choosable = context === 'item' || (context === 'menu' && this.#listFromPrompt);
+    const list = grid && choosable ? listBox(grid) : null;
     const choices = grid && list ? screenChoices(grid, list) : [];
     const layout = controlsFor(
       context,
@@ -764,7 +771,16 @@ class RogueAdapter implements GameAdapter {
     let start = hit.x;
     while (start > 0 && !(line[start - 1] === ' ' && line[start - 2] === ' ')) start--;
     const letter = /^\s*([a-z])\)\s/.exec(line.slice(start))?.[1];
-    if (letter) this.#send([letter.charCodeAt(0)]);
+    if (letter) this.#choose(letter.charCodeAt(0));
+  }
+
+  /**
+   * Chooses a lettered item. Rogue's lists wait only for Space, so a list
+   * shown from an item prompt ("Quaff what? (* for list)") is closed first
+   * and the letter then answers the prompt.
+   */
+  #choose(letter: number): void {
+    this.#send(this.#context === 'menu' && this.#listFromPrompt ? [32, letter] : [letter]);
   }
 
   /** Long press on the map: identify the symbol there ("/" then the symbol). */
