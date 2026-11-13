@@ -6,20 +6,38 @@
  * - Runtime manifests: network first, so new game builds are picked up.
  * - Everything else under our scope: stale-while-revalidate.
  *
+ * - On install, the whole app shell is precached (PRECACHE, written into this
+ *   file at build time with the build id), so the site opens offline after
+ *   one visit, including from the Home Screen. Games are cached when played
+ *   or downloaded for offline play.
+ *
  * It only manages Cache Storage. It never touches IndexedDB, where saved
  * games live, so cache cleanup can never delete a save.
  */
-const SHELL_CACHE = 'ra-shell-v1';
+// Replaced at build time (apps/web/vite.config.ts serviceWorkerPrecache).
+const BUILD = 'dev';
+const PRECACHE = [];
+const SHELL_CACHE = `ra-shell-${BUILD}`;
 const RUNTIME_CACHE = 'ra-runtime-v1';
 const KEEP = new Set([SHELL_CACHE, RUNTIME_CACHE]);
 const SCOPE = new URL(self.registration.scope);
 const SHELL_URL = SCOPE.href;
+// Static files: a Vary header (Origin, Accept-Encoding) must not stop a
+// script requested by the page from matching the copy cached on install.
+const MATCH = { ignoreVary: true };
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(SHELL_CACHE)
-      .then((cache) => cache.addAll([SHELL_URL, `${SHELL_URL}manifest.webmanifest`]))
+      .then((cache) =>
+        // 'reload': fetch from the network, not the browser's HTTP cache.
+        cache.addAll(
+          [SHELL_URL, ...PRECACHE.map((path) => SHELL_URL + path)].map(
+            (url) => new Request(url, { cache: 'reload' }),
+          ),
+        ),
+      )
       .then(() => self.skipWaiting()),
   );
 });
@@ -47,7 +65,7 @@ const RUNTIME_MANIFEST = /^runtime\/([a-z0-9-]+)\/runtime-manifest\.json$/;
 
 async function cacheFirst(request, cacheName) {
   const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
+  const cached = await cache.match(request, MATCH);
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) await cache.put(request, response.clone());
@@ -64,7 +82,7 @@ async function networkFirst(request, cacheName, onFresh) {
     }
     return response;
   } catch (error) {
-    const cached = await cache.match(request);
+    const cached = await cache.match(request, MATCH);
     if (cached) return cached;
     throw error;
   }
@@ -72,7 +90,7 @@ async function networkFirst(request, cacheName, onFresh) {
 
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(SHELL_CACHE);
-  const cached = await cache.match(request);
+  const cached = await cache.match(request, MATCH);
   const network = fetch(request)
     .then((response) => {
       if (response.ok) void cache.put(request, response.clone());
@@ -118,7 +136,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(new Request(SHELL_URL), SHELL_CACHE).catch(() => caches.match(SHELL_URL)));
+    event.respondWith(
+      networkFirst(new Request(SHELL_URL), SHELL_CACHE).catch(() => caches.match(SHELL_URL, MATCH)),
+    );
     return;
   }
   const manifestMatch = RUNTIME_MANIFEST.exec(path);

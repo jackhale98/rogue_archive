@@ -23,5 +23,7 @@ Enable it once: **Settings → Pages → Build and deployment → Source: GitHub
 
 ## Offline
 
-- The service worker precaches the app shell and serves hashed assets and immutable runtime files cache-first.
-- A game is available offline after it has been launched once, or after **Download for offline play** on its page.
+- The service worker precaches the whole app shell on install: the page, every script and stylesheet chunk (all games' adapters included), fonts, covers and icons. The build writes that list and a build id into `sw.js` (`serviceWorkerPrecache` in `apps/web/vite.config.ts`), so every deploy changes `sw.js`, browsers install the new worker, and it caches the new shell (`ra-shell-<build id>`; older shell caches are deleted on activation). Without the precache list the page's own entry script, loaded before the worker controls the page, would never be cached and the site would open blank offline.
+- Hashed assets and immutable runtime files are served cache-first; cache lookups ignore `Vary` (preview servers and Pages send `Vary: Origin` or `Accept-Encoding`, which would otherwise stop a script requested by the page from matching the copy cached on install).
+- A game is available offline after it has been launched once, or after **Download for offline play** on its page. `e2e/offline.spec.ts` checks this end to end: one visit, download, network off, reload, play.
+- Installed to the Home Screen (iPhone, iPad) or as an app (Chrome, Edge), the site works the same; on Apple devices the installed app has its own storage and caches, separate from Safari's, so games are downloaded (or played once) from inside the app.

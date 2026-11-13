@@ -17,7 +17,9 @@ export async function getOfflineState(runtime: LoadedRuntime): Promise<OfflineSt
   if (!offlineSupported()) return 'unsupported';
   const cache = await caches.open(RUNTIME_CACHE);
   const urls = runtimeUrls(runtime);
-  const hits = (await Promise.all(urls.map((url) => cache.match(url)))).filter(Boolean).length;
+  const hits = (await Promise.all(urls.map((url) => cache.match(url, { ignoreVary: true })))).filter(
+    Boolean,
+  ).length;
   if (hits === 0) return 'not-downloaded';
   return hits === urls.length ? 'downloaded' : 'partial';
 }

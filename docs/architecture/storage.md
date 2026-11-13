@@ -6,7 +6,7 @@
 |---|---|---|
 | Platform settings, per-game settings (`game:<id>` scope), recently played | IndexedDB database `rogue-archive` | `packages/game-storage` |
 | Game saves and other game files | The game's own virtual filesystem, persisted to IndexedDB. For Emscripten games: an IDBFS database named after the mount point (Brogue: `/brogue`). | The game adapter/worker |
-| App shell and runtime files | Cache Storage (`ra-shell-v1`, `ra-runtime-v1`) | Service worker |
+| App shell and runtime files | Cache Storage (`ra-shell-<build id>`, `ra-runtime-v1`) | Service worker |
 
 Cache cleanup only ever touches Cache Storage, so it can never delete a save. "Remove all local data" in Settings deletes everything after an explicit confirmation.
 
