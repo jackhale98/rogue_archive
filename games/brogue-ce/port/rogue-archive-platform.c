@@ -48,11 +48,22 @@ static double lastDelayTime = 0;
 
 // Read-only snapshot of game state sent with each frame, so the browser can
 // offer context-aware controls and a compact status bar. Nothing here is ever
-// written back to the game. Field order is mirrored in adapter/state.ts.
+// written back to the game. Field order is mirrored in adapter/state.ts; new
+// fields go at the end so existing indices stay stable.
 enum {
     ST_HP, ST_MAX_HP, ST_NUTRITION, ST_STRENGTH, ST_DEPTH, ST_DEEPEST, ST_GOLD,
     ST_CURSOR_X, ST_CURSOR_Y, ST_CURSOR_MODE, ST_UP_X, ST_UP_Y, ST_DOWN_X, ST_DOWN_Y,
-    ST_TEXT_INPUT, ST_COLORS_DANCE, ST_PLAYBACK, ST_WAITING, ST_FIELDS
+    ST_TEXT_INPUT, ST_COLORS_DANCE, ST_PLAYBACK, ST_WAITING,
+    // Context for the touch dock, read only while Brogue waits for a command:
+    ST_ENEMY_ADJACENT,   // adjacentFightingDir() finds an enemy to fight (what `x` attacks)
+    ST_ENEMIES_VISIBLE,  // hostile monsters the player can see
+    ST_CAN_RETHROW,      // `T` would throw again: the last thrown item is still carried
+    ST_NEEDS_REST,       // `Z` would rest until better (else it rests 100 turns), as autoRest() decides
+    ST_SEARCHING,        // turns of the current search (`s`); the fifth is the strong one
+    ST_FOOD_LETTER,      // inventory letter of the first food carried, 0 if none
+    ST_PLAYBACK_PAUSED,  // a recording's playback is paused
+    ST_OMNISCIENCE,      // playback omniscience is on
+    ST_FIELDS
 };
 static int32_t state[ST_FIELDS];
 // What the game is currently doing: blocked in nextKeyOrMouseEvent (and how)
@@ -135,6 +146,34 @@ static void reportMessageArchive(void) {
                        messageArchivePosition);
 }
 
+// Read-only: the same checks the game makes, none of which change state.
+static int32_t visibleEnemies(void) {
+    int32_t count = 0;
+    for (creatureIterator it = iterateCreatures(monsters); hasNextCreature(it);) {
+        creature *monst = nextCreature(&it);
+        if (canSeeMonster(monst) && monstersAreEnemies(&player, monst)) count++;
+    }
+    return count;
+}
+
+// Mirrors the condition in upstream autoRest() (Time.c) for resting until better.
+static boolean restWouldHeal(void) {
+    return player.currentHP < player.info.maxHP
+        || player.status[STATUS_HALLUCINATING]
+        || player.status[STATUS_CONFUSED]
+        || player.status[STATUS_NAUSEOUS]
+        || player.status[STATUS_POISONED]
+        || player.status[STATUS_DARKNESS]
+        || cellHasTerrainFlag(player.loc, T_OBSTRUCTS_PASSABILITY);
+}
+
+static int32_t firstFoodLetter(void) {
+    for (item *theItem = packItems->nextItem; theItem != NULL; theItem = theItem->nextItem) {
+        if (theItem->category & FOOD) return (int32_t) (unsigned char) theItem->inventoryLetter;
+    }
+    return 0;
+}
+
 static void present(void) {
     reportMessageArchive();
     if (!cellsChanged) return;
@@ -158,6 +197,15 @@ static void present(void) {
         state[ST_UP_Y] = rogue.upLoc.y;
         state[ST_DOWN_X] = rogue.downLoc.x;
         state[ST_DOWN_Y] = rogue.downLoc.y;
+        state[ST_SEARCHING] = player.status[STATUS_SEARCHING];
+        state[ST_CAN_RETHROW] = rogue.lastItemThrown != NULL && itemIsCarried(rogue.lastItemThrown) ? 1 : 0;
+        state[ST_FOOD_LETTER] = firstFoodLetter();
+        // Only at a command prompt: the level is complete and stable there.
+        if (waitingForInput && !waitingTextInput) {
+            state[ST_ENEMY_ADJACENT] = adjacentFightingDir() != NO_DIRECTION ? 1 : 0;
+            state[ST_ENEMIES_VISIBLE] = visibleEnemies();
+            state[ST_NEEDS_REST] = restWouldHeal() ? 1 : 0;
+        }
     }
     state[ST_CURSOR_X] = rogue.cursorLoc.x;
     state[ST_CURSOR_Y] = rogue.cursorLoc.y;
@@ -165,6 +213,8 @@ static void present(void) {
     state[ST_TEXT_INPUT] = waitingTextInput ? 1 : 0;
     state[ST_COLORS_DANCE] = waitingColorsDance ? 1 : 0;
     state[ST_PLAYBACK] = rogue.playbackMode ? 1 : 0;
+    state[ST_PLAYBACK_PAUSED] = rogue.playbackPaused ? 1 : 0;
+    state[ST_OMNISCIENCE] = rogue.playbackOmniscience ? 1 : 0;
     state[ST_WAITING] = waitingForInput ? 1 : 0;
     ra_present(cells, (int) sizeof(cells), px, py, (int) showGraphics, inGame ? 1 : 0, state, ST_FIELDS);
 }

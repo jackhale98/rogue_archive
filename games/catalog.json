@@ -71,8 +71,12 @@
           "action": "Inventory, apply, equip, remove, drop, throw"
         },
         {
-          "keys": "s · z · Z",
-          "action": "Search, rest, rest until better"
+          "keys": "s · Ctrl+S · z · Z",
+          "action": "Search one turn, search five turns, rest one turn, rest until better (100 turns at full health)"
+        },
+        {
+          "keys": "T",
+          "action": "Throw the last thrown item again"
         },
         {
           "keys": "S",
@@ -107,7 +111,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Phone layout, thumb pad, context dock, long-press fans, sheets, drawer and on-screen keyboard exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Phone layout, thumb pad, context dock (stairs route, search, eat, targeting, recording playback), long-press fans, sheets, drawer and on-screen keyboard exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

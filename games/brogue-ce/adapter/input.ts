@@ -61,6 +61,8 @@ export function textToBrogue(text: string): BrogueEventTuple[] {
 
 interface BrogueCommand extends GameCommandDescriptor {
   keyCode: number;
+  /** Sent with Brogue's control flag (e.g. Ctrl+S, search five turns). */
+  ctrl?: boolean;
 }
 
 const k = (char: string) => char.charCodeAt(0);
@@ -89,17 +91,47 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
     shortcut: 's',
     keyCode: k('s'),
     category: 'Actions',
-    description: 'Search for secrets; hold for five turns.',
+    description: 'Search for one turn. Five searches in a row end with a stronger search.',
+  },
+  {
+    id: 'long-search',
+    label: 'Search five turns',
+    shortLabel: 'Long search',
+    shortcut: 'Ctrl+S',
+    keyCode: k('s'),
+    ctrl: true,
+    category: 'Actions',
+    description: 'Search five turns in a row (the fifth is the stronger search); stops if something happens.',
   },
   {
     id: 'auto-rest',
     label: 'Rest until better',
-    shortLabel: 'Long rest',
+    shortLabel: 'Rest',
     shortcut: 'Z',
     keyCode: k('Z'),
     category: 'Actions',
+    description:
+      'Rest until healed and free of poison, confusion, nausea, darkness and hallucination. With nothing to recover from, rests 100 turns. Stops if something happens.',
   },
-  { id: 'explore', label: 'Explore', shortcut: 'x', keyCode: k('x'), category: 'Travel' },
+  {
+    // The same key as auto-rest, named for what it does at full health.
+    id: 'rest-100',
+    label: 'Rest 100 turns',
+    shortLabel: 'Rest 100',
+    shortcut: 'Z',
+    keyCode: k('Z'),
+    category: 'Actions',
+    description:
+      'Rest until better does this when there is nothing to recover from. Stops if something happens.',
+  },
+  {
+    id: 'explore',
+    label: 'Explore',
+    shortcut: 'x',
+    keyCode: k('x'),
+    category: 'Travel',
+    description: 'Explore the level; next to an enemy, fight it.',
+  },
   {
     id: 'descend',
     label: 'Travel to stairs down',
@@ -124,6 +156,15 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
   { id: 'throw', label: 'Throw', shortcut: 't', keyCode: k('t'), category: 'Items' },
   { id: 'rethrow', label: 'Throw again', shortcut: 'T', keyCode: k('T'), category: 'Items' },
   { id: 'swap', label: 'Swap weapons', shortcut: 'w', keyCode: k('w'), category: 'Items' },
+  {
+    // Adapter command: Apply, then the food's letter (from the state snapshot).
+    id: 'eat',
+    label: 'Eat',
+    shortcut: 'a',
+    keyCode: k('a'),
+    category: 'Items',
+    description: 'Apply (a) the first food in your pack.',
+  },
   { id: 'relabel', label: 'Relabel item', shortcut: 'R', keyCode: k('R'), category: 'Items' },
   { id: 'call', label: 'Call (name) item', shortcut: 'c', keyCode: k('c'), category: 'Items' },
   { id: 'messages', label: 'Message log', shortcut: 'M', keyCode: k('M'), category: 'Information' },
@@ -131,6 +172,15 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
   { id: 'feats', label: 'Feats', shortcut: 'F', keyCode: k('F'), category: 'Information' },
   { id: 'seed', label: 'Show seed', shortcut: '~', keyCode: k('~'), category: 'Information' },
   { id: 'help', label: 'Help', shortcut: '?', keyCode: k('?'), category: 'Information' },
+  {
+    id: 'look',
+    label: 'Look (next monster or item)',
+    shortLabel: 'Look',
+    shortcut: 'Tab',
+    keyCode: Key.TAB,
+    category: 'Information',
+    description: 'Moves the cursor to the next monster, item or feature and describes it.',
+  },
   { id: 'stealth-range', label: 'Toggle stealth range', shortcut: ']', keyCode: k(']'), category: 'Display' },
   { id: 'true-colors', label: 'Toggle color effects', shortcut: '\\', keyCode: k('\\'), category: 'Display' },
   {
@@ -142,7 +192,15 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
   },
   { id: 'save', label: 'Save and quit to menu', shortcut: 'S', keyCode: k('S'), category: 'Game' },
   { id: 'quit', label: 'Abandon game', shortcut: 'Q', keyCode: k('Q'), category: 'Game' },
-  { id: 'confirm', label: 'Confirm', shortcut: 'Enter', keyCode: Key.RETURN, category: 'Prompts' },
+  {
+    id: 'confirm',
+    label: 'Confirm / look cursor',
+    shortLabel: 'OK',
+    shortcut: 'Enter',
+    keyCode: Key.RETURN,
+    category: 'Prompts',
+    description: 'Confirms a prompt or target. On the map, shows the cursor for looking around.',
+  },
   {
     id: 'cancel',
     label: 'Cancel / back',
@@ -154,7 +212,7 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
   {
     id: 'acknowledge',
     label: 'Next message',
-    shortLabel: 'More',
+    shortLabel: 'Continue',
     shortcut: 'Space',
     keyCode: k(' '),
     category: 'Prompts',
@@ -186,20 +244,116 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
     description:
       'Sends the next tap, menu choice or move with Shift: item details in menus, running on the map.',
   },
-  { id: 'yes', label: 'Yes', shortcut: 'y', keyCode: k('y'), category: 'Prompts' },
-  { id: 'no', label: 'No', shortcut: 'n', keyCode: k('n'), category: 'Prompts' },
+  // Recording playback (Recordings.c executePlaybackInput); only offered while a recording plays.
+  {
+    id: 'playback-pause',
+    label: 'Pause or resume playback',
+    shortLabel: 'Pause',
+    shortcut: 'Space',
+    keyCode: k(' '),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-slower',
+    label: 'Play back slower',
+    shortLabel: 'Slower',
+    shortcut: 'j',
+    keyCode: k('j'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-faster',
+    label: 'Play back faster',
+    shortLabel: 'Faster',
+    shortcut: 'k',
+    keyCode: k('k'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-next-turn',
+    label: 'Next turn (Shift: 5 turns)',
+    shortLabel: 'Turn →',
+    shortcut: 'l',
+    keyCode: k('l'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-previous-turn',
+    label: 'Previous turn (Shift: 5 turns)',
+    shortLabel: '← Turn',
+    shortcut: 'h',
+    keyCode: k('h'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-next-level',
+    label: 'Go to the next level',
+    shortLabel: 'Level ↓',
+    shortcut: '>',
+    keyCode: k('>'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-previous-level',
+    label: 'Go to the previous level',
+    shortLabel: 'Level ↑',
+    shortcut: '<',
+    keyCode: k('<'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-omniscience',
+    label: 'Omniscience (see the whole level)',
+    shortLabel: 'Omniscience',
+    shortcut: 'Tab',
+    keyCode: Key.TAB,
+    category: 'Playback',
+  },
+  {
+    id: 'playback-quit',
+    label: 'Close the recording',
+    shortLabel: 'Close',
+    shortcut: 'Q',
+    keyCode: k('Q'),
+    category: 'Playback',
+  },
+  {
+    id: 'playback-examine',
+    label: 'Examine surroundings',
+    shortLabel: 'Examine',
+    shortcut: 'Enter',
+    keyCode: Key.RETURN,
+    category: 'Playback',
+  },
 ];
 
 const COMMANDS_BY_ID = new Map(BROGUE_COMMANDS.map((command) => [command.id, command]));
 
-/** Commands handled by the adapter itself rather than sent as a key. */
-export const ADAPTER_COMMANDS = new Set(['shift']);
+/** Commands handled by the adapter itself rather than sent as one key. */
+export const ADAPTER_COMMANDS = new Set(['shift', 'eat']);
 
 export function commandToBrogue(commandId: string, shift = false): BrogueEventTuple | null {
   const command = COMMANDS_BY_ID.get(commandId);
   if (!command || command.keyCode < 0) return null;
-  return keystroke(command.keyCode, false, shift);
+  return keystroke(command.keyCode, command.ctrl ?? false, shift);
 }
+
+/**
+ * The keystrokes a command sends. Eat is Apply (a) followed by the food's
+ * inventory letter, exactly what a player types; without a known letter it
+ * opens Brogue's "Apply what?" menu.
+ */
+export function commandEvents(commandId: string, foodLetter: string | null = null): BrogueEventTuple[] {
+  if (commandId === 'eat') {
+    const apply = keystroke(k('a'), false, false);
+    return foodLetter ? [apply, keystroke(k(foodLetter), false, false)] : [apply];
+  }
+  const event = commandToBrogue(commandId);
+  return event ? [event] : [];
+}
+
+/** Commands not offered in the palette while playing: playback keys move the hero on the map. */
+const PALETTE_EXCLUDED = new Set(['Movement', 'Playback']);
 
 export const BROGUE_TOUCH_LAYOUT: TouchControlLayout = {
   directionPad: {
@@ -214,5 +368,19 @@ export const BROGUE_TOUCH_LAYOUT: TouchControlLayout = {
     se: 'move-se',
   },
   actions: ['explore', 'search', 'inventory', 'descend', 'auto-rest', 'acknowledge', 'cancel', 'confirm'],
-  palette: BROGUE_COMMANDS.filter((command) => command.category !== 'Movement').map((command) => command.id),
+  palette: BROGUE_COMMANDS.filter(
+    (command) => !PALETTE_EXCLUDED.has(command.category ?? '') && command.id !== 'rest-100',
+  ).map((command) => command.id),
 };
+
+/** The palette while a recording plays back: its own keys plus the screens it can show. */
+export const PLAYBACK_PALETTE: string[] = [
+  ...BROGUE_COMMANDS.filter((command) => command.category === 'Playback').map((command) => command.id),
+  'inventory',
+  'discoveries',
+  'feats',
+  'messages',
+  'help',
+  'true-colors',
+  'graphics',
+];

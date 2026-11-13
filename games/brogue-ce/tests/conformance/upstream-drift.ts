@@ -146,6 +146,15 @@ check(
   allSource.includes('%sY%ses') && allSource.includes('%sN%so'),
   'confirm() button labels changed: review the yes/no check in detectContext()',
 );
+// readHints(): what confirming a target does, and the end of exploration.
+check(
+  /"Throw %s %s where\? /.test(allSource) && allSource.includes('"Zapping your %s:"'),
+  'The throw or zap prompt changed: review readHints() (the targeting dock label)',
+);
+check(
+  allSource.includes('"I see no path for further exploration."'),
+  'The "explored" message changed: review readHints() (Stairs leads once explored)',
+);
 
 if (problems.length) {
   console.error('Upstream changed things the port depends on. Review each before updating the pin:');

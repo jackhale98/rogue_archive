@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import {
   cellCenter,
@@ -57,7 +58,12 @@ test('phone layout: full-bleed map, status bar, thumb pad and preview-then-trave
       delta = [dx, dy];
       break;
     } catch {
-      // Blocked by a wall in this direction; try the next one.
+      // Blocked by a wall in this direction; try the next one. A step Brogue
+      // asks about first (deep water, a known trap) is declined.
+      if ((await gameContext(page)) === 'yesno') {
+        await page.getByRole('group', { name: 'Actions' }).getByRole('button', { name: /^No/ }).tap();
+        await expect.poll(() => gameContext(page)).toBe('map');
+      }
     }
   }
   expect(delta).not.toBeNull();
@@ -265,4 +271,120 @@ test("inventory: an item's details fill the sheet and the dock offers its action
   await expect.poll(() => gameContext(page)).toBe('item');
   await dock.getByRole('button', { name: /Back/ }).tap();
   await expect.poll(() => gameContext(page)).not.toBe('item');
+});
+
+/** Long-press a dock button until its fan opens (released on the button, it stays open), then tap an option. */
+async function chooseFromFan(page: import('@playwright/test').Page, button: string, option: RegExp) {
+  const selector = `.dock-button[aria-label="${button}"]`;
+  const box = (await page.locator(selector).boundingBox())!;
+  const at = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
+  await page.dispatchEvent(selector, 'pointerdown', {
+    pointerId: 9,
+    pointerType: 'touch',
+    isPrimary: true,
+    button: 0,
+    buttons: 1,
+    ...at,
+  });
+  const fan = page.getByRole('menu', { name: /options$/ });
+  await expect(fan).toBeVisible();
+  await page.dispatchEvent(selector, 'pointerup', { pointerId: 9, pointerType: 'touch', button: 0, ...at });
+  await fan.getByRole('menuitem', { name: option }).click();
+  await expect(fan).toBeHidden();
+}
+
+test('stairs: once the route is shown, one tap on "Go ↑" travels there', async ({ page }) => {
+  await newGame(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  // `<` shows the route to the up stairs (the dungeon exit on depth 1).
+  await page.keyboard.press('<');
+  const go = dock.getByRole('button', { name: 'Go ↑ (<)' });
+  await expect(go).toBeVisible();
+  await expect(go).toHaveClass(/dock-button--primary/);
+  await go.tap();
+  // Travelled to the stairs and tried them (only the Amulet's bearer may leave).
+  await waitForScreenText(page, 'The dungeon exit is magically sealed!');
+});
+
+test('search: progress towards the fifth search, and the five-turn search (Ctrl+S) by touch', async ({
+  page,
+}) => {
+  await newGame(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: 'Search (s)' }).tap();
+  await expect(dock.getByRole('button', { name: 'Search 1/5 (s)' })).toBeVisible();
+  await dock.getByRole('button', { name: 'Search 1/5 (s)' }).tap();
+  await expect(dock.getByRole('button', { name: 'Search 2/5 (s)' })).toBeVisible();
+  // The long search finishes the five searches with Brogue's stronger one.
+  await chooseFromFan(page, 'Search 2/5 (s)', /Search five turns/);
+  await waitForScreenText(page, 'finish your detailed search of the area.');
+  await expect(dock.getByRole('button', { name: 'Search (s)' })).toBeVisible();
+});
+
+test('Eat (from the Pack fan) applies the food by its letter', async ({ page }) => {
+  await newGame(page);
+  await chooseFromFan(page, 'Pack (i)', /^Eat/);
+  // A new character is far from hungry, so Brogue asks first; the food was chosen without a menu.
+  await expect.poll(() => gameContext(page)).toBe('yesno');
+  await waitForScreenText(page, 'not hungry enough');
+  await page.getByRole('group', { name: 'Actions' }).getByRole('button', { name: /^No/ }).tap();
+  await expect.poll(() => gameContext(page)).toBe('map');
+});
+
+test('targeting: the confirm button says what it does', async ({ page }) => {
+  await newGame(page);
+  await page.keyboard.press('t');
+  await waitForScreenText(page, 'darts');
+  const row = (await findCell(page, 'darts'))!;
+  const text = await page.evaluate(
+    (y) =>
+      (
+        window as unknown as { __rogueArchive: { adapter: { debug: { rowText(y: number): string } } } }
+      ).__rogueArchive.adapter.debug.rowText(y),
+    row.y,
+  );
+  const letter = /([a-z])\)[^)]*darts/.exec(text)![1]!;
+  await page.keyboard.press(letter);
+  await expect.poll(() => gameContext(page)).toBe('targeting');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect(dock.getByRole('button', { name: 'Throw (Enter)' })).toBeVisible();
+  await dock.getByRole('button', { name: 'Cancel (Esc)' }).tap();
+  await expect.poll(() => gameContext(page)).toBe('map');
+});
+
+test('recording playback has its own dock: pause, speed, seek and omniscience', async ({ page }) => {
+  await openBrogue(page);
+  // A saved game is also a recording: view it like one.
+  const bytes = [...readFileSync('games/brogue-ce/tests/recordings/browser-explore-115-turns.broguesave')];
+  await page.evaluate(async (data) => {
+    const adapter = (
+      window as unknown as {
+        __rogueArchive: {
+          adapter: {
+            importSaves(files: { path: string; bytes: Uint8Array; modifiedAt: number }[]): Promise<void>;
+          };
+        };
+      }
+    ).__rogueArchive.adapter;
+    await adapter.importSaves([
+      { path: 'Playback.broguerec', bytes: new Uint8Array(data), modifiedAt: Date.now() },
+    ]);
+  }, bytes);
+  const panel = page.locator('.brogue-title');
+  await panel.getByRole('button', { name: 'View recording' }).tap();
+  await panel.getByRole('button', { name: /Playback/ }).tap();
+  await expect.poll(() => gameContext(page), { timeout: 45_000 }).toBe('playback');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect(page.getByRole('group', { name: 'Movement' })).toHaveCount(0);
+  const omniscience = dock.getByRole('button', { name: /^Omniscience/ });
+  await expect(omniscience).toHaveAttribute('aria-pressed', 'false');
+  await omniscience.tap();
+  await expect(omniscience).toHaveAttribute('aria-pressed', 'true');
+  // Brogue opens a recording paused.
+  await waitForScreenText(page, 'Recording paused');
+  await dock.getByRole('button', { name: 'Play (Space)' }).tap();
+  await expect(dock.getByRole('button', { name: 'Pause (Space)' })).toBeVisible();
+  await dock.getByRole('button', { name: 'Pause (Space)' }).tap();
+  await expect(dock.getByRole('button', { name: 'Play (Space)' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Turn → (l)' })).toBeVisible();
 });

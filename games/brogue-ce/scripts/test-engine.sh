@@ -3,7 +3,8 @@
 #
 # These test the shipped code without anyone playing through the game:
 #  1. Key coverage: every key code upstream defines (Rogue.h) is reachable
-#     through our input mapping.
+#     through our input mapping, and every touch/palette command sends the key
+#     upstream's executeKeystroke / executePlaybackInput binds to its action.
 #  2. Seed catalogs: the WASM engine (same object files as the browser build,
 #     linked for Node) must reproduce upstream's committed regression catalogs
 #     (test/seed_catalogs) for Brogue, Rapid Brogue and Bullet Brogue exactly:

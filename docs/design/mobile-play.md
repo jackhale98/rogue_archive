@@ -29,14 +29,27 @@ All pieces show Brogue's own cells (glyphs, tiles, colours) rendered from the sa
 
 | Context | How it's detected | Dock | Pad |
 |---|---|---|---|
-| Exploring | Waiting for input, nothing else applies | Explore (hold: stairs ↓/↑) · Search (hold: rest, long rest) · Pack (hold: apply, equip, throw, remove, drop) · More (command list). Badly hurt: Rest leads | ✓ |
-| Targeting | `<tab>` targeting prompt, or Brogue's keyboard cursor mode | Confirm · Next · Cancel | ✓ (moves the cursor) |
+| Exploring (quiet) | Waiting for a command, no enemy in view | Explore `x` (hold: stairs ↓/↑, Run ⇧) · Search `s` (hold: Search five turns `Ctrl+S`, Rest `z`, and `Z` named for what it will do: Rest until better when hurt or affected, else Rest 100 turns) · Pack `i` (hold: apply, throw, equip, remove, drop, swap `w`, eat) · Look `Tab` · More (command list) | ✓ |
+| In danger | An enemy in view or adjacent | Fight `x` when one is adjacent (it attacks it), else Explore (hold: search, rest, Run) · Throw again `T` when the last thrown item is still carried (hold: Throw `t`), else Throw · Pack · Look · More. Rest and Search never lead here | ✓ |
+| Targeting | `<tab>` targeting prompt, or Brogue's keyboard cursor mode | Throw / Zap / Go (from the prompt text: "Throw … where?", "Zapping your …:", the look cursor) or Confirm · Next · Cancel | ✓ (moves the cursor) |
+| Recording playback | `rogue.playbackMode` | Play/Pause `Space` · Slower `j` · Faster `k` · Turn → `l` (hold: ← Turn `h`, Level ↓ `>`, Level ↑ `<`) · Omniscience `Tab` (toggle) · More (playback commands and the screens a recording can show) | — |
 | `--MORE--` | Shown on screen | One wide Continue | — |
 | Yes/No | Text-input wait with a Yes/No box | Yes · No | — |
 | Menus, typing | Text-input wait (Brogue uses it for every menu) | Back · Shift ⓘ · OK · Type | — |
 | Busy (auto-explore, travel, animation) | Engine not waiting for input for >350 ms | Stop | — |
 
-The game-state snapshot (HP, max HP, nutrition, strength, depth, gold, cursor, stairs, input flags) is read in `port/rogue-archive-platform.c` and never written back. Engine conformance tests confirm the game is unchanged.
+One button on the map leads (is emphasized), in order of urgency:
+
+1. **Go ↓ / Go ↑** when the route to the stairs is shown (the cursor is on them): `>` shows the route, a second `>` goes, so this is one tap instead of a second long-press.
+2. **Eat** when Hungry or worse and food is carried: Apply `a` then the food's letter, exactly what a player types.
+3. In danger: **Fight** with an adjacent enemy, else **Throw again**.
+4. Quiet: **Rest** (`Z`) when below half health; **Stairs ↓** once the newest message is "I see no path for further exploration."
+
+Search shows its progress ("Search 3/5"): the fifth search in a row is Brogue's stronger one.
+
+The game-state snapshot (HP, max HP, nutrition, strength, depth, gold, cursor, stairs, input flags; and, at a command prompt, an adjacent enemy (`adjacentFightingDir()`), enemies in view, whether `T` can throw again, whether `Z` would rest until better, search turns, the first food's letter, playback paused and omniscience) is read in `port/rogue-archive-platform.c` and never written back. Engine conformance tests confirm the game is unchanged, and `tests/conformance/key-coverage.ts` checks that every touch command sends the key upstream's `executeKeystroke` (or `executePlaybackInput`) binds to that action.
+
+The command palette leaves out keys that would do something else on the map: `y`/`n` (they move diagonally; Brogue's yes/no boxes take Enter and Escape, which the Yes/No dock sends) and the playback keys. Enter on the map shows Brogue's keyboard look cursor; the palette names it so.
 
 ## Message log
 

@@ -30,7 +30,7 @@ import {
   MAP_ORIGIN_Y,
   ROWS,
 } from './constants.ts';
-import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
+import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandEvents, keyToBrogue, textToBrogue } from './input.ts';
 import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
 import { findItemDetails, findTextOverlay, itemActions } from './camera.ts';
 import { readDescription } from './describe.ts';
@@ -40,7 +40,14 @@ import { BrogueTitlePanel, readTitleScreen, showsDungeon } from './title.ts';
 import { toLogEntry } from './messages.ts';
 import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from './renderer.ts';
 import type { HitResult, OverlayKind } from './views.ts';
-import { controlsFor, detectContext, parseState, type BrogueContext, type BrogueState } from './state.ts';
+import {
+  controlsFor,
+  detectContext,
+  parseState,
+  readHints,
+  type BrogueContext,
+  type BrogueState,
+} from './state.ts';
 
 /** Phones: room left above Brogue's title art for the shell's toolbar (CSS px). */
 const TITLE_ART_TOP_CSS = 64;
@@ -308,8 +315,9 @@ class BrogueAdapter implements GameAdapter {
     } else if (input.type === 'text') {
       events = textToBrogue(input.text);
     } else if (input.type === 'command') {
-      const event = commandToBrogue(input.commandId);
-      if (event) events = [this.#withStickyShift(event)];
+      events = commandEvents(input.commandId, this.#state?.foodLetter ?? null);
+      // A latched Shift applies to the command's first key (e.g. Shift + a move runs).
+      if (events[0]) events[0] = this.#withStickyShift(events[0]);
     }
     for (const event of events) this.#post({ type: 'event', event });
   }
@@ -638,7 +646,8 @@ class BrogueAdapter implements GameAdapter {
   #publishContext(context: BrogueContext, state: BrogueState): void {
     const details = context === 'item' && this.#lastCells ? findItemDetails(this.#lastCells) : null;
     const actions = details && this.#lastCells ? itemActions(this.#lastCells, details) : [];
-    let layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift, actions);
+    const hints = this.#lastCells ? readHints(this.#lastCells) : {};
+    let layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift, actions, hints);
     // The title panel has its own large buttons (and Back where it applies).
     if (context === 'title' && this.#titlePanel?.visible) layout = { ...layout, actions: [] };
     const signature = `${context}:${JSON.stringify(layout.actions)}`;
