@@ -42,7 +42,7 @@ pnpm dev                 # http://localhost:5173
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/contributing/adding-a-game.md](docs/contributing/adding-a-game.md). Coding agents should start with [AGENTS.md](AGENTS.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [porting playbook](docs/contributing/porting-playbook.md). Coding agents should start with [AGENTS.md](AGENTS.md).
 
 ## Licenses
 

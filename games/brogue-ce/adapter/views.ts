@@ -67,6 +67,8 @@ export interface CompactInput {
 /** Brogue's sprites are 128x232; text reads better a little wider at small sizes. */
 const CELL_RATIO = 0.58;
 const MAX_SHEET_CELL_CSS = 30;
+/** Descriptions stay compact so the dungeon around them stays visible. */
+const MAX_PEEK_CELL_CSS = 18;
 const MAX_MAP_CELL_CSS = 56;
 const BACKDROP_DIM = 0.62;
 
@@ -224,24 +226,8 @@ export function compactViews(input: CompactInput): View[] {
       ),
     );
   } else if (input.overlay && input.overlayKind === 'peek') {
-    // A description card on the half of the screen away from what the player is looking at.
-    const look = input.focus ?? input.player;
-    const lookY = look ? map.originY + (look.y + 0.5) * map.cellHeight : area.y;
-    const half = Math.round(free.height / 2);
-    const top = lookY > free.y + half;
     views.push(
-      fitted(
-        'peek',
-        input.overlay,
-        {
-          x: free.x + margin,
-          y: top ? free.y + margin : free.y + half,
-          width: free.width - 2 * margin,
-          height: half - margin,
-        },
-        MAX_SHEET_CELL_CSS * dpr,
-        false,
-      ),
+      placePeek(input.overlay, map, free, margin, MAX_PEEK_CELL_CSS * dpr, [input.player, input.focus]),
     );
   }
 
@@ -263,6 +249,58 @@ export function compactViews(input: CompactInput): View[] {
     map.dim = Math.max(map.dim, BACKDROP_DIM);
   }
   return views;
+}
+
+type Box = { x: number; y: number; width: number; height: number };
+
+/**
+ * A description card in whichever part of the screen (top, bottom, left or
+ * right) keeps the player and what they're looking at visible, preferring the
+ * placement that leaves the text largest.
+ */
+export function placePeek(
+  overlay: Rect,
+  map: View,
+  free: Box,
+  margin: number,
+  maxCell: number,
+  keepVisible: ({ x: number; y: number } | null)[],
+): View {
+  const inner = {
+    x: free.x + margin,
+    y: free.y + margin,
+    width: free.width - 2 * margin,
+    height: free.height - 2 * margin,
+  };
+  const halfH = Math.floor(inner.height * 0.46);
+  const halfW = Math.floor(inner.width * 0.5) - margin;
+  const candidates: Box[] = [
+    { ...inner, height: halfH },
+    { ...inner, y: inner.y + inner.height - halfH, height: halfH },
+    { ...inner, width: halfW },
+    { ...inner, x: inner.x + inner.width - halfW, width: halfW },
+  ];
+  // Screen positions (device px) of cells that must stay visible, with a cell of slack.
+  const points = keepVisible
+    .filter((cell): cell is { x: number; y: number } => cell !== null)
+    .map((cell) => ({
+      x: map.originX + (cell.x + 0.5) * map.cellWidth,
+      y: map.originY + (cell.y + 0.5) * map.cellHeight,
+    }));
+  const covers = (view: View, point: { x: number; y: number }) =>
+    point.x > view.x - map.cellWidth &&
+    point.x < view.x + view.width + map.cellWidth &&
+    point.y > view.y - map.cellHeight &&
+    point.y < view.y + view.height + map.cellHeight;
+  let best: { view: View; hidden: number } | null = null;
+  for (const box of candidates) {
+    const view = fitted('peek', overlay, box, maxCell, false);
+    const hidden = points.filter((point) => covers(view, point)).length;
+    if (!best || hidden < best.hidden || (hidden === best.hidden && view.cellHeight > best.view.cellHeight)) {
+      best = { view, hidden };
+    }
+  }
+  return best!.view;
 }
 
 /** Rows of the sidebar actually in use (Brogue fills it from the top). */

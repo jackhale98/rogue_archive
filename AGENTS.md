@@ -55,7 +55,7 @@ ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 
 ## Porting a game
 
-Follow [docs/contributing/adding-a-game.md](docs/contributing/adding-a-game.md). In short: separate feasibility and license reports first; investigate existing browser ports before writing one; pin source and toolchain; native build before WASM; isolate patches; a compile is not a playable game; record size, memory and compatibility; test on real mobile browsers.
+Follow [docs/contributing/porting-playbook.md](docs/contributing/porting-playbook.md) (the standard, with Brogue CE as the reference implementation) and [docs/contributing/adding-a-game.md](docs/contributing/adding-a-game.md). In short: separate feasibility and license reports first; investigate existing browser ports before writing one; pin source and toolchain; native build before WASM; isolate patches; a compile is not a playable game; record size, memory and compatibility; test on real mobile browsers.
 
 ## Honesty rules
 

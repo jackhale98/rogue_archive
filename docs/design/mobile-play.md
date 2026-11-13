@@ -15,7 +15,7 @@ The shell is in *compact* mode when touch controls are shown and the viewport's 
 | Messages (3 lines) | Brogue's message rows | Colored lines in the status band; tap to open the message log |
 | Flavor line ("You see…") | Row 32 | Small pill above the bottom edge |
 | Text over the map: inventory, dialogs, menus | Detected per frame (`camera.ts`) | **Sheet**: lifted out, scaled up to 30 CSS-px rows, centred over a dimmed map; tap outside = Escape |
-| Descriptions while exploring | Same detection | **Peek card** on the half of the screen away from what you're looking at, so the second tap still reaches the map. Under a card or sheet the map shows the dungeon as it was before the box appeared, not the box's text |
+| Descriptions, `--MORE--` boxes | Same detection | Compact, outlined **peek card** (≤ 18 CSS-px rows) placed top, bottom, left or right — whichever keeps the player and the described cell (Brogue's cursor) visible. Tap it to put it away until something new is described. Under a card or sheet the map shows the dungeon as it was before the box appeared, not the box's text |
 | Sidebar (cols 0–19) | Brogue's screen | **Drawer**, rows in use only, scaled up; tap outside closes |
 | Bottom button row | — | Replaced by the dock |
 

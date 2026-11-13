@@ -41,8 +41,22 @@ export async function player(page: Page): Promise<{ inGame: boolean; x: number; 
   });
 }
 
+/**
+ * Waits until a game is in progress and Brogue is waiting for a command. Keys
+ * pressed during the level's opening fade-in only skip the fade (as in the
+ * desktop game), so tests must not type before this.
+ */
 export async function waitInGame(page: Page): Promise<void> {
-  await expect.poll(async () => (await player(page)).inGame, { timeout: 45_000 }).toBe(true);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const debug = (window as unknown as DebugWindow).__rogueArchive?.adapter.debug;
+          return !!debug?.inGame && debug.context === 'map';
+        }),
+      { timeout: 45_000 },
+    )
+    .toBe(true);
 }
 
 /** Screen cell containing the given text, or null. */

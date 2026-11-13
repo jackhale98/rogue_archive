@@ -326,12 +326,12 @@ class BrogueAdapter implements GameAdapter {
     );
     // Menus and dialogs are modal sheets; descriptions shown while exploring are peek cards.
     const context = this.#context;
+    // Menus and yes/no dialogs need an answer: modal sheets. Everything else
+    // (descriptions, --MORE-- prompts) is a card that leaves the map visible.
     const overlayKind: OverlayKind =
-      context === 'menu' || context === 'yesno' || context === 'more'
-        ? 'sheet'
-        : context === 'title'
-          ? 'none'
-          : 'peek';
+      context === 'menu' || context === 'yesno' ? 'sheet' : context === 'title' ? 'none' : 'peek';
+    const cursor = this.#state?.cursor;
+    renderer.setLook(cursor ? { x: MAP_ORIGIN_X + cursor.x, y: MAP_ORIGIN_Y + cursor.y } : null);
     const stored = Number(this.#settings.mapCellCss);
     renderer.setCompact({
       band: this.#hud.height,
@@ -650,6 +650,11 @@ class BrogueAdapter implements GameAdapter {
           return;
         }
         if (hit?.kind !== 'cell') return;
+        if (hit.view === 'peek') {
+          // Tapping a description card puts it away (until something new is described).
+          renderer()?.dismissPeek();
+          return;
+        }
         if (hit.view === 'drawer') this.#setDrawer(false);
         const tapMode: TapMode = this.#settings.tapMode === 'immediate' ? 'immediate' : 'preview';
         const alreadyPreviewed = this.#lastHover?.x === hit.x && this.#lastHover?.y === hit.y;

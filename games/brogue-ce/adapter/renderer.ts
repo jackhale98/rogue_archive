@@ -190,6 +190,11 @@ export class BrogueRenderer {
   #mapUsesUnderlay = false;
   #mapCellsDirty = false;
   #overlay: Rect | null = null;
+  /** Cell the player is looking at (Brogue's cursor), kept visible beside description cards. */
+  #look: { x: number; y: number } | null = null;
+  /** A description the player tapped away; it stays hidden until a different one appears. */
+  #dismissedPeek = '';
+  #cardFrame: HTMLDivElement;
   #atlases = new Map<string, Atlas>();
   #atlasBuildQueue = new Set<string>();
   #atlasTimer: ReturnType<typeof setTimeout> | undefined;
@@ -252,6 +257,19 @@ export class BrogueRenderer {
       'border-bottom:1px solid rgba(255,255,255,0.12)',
     ].join(';');
     container.appendChild(this.#messageStrip);
+    // A quiet outline around cards and sheets, so they read as panels over the map.
+    this.#cardFrame = document.createElement('div');
+    this.#cardFrame.className = 'brogue-card-frame';
+    this.#cardFrame.hidden = true;
+    this.#cardFrame.style.cssText = [
+      'position:absolute',
+      'pointer-events:none',
+      'border:1px solid rgba(224,170,74,0.35)',
+      'border-radius:10px',
+      'box-shadow:0 10px 30px rgba(0,0,0,0.55)',
+      'z-index:0',
+    ].join(';');
+    container.appendChild(this.#cardFrame);
     this.canvas.addEventListener('webglcontextlost', this.#onContextLost);
     this.canvas.addEventListener('webglcontextrestored', this.#onContextRestored);
     this.#initGl();
@@ -298,6 +316,35 @@ export class BrogueRenderer {
     if (!this.#compact) return;
     this.#compact.mapCellCss = Math.max(6, Math.min(56, css));
     this.#updateLayout();
+  }
+
+  /** The cell the player is looking at (screen coordinates), or null. */
+  setLook(cell: { x: number; y: number } | null): void {
+    if (cell?.x === this.#look?.x && cell?.y === this.#look?.y) return;
+    this.#look = cell;
+    if (this.#compact) this.#updateLayout();
+  }
+
+  /** Hide the current description card until a different description appears. */
+  dismissPeek(): void {
+    this.#dismissedPeek = this.#peekKey();
+    this.#updateLayout();
+  }
+
+  #peekKey(): string {
+    const overlay = this.#overlay;
+    const cells = this.#lastCells;
+    if (!overlay || !cells) return '';
+    // The box's position plus its first row of text identifies the description.
+    let key = `${overlay.x},${overlay.y},${overlay.width},${overlay.height}:`;
+    for (let x = overlay.x; x < overlay.x + overlay.width; x++)
+      key += String.fromCharCode(cells[(overlay.y * COLS + x) * CELL_BYTES]!);
+    for (let x = overlay.x; x < overlay.x + overlay.width; x++) {
+      key += String.fromCharCode(
+        cells[((overlay.y + Math.min(2, overlay.height - 1)) * COLS + x) * CELL_BYTES]!,
+      );
+    }
+    return key;
   }
 
   /** Drag to look around the map on phones; cleared when the player moves. */
@@ -390,6 +437,7 @@ export class BrogueRenderer {
     gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
     this.#messageStrip.remove();
+    this.#cardFrame.remove();
   }
 
   #effectivePan(map: View): { x: number; y: number } {
@@ -455,9 +503,14 @@ export class BrogueRenderer {
       mapCellCss: compact.mapCellCss,
       pan: this.#pan,
       player: this.#player,
-      focus: null,
+      focus: this.#look,
       overlay: compact.overlayKind === 'none' ? null : overlay,
-      overlayKind: compact.overlayKind,
+      overlayKind:
+        compact.overlayKind === 'peek' &&
+        this.#dismissedPeek !== '' &&
+        this.#dismissedPeek === this.#peekKey()
+          ? ('none' as const)
+          : compact.overlayKind,
       drawer,
     };
   }
@@ -649,6 +702,19 @@ export class BrogueRenderer {
       }
     }
     for (const view of this.#views) this.#atlasFor(view.cellWidth, view.cellHeight);
+    const card = this.#views.find(
+      (view) => view.name === 'peek' || view.name === 'sheet' || view.name === 'drawer',
+    );
+    this.#cardFrame.hidden = !card;
+    if (card) {
+      const pad = 6;
+      Object.assign(this.#cardFrame.style, {
+        left: `${card.x / dpr - pad}px`,
+        top: `${card.y / dpr - pad}px`,
+        width: `${card.width / dpr + 2 * pad}px`,
+        height: `${card.height / dpr + 2 * pad}px`,
+      });
+    }
     this.#dirty = true;
     this.#requestDraw();
   }

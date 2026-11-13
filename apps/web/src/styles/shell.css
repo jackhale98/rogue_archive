@@ -438,6 +438,8 @@
 
 .play--compact {
   grid-template-rows: minmax(0, 1fr);
+  /* Edge to edge: the map may run under a notch; controls apply the safe area themselves. */
+  padding: 0;
 }
 .play--compact .play__stage {
   grid-row: 1;
@@ -472,19 +474,20 @@
   z-index: 2;
   bottom: max(0.6rem, env(safe-area-inset-bottom));
 }
+/* Side insets mostly protect a mid-height camera cutout; the bottom corners are clear of it. */
 .play__dock {
-  left: max(0.6rem, env(safe-area-inset-left));
+  left: max(0.5rem, calc(env(safe-area-inset-left) * 0.6));
 }
 .play__pad {
-  right: max(0.6rem, env(safe-area-inset-right));
+  right: max(0.5rem, calc(env(safe-area-inset-right) * 0.6));
 }
 .play[data-hand='left'] .play__dock {
   left: auto;
-  right: max(0.6rem, env(safe-area-inset-right));
+  right: max(0.5rem, calc(env(safe-area-inset-right) * 0.6));
 }
 .play[data-hand='left'] .play__pad {
   right: auto;
-  left: max(0.6rem, env(safe-area-inset-left));
+  left: max(0.5rem, calc(env(safe-area-inset-left) * 0.6));
 }
 @media (orientation: portrait) {
   .play--compact .play__dock {

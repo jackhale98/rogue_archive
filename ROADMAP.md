@@ -39,6 +39,8 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Phone layout: full-bleed map with pinch zoom and pan, status band (health, hunger, depth, messages), menus as sheets, descriptions as peek cards, sidebar drawer, immersive shell (see docs/design/mobile-play.md)
 - [x] Context-aware dock (exploring, targeting, --MORE--, yes/no, menus, busy) with long-press fans; floating thumb pad; optional vibration
 - [x] Scrollable message log (Brogue's full history, colors, turns) as a platform feature; map no longer shows lifted text boxes
+- [x] Description cards: compact, outlined, placed so they never cover the player or the described cell; tap to dismiss; --MORE-- boxes no longer dim the map
+- [x] Porting playbook (docs/contributing/porting-playbook.md) capturing the Brogue patterns as the standard for future games
 - [ ] Try it on real phones; tune default map size, dock contents and fan timing from that feedback
 - [ ] iPhone: one-time "Add to Home Screen" hint for full screen
 - [x] Update safety: build reads upstream's Makefile; drift check; weekly canary against latest release and development branch

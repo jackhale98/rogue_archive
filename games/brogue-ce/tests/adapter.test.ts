@@ -236,3 +236,56 @@ describe('compact views', () => {
     expect(cardLow.modal).toBe(false);
   });
 });
+
+describe('description card placement', () => {
+  const base = {
+    width: 1688,
+    height: 780,
+    dpr: 2,
+    band: 90,
+    insets: { top: 0, right: 300, bottom: 0, left: 260 },
+    mapCellCss: 18,
+    pan: { x: 0, y: 0 },
+    overlay: { x: 30, y: 5, width: 34, height: 10 },
+    overlayKind: 'peek' as const,
+    drawer: null,
+  };
+  const at = (views: ReturnType<typeof compactViews>, cell: { x: number; y: number }) => {
+    const map = views[0]!;
+    return {
+      x: map.originX + (cell.x + 0.5) * map.cellWidth,
+      y: map.originY + (cell.y + 0.5) * map.cellHeight,
+    };
+  };
+  const inside = (
+    view: { x: number; y: number; width: number; height: number },
+    p: { x: number; y: number },
+  ) => p.x >= view.x && p.x <= view.x + view.width && p.y >= view.y && p.y <= view.y + view.height;
+
+  it('never covers the player or the monster being described', () => {
+    for (const [player, look] of [
+      [
+        { x: 60, y: 20 },
+        { x: 64, y: 17 },
+      ],
+      [
+        { x: 40, y: 10 },
+        { x: 45, y: 26 },
+      ],
+      [
+        { x: 80, y: 28 },
+        { x: 30, y: 6 },
+      ],
+    ] as const) {
+      const views = compactViews({ ...base, player, focus: look });
+      const card = views.find((view) => view.name === 'peek')!;
+      expect(inside(card, at(views, player))).toBe(false);
+      expect(inside(card, at(views, look))).toBe(false);
+    }
+  });
+
+  it('keeps description text compact', () => {
+    const views = compactViews({ ...base, player: { x: 60, y: 20 }, focus: null });
+    expect(views.find((view) => view.name === 'peek')!.cellHeight).toBeLessThanOrEqual(18 * 2);
+  });
+});

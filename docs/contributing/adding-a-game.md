@@ -1,6 +1,6 @@
 # Adding a game
 
-Read [the plan](../plan/implementation-plan.md) §2.3 (feasibility vs readiness), §11 (porting methodology) and §12 (per-game notes) first. Brogue CE (`games/brogue-ce`) is the reference implementation.
+Read [the porting playbook](porting-playbook.md) first: it is the standard every port follows (build, platform layer, adapter features, phone layout, verification ladder, update safety, definition of done, lessons learned), with Brogue CE (`games/brogue-ce`) as the worked example. Then [the plan](../plan/implementation-plan.md) §2.3 (feasibility vs readiness), §11 and §12 (per-game notes).
 
 ## 0. Before writing code
 

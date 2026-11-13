@@ -10,3 +10,6 @@
 | [0006](0006-brogue-browser-renderer.md) | Brogue: custom platform layer and WebGL2 renderer, not SDL | Accepted |
 | [0007](0007-catalog-and-hash-routing.md) | Manifest-driven catalog, validated in CI; hash routing | Accepted |
 | [0008](0008-licensing-model.md) | MIT platform; each game keeps its own license | Accepted |
+| [0009](0009-phone-layout-and-contextual-controls.md) | Phone layout and context-aware controls | Accepted |
+| [0010](0010-message-log.md) | Message log as a platform feature | Accepted |
+| [0011](0011-engine-conformance-and-canary.md) | Engine conformance and upstream canary | Accepted |

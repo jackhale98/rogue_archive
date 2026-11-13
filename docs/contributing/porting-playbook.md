@@ -1,0 +1,135 @@
+# Porting playbook
+
+How a game is ported to Rogue Archive, distilled from the Brogue CE port (`games/brogue-ce`), which is the reference implementation. [adding-a-game.md](adding-a-game.md) is the short procedure; this is the standard every port is held to and the reasoning behind it. When a section says "Brogue:", the named file is a working example to copy from.
+
+Contents: [1. Package layout](#1-package-layout) · [2. Build](#2-build) · [3. Platform layer](#3-the-platform-layer-inside-the-engine) · [4. Adapter](#4-the-adapter-browser-side) · [5. Phones](#5-phones-the-standard-mobile-experience) · [6. Verification](#6-verification-ladder) · [7. Updates](#7-staying-current-with-upstream) · [8. Definition of done](#8-definition-of-done) · [9. Lessons learned](#9-lessons-learned)
+
+---
+
+## 1. Package layout
+
+```
+games/<id>/
+  upstream.env              pinned repository, tag AND commit, version
+  package.json              name @rogue-archive/game-<id>, license = the game's license
+  scripts/
+    upstream.sh             resolves the pin (or a canary ref) — copy from Brogue
+    build.sh                reproducible WASM build → dist/ + runtime-manifest.json
+    test-engine.sh          engine conformance (see §6)
+  port/                     files added to the upstream build (platform layer)
+  patches/                  NNNN-*.patch + README.md (aim for none)
+  adapter/                  TypeScript: index.ts (GameAdapter), worker.ts, renderer, input, state…
+  tests/                    unit tests; conformance/ scripts; recordings/ fixtures
+  BUILDING.md  PORTING.md  LICENSES.md
+docs/games/<id>-feasibility.md
+```
+
+Register the lazy import in `apps/web/src/app/adapters.ts` (the only shared-code change a game should need) and add the catalog entry in `games/catalog.json`.
+
+## 2. Build
+
+| Rule | Why | Brogue |
+|---|---|---|
+| Pin tag **and** commit; verify the commit after cloning | Tags can move; builds must be reproducible | `upstream.env`, `scripts/upstream.sh`, `build.sh` |
+| Pin the toolchain in `tools/toolchain.env` | Same inputs → same bytes | Emscripten 6.0.13 |
+| Read source lists / include paths from **upstream's own build system** | New upstream files (e.g. a vendored library) must not break the build | `build.sh` asks upstream's Makefile for `sources` and `cflags` |
+| Prefer adding files over patching upstream | Patches rot; added files are reviewable | No patches; `port/rogue-archive-platform.c` |
+| Write `runtime-manifest.json` with SHA-256 per file; `buildId` is a content hash | Clients verify before executing; deploy dirs are immutable | `tools/write-runtime-manifest.mjs` |
+| Single-threaded WASM, no SharedArrayBuffer | GitHub Pages cannot send COOP/COEP headers | ADR 0004 |
+| Link the same object files into a Node **test harness** | Conformance tests must exercise the code we ship | `harness-<commit>/brogue-node.cjs` |
+| Check reproducibility: rebuild and compare `buildId` | Proves the build is deterministic | Identical locally and in CI |
+
+## 3. The platform layer (inside the engine)
+
+Most roguelikes already separate the game from its platform (Brogue: `struct brogueConsole`; NetHack: window ports; Angband: `term`; DCSS: its console/tiles front ends). Implement **that** interface in one added file.
+
+- **Select it without patching** where possible (Brogue reuses the `BROGUE_WEB` branch of `main.c` with `-DwebConsole=rogueArchiveConsole`). Use **designated initializers** for interface structs so a reordered upstream struct fails to compile.
+- **Blocking input → Asyncify.** The engine's own loop stays intact; waits yield to the worker's event loop (`EM_ASYNC_JS`, `emscripten_sleep`). Sleep until input arrives when nothing animates; keep upstream's cadence when it does.
+- **Output:** send the whole screen buffer (cells: glyph/sprite, foreground, background) at each wait or pause; the browser renders it.
+- **Read-only state snapshot** with every frame: whatever the UI needs that the screen doesn't express cleanly (HP, nutrition, depth, cursor, the kind of input being waited for). **Never write game state.** Brogue: `ST_*` in `port/rogue-archive-platform.c`, parsed in `adapter/state.ts`.
+- **Message history** from the engine's own archive, not screen scraping. Brogue: `reportMessageArchive()` → worker reads the ring buffer → `adapter/messages.ts`.
+- **Saves:** mount the save directory on IDBFS with `autoPersist`; expose a "flush" the host can call on page hide/exit (Brogue calls upstream's own `flushBufferToFile()` at an input wait).
+
+## 4. The adapter (browser side)
+
+Implement `GameAdapter` (`packages/game-api`). Feature checklist, with Brogue examples:
+
+| Feature | Brogue |
+|---|---|
+| Worker hosting the engine; download → verify SHA-256 → instantiate from a blob URL (pass `locateFile`) | `adapter/worker.ts` |
+| Renderer in the mount the shell gives you; WebGL2, whole-pixel cells; game's own glyphs/tiles | `adapter/renderer.ts`, `atlas.ts` |
+| Keyboard mapping that mirrors upstream's native platform exactly | `adapter/input.ts` (`keyToBrogue` mirrors `sdl2-platform.c`) |
+| `commands`: every command with its **original key** (shown on buttons) | `BROGUE_COMMANDS` |
+| Context detection → `touch-layout` events (dock actions with long-press `alternates`, pad on/off) | `adapter/state.ts` (`detectContext`, `controlsFor`) |
+| `setPresentation` → phone layout (§5) | `adapter/views.ts`, `hud.ts` |
+| `message-log` events | `adapter/messages.ts` |
+| `persist`, `exportSaves`/`importSaves`, `nativeSaveExtensions` (raw files usable by the desktop game) | `adapter/index.ts`, `worker.ts` |
+| `settings` descriptors, `resumeHint`, `cycleView` (desktop zoom) | `adapter/index.ts` |
+| Debug hook (`?debug` / dev only): screen text, context, views, cell↔client mapping | `debug` in `adapter/index.ts` |
+
+Keep the shared platform game-agnostic: if you need something the contract lacks, extend `packages/game-api` (with docs in `docs/architecture/game-api.md`) rather than special-casing a game in `apps/web`.
+
+## 5. Phones: the standard mobile experience
+
+Decided with the project owner for Brogue and the default for every game (details: [docs/design/mobile-play.md](../design/mobile-play.md)):
+
+1. **Compact mode** (shell): touch + shorter side < 600 px. The shell hides its header, floats its tools top-right, overlays the dock and pad, and calls `setPresentation({ compact, insets, topRightReserve })`. Desktop and tablets keep the original screen.
+2. **Recompose the screen from the game's own cells**, don't redesign it:
+   - main view (map) full-bleed at a readable size, pinch to resize, drag to look, camera on the player within the area not covered by controls;
+   - status band (health etc. from the state snapshot) + latest messages;
+   - text the game draws over the main view: **modal sheet** when an answer is needed (menus, yes/no; tap outside = cancel), otherwise a **compact peek card** that never covers the player or what they're looking at, is tappable to dismiss, and hides the duplicated box from the main view (draw what was underneath);
+   - side panels (Brogue's sidebar) as a drawer.
+3. **Controls:** context-aware **dock** (tap = main action, long-press fans related actions, slide-and-release to choose) and a floating **thumb pad** (press-and-slide, hold to repeat). Every control sends the game's original keys. Contexts at minimum: exploring, targeting, `--MORE--`-style acknowledgement, yes/no, menus/typing, busy (Stop).
+4. **Message log** from the engine's history.
+5. Safe areas: apply `env(safe-area-inset-*)` **once** (the compact shell is edge-to-edge; controls inset themselves).
+
+## 6. Verification ladder
+
+Every port climbs all of these; each step catches what the previous can't.
+
+| Level | What it proves | Brogue |
+|---|---|---|
+| Unit tests | Input mapping equals upstream's; layout/camera/context logic | `games/brogue-ce/tests/*.test.ts` |
+| **Engine equivalence** | The WASM engine behaves like upstream's | Upstream's own regression data (`test/seed_catalogs`) regenerated exactly by the Node harness |
+| **Save/replay equivalence** | Same inputs → same game; saves interchangeable with the desktop game | `tests/recordings/*` replayed by native and WASM builds, identical output to the end |
+| **Interface completeness (source-driven)** | Every input upstream defines is reachable | `tests/conformance/key-coverage.ts` parses `Rogue.h` |
+| **Upstream drift** | Nothing we copied or rely on changed | `tests/conformance/upstream-drift.ts` |
+| End-to-end (Playwright, desktop + phone emulation) | Real games start, play, save, reload, load, export/import; touch contexts; log | `e2e/brogue.spec.ts`, `e2e/mobile.spec.ts` |
+| Real devices | Comfort, performance, memory | Required before `playable` |
+
+Prefer the game's **own** test data (seed catalogs, recordings, replay modes, regression suites) over inventing checks: they are what "behaves like the original" means.
+
+## 7. Staying current with upstream
+
+- **Weekly canary**: add a job for the game to `.github/workflows/upstream-canary.yml` (latest release + development branch; never deploys). Locally: `ROGUE_ARCHIVE_UPSTREAM_REF=latest-release pnpm canary:brogue`.
+- **Drift check** names exactly what to re-review when upstream changes something the port copied.
+- **Saves across versions**: find out the game's compatibility rule (Brogue: same minor version) and decide before shipping an incompatible update (warn players, or keep the previous build playable for its saves).
+- Updates are one reviewed PR per game: [updating-a-game.md](updating-a-game.md).
+
+## 8. Definition of done
+
+A game moves to `experimental` when all of these hold, and to `playable` when, in addition, it has been tested on physical iOS Safari and Android Chrome:
+
+- [ ] Feasibility report and complete license/provenance inventory (code, data, tiles, fonts, audio, docs/screenshots, third-party code, generated artifacts)
+- [ ] Pinned, reproducible build reading upstream's build system; runtime manifest with hashes; Node test harness
+- [ ] Platform layer with read-only state snapshot and message history; no game rules changed
+- [ ] Adapter: original keys, commands, contexts and dock, phone layout, message log, saves with flush/export/import (native files if the desktop game can use them)
+- [ ] Verification ladder levels 1–6 in CI; canary job added
+- [ ] `BUILDING.md`, `PORTING.md`, `LICENSES.md`, catalog entry (compatibility and known limitations filled honestly), cover captured from the running game
+- [ ] Bundle sizes and memory recorded
+
+## 9. Lessons learned
+
+Things that cost time on Brogue; check for their equivalents in every port.
+
+- **Blob-URL glue** needs `locateFile` (Emscripten otherwise resolves the `.wasm` relative to `import.meta.url`).
+- **Persist immediately**: periodic syncs lose saves on reload; use IDBFS `autoPersist` plus an explicit flush on hide/exit.
+- **"Text input" flags lie**: Brogue waits in text-input mode for every menu, not just typing. Derive context from several signals (flags + snapshot + on-screen prompts) and test each context.
+- **Text drawn over the main view is in the same buffer** as the map: lifting it into a card means also drawing what was underneath, or it appears twice.
+- **Cards must not hide the action**: place them using both the player's and the cursor's positions; keep them compact.
+- **Keys during transitions** are consumed by the game (Brogue's level fade-in): tests must wait for "waiting for input", not just "in game".
+- **Acknowledgement keys differ** per game (Brogue's `--MORE--` takes Space/Escape/click, not Enter).
+- **Focus**: after shell UI (menus, toolbar) return keyboard focus to the game; the shell must not treat the on-screen keyboard field as a shell control *and* forward its keys.
+- **Service workers bypass Playwright `page.route`**: block them in tests that intercept requests.
+- **Safe-area insets** applied at two levels double the margin.
+- Brogue's debug screen text shows `?` for any non-text glyph and dialog boxes keep map glyphs in their "spaces": match contiguous substrings in tests.

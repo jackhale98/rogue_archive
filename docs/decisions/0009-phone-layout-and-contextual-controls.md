@@ -1,0 +1,5 @@
+# 0009 — Phone layout and context-aware controls
+
+**Context.** Brogue's fixed 100×34 screen is too small to use on phones even with zoom, and a fixed button set doesn't fit what the game is asking for at any moment.
+**Decision (with the project owner).** On phones (touch, shorter side < 600 px) adapters may recompose the game's own screen: full-bleed main view with pinch/pan, a status band, modal sheets for menus and dialogs, compact peek cards for descriptions (never covering the player or target), side panels as drawers. Controls are a context-aware dock with long-press fans plus a floating thumb pad; contexts come from a read-only state snapshot, input flags and on-screen prompts. Every control sends the original keys. Desktop and tablets keep the original screen.
+**Consequences.** More adapter work per game, but a consistent, genuinely playable phone experience. Platform contract additions: `setPresentation`, `touch-layout` events, `TouchAction`. See docs/design/mobile-play.md and the porting playbook.

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code in this repository. The full agent rules are in [AGENTS.md](AGENTS.md); the plan is [docs/plan/implementation-plan.md](docs/plan/implementation-plan.md); progress is tracked in [ROADMAP.md](ROADMAP.md). Read AGENTS.md before making changes.
+Guidance for Claude Code in this repository. The full agent rules are in [AGENTS.md](AGENTS.md); **porting or changing a game? Follow [docs/contributing/porting-playbook.md](docs/contributing/porting-playbook.md)** (Brogue CE is the reference implementation); the plan is [docs/plan/implementation-plan.md](docs/plan/implementation-plan.md); progress is tracked in [ROADMAP.md](ROADMAP.md). Read AGENTS.md before making changes.
 
 ## Essentials
 
@@ -26,6 +26,7 @@ ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 - E2E tests read the game screen through `window.__rogueArchive.adapter.debug` (dev builds or `?debug` in the URL): `screenText()`, `rowText(y)`, `cellToClient(x, y)`, `inGame`, `playerX/Y`.
 - Brogue's `--MORE--` prompts accept Space/Escape/click, not Enter. Dialogs drawn over the map can leave map glyphs in the "spaces" of `screenText()`; match contiguous substrings.
 - Service-worker-served requests bypass `page.route`; use `test.use({ serviceWorkers: 'block' })` when intercepting.
+- Wait for Brogue to be waiting for input (`waitInGame` checks `debug.context === 'map'`): keys pressed during the level's fade-in only skip the fade.
 
 ## Before committing
 
