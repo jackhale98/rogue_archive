@@ -101,6 +101,9 @@ MAKE_VARS=(
   EXTRA_LIBS=
   prefix=/crawl DATADIR=data SAVEDIR=/saves
   NOWIZARD=y
+  # Use upstream's pregenerated level-compiler parser (prebuilt/), whatever
+  # flex/bison the host has, so every build compiles the same sources.
+  NO_YACC=y
 )
 
 upstream_make_var() {
@@ -111,7 +114,8 @@ MAKE
 }
 
 echo "Building DCSS $UPSTREAM_TAG with upstream's Makefile ($JOBS jobs)…"
-make --no-print-directory -C "$CRAWL" -j"$JOBS" "${MAKE_VARS[@]}" crawl webserver
+# "docs" generates the manual, aptitude tables and FAQ the in-game help opens.
+make --no-print-directory -C "$CRAWL" -j"$JOBS" "${MAKE_VARS[@]}" crawl webserver docs
 
 # Relink: upstream's objects and libraries plus our platform layer.
 read -r -a GAME_OBJS <<< "$(upstream_make_var GAME_OBJS)"
@@ -182,6 +186,9 @@ cp "$GAME_DIR/client-host/"* "$CLIENT/"
 mkdir -p "$OUT/licenses"
 cp "$SRC/LICENSE" "$OUT/licenses/DCSS-LICENSE.txt"
 cp "$SRC/crawl-ref/docs/license/"*.txt "$OUT/licenses/"
+# The DejaVu web fonts carry their license inside the font files only.
+python3 "$GAME_DIR/scripts/font-license.py" "$CRAWL/contrib/fonts/DejaVuSans.ttf" \
+  > "$OUT/licenses/DejaVu-fonts-LICENSE.txt"
 
 # The module and its data are delivered compressed and inflated by the worker
 # (which hands both to the runtime as bytes), so download size does not
@@ -193,13 +200,19 @@ for file in crawl.wasm crawl-data.data; do
   mv "$OUT/$file.gz" "$OUT/$file.gzip"
 done
 
-# Conformance harness: the same objects linked for Node with direct file
-# system access (see scripts/test-engine.sh). Not deployed.
+# Conformance harness: the same objects and platform layer linked for Node,
+# with the game data mounted from the staging directory and a key script
+# standing in for the browser (tests/conformance/replay-hooks.js). Used by
+# scripts/test-engine.sh to compare against a native build. Not deployed.
 HARNESS="$WORK/harness-$UPSTREAM_COMMIT"
-rm -rf "$HARNESS" && mkdir -p "$HARNESS"
-em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
-  -sENVIRONMENT=node -sNODERAWFS=1 -sEXIT_RUNTIME=1 \
-  -o "$HARNESS/crawl-node.cjs"
+if [ "${ROGUE_ARCHIVE_HARNESS:-1}" != "0" ]; then
+  rm -rf "$HARNESS" && mkdir -p "$HARNESS"
+  em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
+    -sENVIRONMENT=node -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lnodefs.js \
+    -sEXPORTED_RUNTIME_METHODS=FS,NODEFS \
+    --pre-js "$GAME_DIR/tests/conformance/replay-hooks.js" \
+    -o "$HARNESS/crawl-node.cjs"
+fi
 
 node "$ROOT/tools/write-runtime-manifest.mjs" \
   --dir "$OUT" \

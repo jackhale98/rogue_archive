@@ -34,6 +34,19 @@ jobs:
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
       - run: pnpm test
       - run: pnpm build:brogue
+      - name: Install DCSS host build tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev
+      - name: Cache DCSS build tree
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rogue-archive/dcss
+          key: dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'games/dcss/upstream.env', 'games/dcss/scripts/build.sh', 'games/dcss/port/**') }}
+          # Upstream's Makefile rebuilds whatever a changed flag or source affects.
+          restore-keys: dcss-${{ runner.os }}-
+      - name: Build DCSS runtime
+        run: pnpm build:dcss
+        env:
+          ROGUE_ARCHIVE_HARNESS: '0'
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

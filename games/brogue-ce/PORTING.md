@@ -77,6 +77,6 @@ See the game page or `games/catalog.json`. In short: not yet verified on physica
 
 - Unit: `games/brogue-ce/tests/adapter.test.ts` (key mapping vs upstream, command catalog, layout math, sprite fitting).
 - Engine conformance: `games/brogue-ce/scripts/test-engine.sh` (`pnpm test:engine`), described above.
-- End-to-end: `e2e/brogue.spec.ts` and `e2e/mobile.spec.ts`. These start a real game; move with keys, the pad and taps; check preview-then-travel; save with `S`, reload the page and load the save; export and import saves; type through the on-screen keyboard; and verify that a tampered or missing runtime fails with an actionable error.
+- End-to-end: `e2e/brogue.spec.ts` and `e2e/brogue.mobile.spec.ts`. These start a real game; move with keys, the pad and taps; check preview-then-travel; save with `S`, reload the page and load the save; export and import saves; type through the on-screen keyboard; and verify that a tampered or missing runtime fails with an actionable error.
 
 Tests read the screen through a debug hook (`window.__rogueArchive`) that exists only in development builds or with `?debug` in the URL.

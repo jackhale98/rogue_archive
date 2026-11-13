@@ -1,7 +1,7 @@
-name: Upstream canary (Brogue CE)
+name: Upstream canary
 
-# Weekly early warning: does the port still build, play and pass its tests
-# against Brogue's newest release and development branch? This never changes
+# Weekly early warning: does each port still build, play and pass its tests
+# against its game's newest release and development branch? This never changes
 # what is deployed; updating the pin stays a deliberate, reviewed change
 # (docs/contributing/updating-a-game.md).
 on:
@@ -14,11 +14,12 @@ permissions:
 
 jobs:
   canary:
-    name: Brogue CE ${{ matrix.ref }}
+    name: ${{ matrix.game }} ${{ matrix.ref }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        game: [brogue-ce, dcss]
         ref: [latest-release, master]
     env:
       ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
@@ -35,12 +36,16 @@ jobs:
         with:
           path: ~/.cache/rogue-archive/emsdk
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
+      - name: Host build tools (DCSS)
+        if: matrix.game == 'dcss'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev
       - name: Build against upstream ${{ matrix.ref }}
-        run: games/brogue-ce/scripts/build.sh
+        run: games/${{ matrix.game }}/scripts/build.sh
       - name: Engine conformance and upstream drift
-        run: games/brogue-ce/scripts/test-engine.sh
+        run: games/${{ matrix.game }}/scripts/test-engine.sh
       - name: Build site
-        run: node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
+        # Only this game is built here, so other games' runtimes are absent (not --strict).
+        run: node tools/stage-runtimes.mjs && pnpm --filter @rogue-archive/web build
       - run: pnpm exec playwright install --with-deps chromium
-      - name: End-to-end tests
-        run: pnpm e2e
+      - name: End-to-end tests (this game)
+        run: pnpm e2e ${{ matrix.game == 'brogue-ce' && 'brogue' || 'dcss' }}

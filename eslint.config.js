@@ -26,7 +26,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tools/**', '*.config.{js,ts}', 'apps/web/vite.config.ts', 'e2e/**'],
+    files: ['tools/**', '*.config.{js,ts}', 'apps/web/vite.config.ts', 'e2e/**', 'games/*/tests/**'],
     languageOptions: { globals: { ...globals.node } },
   },
   {
@@ -35,6 +35,15 @@ export default tseslint.config(
     languageOptions: {
       sourceType: 'script',
       globals: { ...globals.browser, require: 'readonly', define: 'readonly' },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
+    // Emscripten --pre-js code for Node test harnesses.
+    files: ['games/*/tests/**/*-hooks.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: { ...globals.node, Module: 'writable', FS: 'readonly', NODEFS: 'readonly' },
     },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },

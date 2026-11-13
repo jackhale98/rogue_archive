@@ -165,7 +165,90 @@
       },
       "offline": true,
       "adapter": "dcss",
-      "runtimeManifest": "runtime/dcss/runtime-manifest.json"
+      "runtimeManifest": "runtime/dcss/runtime-manifest.json",
+      "controlsSummary": [
+        {
+          "keys": "Arrow keys · hjklyubn · numpad",
+          "action": "Move or attack; Shift to run"
+        },
+        {
+          "keys": "o · Tab",
+          "action": "Explore automatically · attack the nearest monster"
+        },
+        {
+          "keys": "Mouse / tap",
+          "action": "Click or tap the map to travel; right-click to describe"
+        },
+        {
+          "keys": "i · g · e · c · q · r · d",
+          "action": "Inventory, pick up, equip, unequip, quaff, read, drop"
+        },
+        {
+          "keys": "z · a · V · f · p",
+          "action": "Cast, ability, evoke, fire (aim) · fire at nearest"
+        },
+        {
+          "keys": "x · X · @ · m",
+          "action": "Look, level map, character, skills"
+        },
+        {
+          "keys": "5 · s · > · <",
+          "action": "Rest, wait, take stairs"
+        },
+        {
+          "keys": "S",
+          "action": "Save and return to the start screen"
+        },
+        {
+          "keys": "?",
+          "action": "Full in-game help and command list"
+        },
+        {
+          "keys": "Phone",
+          "action": "Six-button dock (long-press for related actions), thumb pad, More lists every command"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download a .cs save that desktop DCSS 0.34 loads; desktop saves can be imported too"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "The first launch takes 10–15 seconds while DCSS builds its level and description caches; later launches are quicker.",
+        "The download is about 19 MB on the first visit (cached afterwards for offline play).",
+        "Map zoom on phones follows DCSS's own fit-to-view; pinch zoom is not yet available.",
+        "No sound (DCSS's browser interface has none)."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "New character, auto-explore, menus, message log, save, reload and continue verified by end-to-end tests."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Phone layout, status drawer, character creation by tap, context dock and long-press fans exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ],
+      "cover": {
+        "src": "covers/dcss.webp",
+        "alt": "DCSS in tiles mode: a troll in a mossy cave with mushrooms and a sleeping bat, with the stats panel and minimap on the right.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "sil-q",

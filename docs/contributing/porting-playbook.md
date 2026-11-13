@@ -94,7 +94,7 @@ Every port climbs all of these; each step catches what the previous can't.
 | **Save/replay equivalence** | Same inputs → same game; saves interchangeable with the desktop game | `tests/recordings/*` replayed by native and WASM builds, identical output to the end |
 | **Interface completeness (source-driven)** | Every input upstream defines is reachable | `tests/conformance/key-coverage.ts` parses `Rogue.h` |
 | **Upstream drift** | Nothing we copied or rely on changed | `tests/conformance/upstream-drift.ts` |
-| End-to-end (Playwright, desktop + phone emulation) | Real games start, play, save, reload, load, export/import; touch contexts; log | `e2e/brogue.spec.ts`, `e2e/mobile.spec.ts` |
+| End-to-end (Playwright, desktop + phone emulation) | Real games start, play, save, reload, load, export/import; touch contexts; log | `e2e/<game>.spec.ts`, `e2e/<game>.mobile.spec.ts` (e.g. `brogue`, `dcss`) |
 | Real devices | Comfort, performance, memory | Required before `playable` |
 
 Prefer the game's **own** test data (seed catalogs, recordings, replay modes, regression suites) over inventing checks: they are what "behaves like the original" means.
@@ -137,3 +137,17 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Service workers bypass Playwright `page.route`**: block them in tests that intercept requests.
 - **Safe-area insets** applied at two levels double the margin.
 - Brogue's debug screen text shows `?` for any non-text glyph and dialog boxes keep map glyphs in their "spaces": match contiguous substrings in tests.
+
+### From DCSS
+
+- **Look for an upstream browser front end first.** DCSS's WebTiles client already renders every screen from a JSON protocol. Running the game headless in the worker and serving that client unmodified (in an iframe, with a small host for the lobby's modules) gave the full official interface. A custom renderer would have taken far longer. The same may hold for other games with web front ends.
+- **Use upstream's build system in its cross-compiling mode** (`CROSSHOST=wasm32-emscripten` plus one-line compiler wrappers) rather than re-deriving sources and flags. Command-line make variables reach sub-makes, so don't set ones a host-side tool must not see (e.g. `NO_PKGCONFIG`, which broke `rltiles`). Read printed make variables with `| tail -n 1`: make may first report regenerating included files.
+- **Replace system calls at link time instead of patching**: defining `socket`, `sendto`, `recvfrom`, `select`, `usleep`… in an added file overrides the C library's. Link C++ with `em++`. Headless builds still link their terminal library; inert stubs suffice (`port/compat/`).
+- **C++ exceptions + Asyncify:** use Emscripten's JavaScript exception handling (`-fexceptions`, everywhere: compile and link); wasm exceptions don't combine with Asyncify.
+- **Don't name runtime files `.gz`:** some servers (Vite's included) send them with `Content-Encoding: gzip`, so the browser inflates them before the integrity check. Use `.gzip` and inflate in the worker.
+- **An `<iframe>` is a replaced element:** with `width/height: auto` and insets it stays 300×150. Set its size explicitly.
+- **Hidden panels can break upstream code**: `display:none` gave upstream's minimap a zero-size canvas, and the error aborted every map update. Wrap the one function at runtime rather than hiding the problem.
+- **Option bounds:** game options often have minimums (`msg_min_height` ≥ 7). Change the presentation in the client host instead of fighting the game's options.
+- **First launch can be slow** when a game builds caches (DCSS: levels and descriptions, ~10–15 s). Keep them in the persistent save directory and exclude them from exports.
+- **A launcher may be needed:** servers often start games with arguments a player never sees (WebTiles: the player name). Provide the equivalent (start screen) instead of hoping the game asks.
+- **Upstream test suites may need debug builds.** Native-vs-WebAssembly replay of seeded games through the same platform interface (key script in, message stream out) is a strong, cheap alternative.

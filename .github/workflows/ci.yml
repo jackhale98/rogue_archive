@@ -51,6 +51,19 @@ jobs:
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
       - name: Build Brogue CE runtime
         run: pnpm build:brogue
+      - name: Install DCSS host build tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev
+      - name: Cache DCSS build tree
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rogue-archive/dcss
+          key: dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'games/dcss/upstream.env', 'games/dcss/scripts/build.sh', 'games/dcss/port/**') }}
+          # Upstream's Makefile rebuilds whatever a changed flag or source affects.
+          restore-keys: dcss-${{ runner.os }}-
+      - name: Build DCSS runtime
+        run: pnpm build:dcss
+      - name: DCSS engine conformance (key coverage, upstream drift, native vs WASM replay)
+        run: pnpm test:engine:dcss
       - name: Engine conformance (seed catalogs, native vs WASM replay, key coverage)
         run: pnpm test:engine
       - name: Report runtime sizes

@@ -437,6 +437,68 @@
     }
   }
 
+  /**
+   * Touch: a long press on the map describes that square. Upstream's client
+   * does that on a right click; phones have none, so a held finger sends one
+   * (and the tap's own click, which would travel there, is suppressed).
+   */
+  function attach_long_press() {
+    var LONG_PRESS_MS = 450;
+    var SLOP_PX = 12;
+    var timer = null;
+    var start = null;
+    var fired = false;
+    function cancel() {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    }
+    document.addEventListener(
+      'touchstart',
+      function (event) {
+        cancel();
+        fired = false;
+        var canvas = document.getElementById('dungeon');
+        if (!canvas || event.target !== canvas || event.touches.length !== 1) return;
+        var touch = event.touches[0];
+        start = { x: touch.clientX, y: touch.clientY };
+        timer = setTimeout(function () {
+          timer = null;
+          fired = true;
+          canvas.dispatchEvent(
+            new MouseEvent('mousedown', {
+              bubbles: true,
+              cancelable: true,
+              button: 2,
+              buttons: 2,
+              clientX: start.x,
+              clientY: start.y,
+            }),
+          );
+        }, LONG_PRESS_MS);
+      },
+      { passive: true },
+    );
+    document.addEventListener(
+      'touchmove',
+      function (event) {
+        var touch = event.touches[0];
+        if (start && touch && Math.hypot(touch.clientX - start.x, touch.clientY - start.y) > SLOP_PX)
+          cancel();
+      },
+      { passive: true },
+    );
+    document.addEventListener(
+      'touchend',
+      function (event) {
+        cancel();
+        if (fired) event.preventDefault();
+        fired = false;
+      },
+      { passive: false },
+    );
+    document.addEventListener('touchcancel', cancel, { passive: true });
+  }
+
   function load_markup() {
     // Upstream's game.html, as the server would send it: without its script
     // (we load the client below) and stylesheets (index.html links them), and
@@ -482,6 +544,7 @@
           });
         }
         require(['game/game', 'game/minimap', 'game/enums'], function (game, minimap, enums) {
+          attach_long_press();
           // Phones hide the stats column (it opens as a drawer), so the client
           // sizes the minimap beside it to zero width, and drawing a zero-size
           // canvas throws. Keep it at least one pixel per map cell.

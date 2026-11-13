@@ -18,6 +18,14 @@ body {
   overscroll-behavior: none;
 }
 
+/* Long-pressing the map describes a square (host.js); no text selection
+   or callout menu on the way. */
+#dungeon {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* The shell provides its own text entry button. */
 #mobile_input {
   display: none !important;

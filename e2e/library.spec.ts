@@ -11,6 +11,7 @@ test('landing page lists games without downloading any game runtime', async ({ p
   await page.goto('');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Classic roguelikes');
   await expect(page.getByRole('link', { name: 'Play Brogue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dungeon Crawl Stone Soup', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'On the roadmap' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();
   await page.waitForLoadState('networkidle');
@@ -41,10 +42,10 @@ test('game detail shows provenance, controls and limitations', async ({ page }) 
 });
 
 test('roadmap games are not launchable', async ({ page }) => {
-  await page.goto('#/games/dcss');
+  await page.goto('#/games/sil-q');
   await expect(page.getByText('This game is on the roadmap and is not playable yet.')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Play / })).toHaveCount(0);
-  await page.goto('#/play/dcss');
+  await page.goto('#/play/sil-q');
   await expect(page.getByRole('heading', { name: 'Nothing down here' })).toBeVisible();
 });
 

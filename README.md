@@ -5,7 +5,7 @@
 | Game | Status | Notes |
 |---|---|---|
 | [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Experimental** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. Not yet verified on physical phones. |
-| Dungeon Crawl Stone Soup | Researching | Next port. |
+| [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Experimental** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. Not yet verified on physical phones. |
 | Sil-Q, Rogue 5.4.4, HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works
@@ -24,6 +24,7 @@ Requirements: Node ≥ 22.12, pnpm 10, git and python3 (for the Emscripten SDK, 
 ```sh
 pnpm install
 pnpm build:brogue        # build the Brogue CE WebAssembly runtime (≈1 min)
+pnpm build:dcss          # build the DCSS WebAssembly runtime (≈15–20 min the first time; needs python3-yaml, libpng-dev)
 pnpm stage:runtimes      # make built runtimes available to the web app
 pnpm dev                 # http://localhost:5173
 ```

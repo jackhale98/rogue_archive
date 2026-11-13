@@ -1,0 +1,20 @@
+{
+  "$comment": "Seeded games replayed on native and WebAssembly builds by scripts/test-engine.sh. Keys: characters, or {TAB} {ESC} {ENTER} {CTRL-<letter>} {SPACE}. A key is given each time the game waits for input; the run ends when the keys run out.",
+  "scenarios": [
+    {
+      "name": "gnoll-fighter-explores",
+      "seed": 20261113,
+      "keys": "aab{ENTER}oooooooo{TAB}{TAB}{TAB}{TAB}oooo5ooooi{ESC}@{ESC}m{ESC}x{ESC}X{ESC}>oooooooo{TAB}{TAB}{TAB}{TAB}"
+    },
+    {
+      "name": "spellcaster-menus-and-targeting",
+      "seed": 7,
+      "keys": "ff{ENTER}{ENTER}ooooozaf{ESC}za{ESC}{ESC}Ia{ESC}{ESC}^{ESC}%{ESC}{CTRL-O}{ESC}?{ESC}{ESC}oooooo{TAB}{TAB}{TAB}"
+    },
+    {
+      "name": "items-and-prompts",
+      "seed": 31337,
+      "keys": "cbc{ENTER}oooooooog,q{ESC}r{ESC}e{ESC}c{ESC}d{ESC}ooooo5{CTRL-X}{ESC};{ESC}S"
+    }
+  ]
+}

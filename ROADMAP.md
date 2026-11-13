@@ -52,13 +52,24 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Measure peak memory and startup time on a mid-range phone
 - [ ] Promote to `playable` once the above pass
 
-## Phase 4 — Dungeon Crawl Stone Soup ⏭ next
+## Phase 4 — Dungeon Crawl Stone Soup 🟡 experimental
 
-- [ ] Feasibility report (existing community WASM work, console vs tiles, prompts and menus)
-- [ ] License/provenance report (per-file code licenses, tiles)
-- [ ] Native build, then minimal WASM proof
-- [ ] Adapter, rendering, controls, saves, tests
-- [ ] Confirm Brogue CE needed no DCSS-specific changes
+- [x] Feasibility report (prior WASM work, console vs local tiles vs WebTiles, prompts and menus): docs/games/dcss-feasibility.md
+- [x] License/provenance report, including bundled libraries, the WebTiles client and the DejaVu fonts (license extracted from the fonts at build time)
+- [x] Native build, then WASM build: 0.34.1 built unmodified by upstream's own Makefile (cross-compiling mode); headless WebTiles with the socket replaced by the worker; no patches
+- [x] Upstream's own WebTiles client, version-matched, in a frame (ADR 0012); start screen for saved and new characters
+- [x] Saves in IndexedDB (IDBFS autoPersist), export/import; `.cs` saves interchangeable with desktop DCSS 0.34
+- [x] Phone layout: status band, stats drawer, full-frame popups and menus, shorter message pane
+- [x] Action structure for DCSS's ~70 commands: six-button dock with long-press fans, thumb pad with Run latch, context docks (menus, --more--, yes/no, item prompts, text, targeting, level map), full palette (docs/design/mobile-play.md#dcss)
+- [x] Message log from DCSS's message stream (colours, rollbacks)
+- [x] Engine conformance: key coverage against `cmd-keys.h`; upstream drift check; native-vs-WebAssembly replay of seeded games through the same platform interface
+- [x] e2e: desktop (new character, auto-explore, log, menus, save, reload, continue) and phone (tap creation, status drawer, dock, fans)
+- [x] CI build (cached), weekly canary for both games
+- [x] Confirm Brogue CE needed no DCSS-specific changes (shared code changed only to register the adapter; one e2e file renamed)
+- [ ] Pinch zoom of the map on phones (upstream's viewport scale)
+- [ ] Faster first launch: ship DCSS's prebuilt level/description caches
+- [ ] Test on physical phones, Firefox and Safari; measure memory and startup
+- [ ] Promote to `playable` once the above pass
 
 ## Phase 5 — First public release
 

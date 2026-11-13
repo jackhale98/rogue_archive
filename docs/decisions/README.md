@@ -13,3 +13,4 @@
 | [0009](0009-phone-layout-and-contextual-controls.md) | Phone layout and context-aware controls | Accepted |
 | [0010](0010-message-log.md) | Message log as a platform feature | Accepted |
 | [0011](0011-engine-conformance-and-canary.md) | Engine conformance and upstream canary | Accepted |
+| [0012](0012-dcss-upstream-webtiles-client.md) | DCSS: upstream's WebTiles client against a headless game in the worker | Accepted |
