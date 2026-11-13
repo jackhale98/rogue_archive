@@ -155,7 +155,8 @@
 /* Thumb pad --------------------------------------------------------------- */
 
 .thumb-pad {
-  --size: clamp(8.25rem, 30vmin, 9.75rem);
+  /* Large enough to pick a diagonal with a thumb (about 165 px on a 412 px-wide phone). */
+  --size: clamp(10rem, 40vmin, 12rem);
   position: relative;
   width: var(--size);
   height: var(--size);
@@ -190,12 +191,12 @@
 }
 .thumb-pad__dir {
   --r: calc(var(--size) * 0.36);
-  width: 2.5rem;
-  height: 2.5rem;
-  left: calc(50% - 1.25rem + var(--dx) * var(--r));
-  top: calc(50% - 1.25rem + var(--dy) * var(--r));
+  width: 3rem;
+  height: 3rem;
+  left: calc(50% - 1.5rem + var(--dx) * var(--r));
+  top: calc(50% - 1.5rem + var(--dy) * var(--r));
   border-radius: 50%;
-  font-size: 1.15rem;
+  font-size: 1.3rem;
   opacity: 0.85;
   transition:
     background var(--motion),

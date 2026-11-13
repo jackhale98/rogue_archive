@@ -121,13 +121,19 @@ export function detectContext(grid: Grid, state: RogueState): RogueContext {
     // An inventory or list shown with "--Press space...": its letters are tappable.
     return listBox(grid) ? 'menu' : 'more';
   }
-  if (/which direction\?/i.test(top)) return 'direction';
-  if (/\(\* for list\):?$/.test(top)) return 'item';
-  if (/really quit\?|save file \(.*\)\?|Do you wish to overwrite it\?|\? *\(y\/n\)|\[y\/n\]/i.test(top))
-    return 'yesno';
-  // Typing a name ("file name:", "what do you want to call it?", options):
-  // the cursor waits after the prompt on the message line.
-  if (grid.cursor?.visible && grid.cursor.y === MESSAGE_ROW && /[:?] ?\S*$/.test(top)) return 'text';
+  // Prompts wait with the cursor after the question on the message line. A
+  // question can stay on screen after it is answered or cancelled (get_dir
+  // returns on Escape without clearing it); at the command prompt Rogue puts
+  // the cursor on the hero.
+  const prompting = grid.cursor?.y === MESSAGE_ROW;
+  if (prompting) {
+    if (/which direction\?/i.test(top)) return 'direction';
+    if (/\(\* for list\):?$/.test(top)) return 'item';
+    if (/really quit\?|save file \(.*\)\?|Do you wish to overwrite it\?|\? *\(y\/n\)|\[y\/n\]/i.test(top))
+      return 'yesno';
+    // Typing a name ("file name:", "what do you want to call it?", options).
+    if (grid.cursor?.visible && /[:?] ?\S*$/.test(top)) return 'text';
+  }
   if (state.inGame) return 'map';
   return 'busy';
 }

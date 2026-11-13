@@ -217,7 +217,11 @@ export function compactViews(input: CompactInput): View[] {
   // Map: readable size, centered on the player (plus manual pan) within the free
   // space, clamped so it never scrolls past its edges. It draws under the controls.
   const fit = fitCell(MAP_RECT, area.width, area.height, Infinity);
-  const wanted = Math.round(input.mapCellCss * dpr);
+  // Behind a sheet (menus, item details) the map is only a backdrop, and Brogue
+  // has drawn the menu into it: show it whole (small), not at the play zoom,
+  // where that text would loom large around the sheet.
+  const backdrop = !!input.overlay && input.overlayKind === 'sheet';
+  const wanted = backdrop ? 0 : Math.round(input.mapCellCss * dpr);
   const cellHeight = Math.max(fit.cellHeight, Math.min(wanted, Math.round(MAX_MAP_CELL_CSS * dpr)));
   const cellWidth = Math.max(fit.cellWidth, widthFor(cellHeight));
   const axis = (

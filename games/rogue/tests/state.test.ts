@@ -27,7 +27,9 @@ const MAP = [
   ...Array(11).fill(''),
   'Level: 3  Gold: 15     Hp: 7(12)  Str: 16(16)  Arm: 4   Exp: 1/0',
 ];
-const withTop = (top: string, cursor?: Grid['cursor']) => grid([top, ...MAP.slice(1)], cursor);
+// Prompts wait with the cursor on the message line, after the question.
+const withTop = (top: string, cursor: Grid['cursor'] = { x: top.length, y: 0, visible: true }) =>
+  grid([top, ...MAP.slice(1)], cursor);
 
 describe('Rogue state', () => {
   it('parses the snapshot; the hero is at his screen position', () => {
@@ -41,6 +43,8 @@ describe('Rogue state', () => {
     expect(detectContext(grid(MAP), playing)).toBe('map');
     expect(detectContext(withTop('The bat bites you.  --More--'), playing)).toBe('more');
     expect(detectContext(withTop('Which direction? '), playing)).toBe('direction');
+    // The question stays on screen after Escape; the cursor is back on the hero.
+    expect(detectContext(withTop('Which direction? ', { x: 40, y: 11, visible: true }), playing)).toBe('map');
     expect(detectContext(withTop('Which object do you want to quaff? (* for list): '), playing)).toBe('item');
     expect(detectContext(withTop('Really quit?'), playing)).toBe('yesno');
     expect(detectContext(withTop('Save file (/rogue/Tester.save)? '), playing)).toBe('yesno');

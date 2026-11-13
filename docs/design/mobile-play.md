@@ -132,7 +132,7 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
-- **ThumbPad**: press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.
+- **ThumbPad** (160–192 CSS px across, scaled to the screen): press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.
 - **ActionDock**: toggles (`TouchAction.active`) render as pressed buttons (`aria-pressed`). Tap = main action. Long-press (340 ms) fans out alternates; slide onto one and release to choose, release on the button to keep the fan open for tapping, release elsewhere to cancel. Optional vibration (Settings → Vibration, off by default).
 - Shell commands `shell:palette` and `shell:keyboard` let adapters place "More" and "Type" buttons.
 - Dock buttons cancel `touchend`, so the browser's follow-up click can't land on what the action just opened (e.g. a command in the menu "More" opens under the finger).
