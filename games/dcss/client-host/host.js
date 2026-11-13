@@ -443,6 +443,32 @@
    * does that on a right click; phones have none, so a held finger sends one
    * (and the tap's own click, which would travel there, is suppressed).
    */
+  /**
+   * Character creation places its choices with inline grid-row/grid-column
+   * (ui-layouts.js), in several columns; on phones host.css flows them into
+   * one. Give each item an `order` from its place, so the single column reads
+   * column by column, each group's label first (upstream adds the labels after
+   * all the buttons). Desktop keeps upstream's explicit placement, which
+   * `order` does not affect.
+   */
+  function order_newgame_choices() {
+    var place = /grid-row:\s*(\d+);\s*grid-column:\s*(\d+)/;
+    function order(root) {
+      var items = root.querySelectorAll('.newgame-choice .grid > [style]');
+      Array.prototype.forEach.call(items, function (item) {
+        var match = place.exec(item.getAttribute('style') || '');
+        if (match) item.style.order = String(Number(match[2]) * 1000 + Number(match[1]));
+      });
+    }
+    new MutationObserver(function (records) {
+      records.forEach(function (record) {
+        Array.prototype.forEach.call(record.addedNodes, function (node) {
+          if (node.nodeType === 1) order(node);
+        });
+      });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   function attach_long_press() {
     var LONG_PRESS_MS = 450;
     var SLOP_PX = 12;
@@ -551,6 +577,7 @@
           display,
         ) {
           attach_long_press();
+          order_newgame_choices();
           var shell_classes = [];
           var minimap_open = false;
           function apply_classes() {

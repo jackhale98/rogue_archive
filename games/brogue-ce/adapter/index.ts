@@ -42,6 +42,9 @@ import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from '
 import type { HitResult, OverlayKind } from './views.ts';
 import { controlsFor, detectContext, parseState, type BrogueContext, type BrogueState } from './state.ts';
 
+/** Phones: room left above Brogue's title art for the shell's toolbar (CSS px). */
+const TITLE_ART_TOP_CSS = 64;
+
 export const GAME_ID = 'brogue-ce';
 
 const ZOOM_STEPS = [
@@ -403,6 +406,7 @@ class BrogueAdapter implements GameAdapter {
     if (!mount) return;
     if (!this.#presentation?.compact || this.#inGame) {
       this.#titlePanel?.hide();
+      this.#renderer?.setTitleArt(null);
       return;
     }
     this.#titlePanel ??= new BrogueTitlePanel(mount, (keys) => {
@@ -413,6 +417,10 @@ class BrogueAdapter implements GameAdapter {
       }
     });
     this.#titlePanel.update(readTitleScreen(cells));
+    // Behind the main menu's buttons, Brogue's title art, below the shell's toolbar.
+    this.#renderer?.setTitleArt(this.#titlePanel.showsArt ? TITLE_ART_TOP_CSS : null);
+    if (this.#titlePanel.showsArt && this.#renderer)
+      this.#titlePanel.setArtEnd(this.#renderer.screenBottomCss);
   }
 
   /** Offers (or, right after a long-press, opens) a description Brogue drew over the map. */

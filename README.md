@@ -41,7 +41,7 @@ pnpm dev                 # http://localhost:5173
 
 ## Deployment
 
-`.github/workflows/deploy.yml` builds everything from source on pushes to `main` and publishes to GitHub Pages. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. See [docs/architecture/deployment.md](docs/architecture/deployment.md).
+`.github/workflows/deploy.yml` publishes `main` to GitHub Pages after CI has passed for that commit. Each game's WebAssembly runtime is cached in CI under a hash of its directory and the toolchain, so a push rebuilds (and re-runs the engine conformance of) only the games it changed; deploy reuses those runtimes. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. See [docs/architecture/deployment.md](docs/architecture/deployment.md).
 
 ## Contributing
 

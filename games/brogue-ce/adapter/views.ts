@@ -125,6 +125,43 @@ function fitted(
   };
 }
 
+/**
+ * Brogue's title art (MainMenu.c: MENU_TITLE_WIDTH x MENU_TITLE_HEIGHT, 68x26,
+ * centred and offset by -7, -2), with a little of the flames around it.
+ */
+export const TITLE_ART_RECT: Rect = { x: 7, y: 1, width: 72, height: 28 };
+
+/**
+ * Phones, behind the large title-menu buttons: the whole title screen with
+ * its flames, scaled so the title art fills the width and placed at the top
+ * of `area` (device pixels). The buttons sit below it, over the lower flames.
+ */
+export function titleArtView(width: number, height: number, area: Rect, cellRatio: number): View {
+  const art = TITLE_ART_RECT;
+  let cellWidth = Math.max(2, Math.floor(area.width / art.width));
+  let cellHeight = Math.max(4, Math.round(cellWidth / cellRatio));
+  // Leave at least half the area for the buttons.
+  const maxHeight = Math.floor((area.height * 0.5) / art.height);
+  if (cellHeight > maxHeight) {
+    cellHeight = Math.max(4, maxHeight);
+    cellWidth = Math.max(2, Math.round(cellHeight * cellRatio));
+  }
+  return {
+    name: 'screen',
+    src: SCREEN_RECT,
+    x: 0,
+    y: 0,
+    width,
+    height,
+    cellWidth,
+    cellHeight,
+    originX: Math.round(area.x + (area.width - art.width * cellWidth) / 2 - art.x * cellWidth),
+    originY: Math.round(area.y - art.y * cellHeight),
+    dim: 0,
+    modal: false,
+  };
+}
+
 /** Whole screen, fitted: desktop, tablets, and the title screen on phones. */
 export function screenView(width: number, height: number, cellWidth: number, cellHeight: number): View {
   const x = Math.floor((width - COLS * cellWidth) / 2);

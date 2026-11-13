@@ -1,7 +1,11 @@
 name: Deploy to GitHub Pages
 
+# Deploys main after CI has passed for that commit (so a failing build is
+# never deployed), reusing the runtimes CI built and cached.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -16,27 +20,54 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     env:
       ROGUE_ARCHIVE_BASE: /${{ github.event.repository.name }}/
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # The runtimes CI built and verified for this commit (same cache keys);
+      # built here only if the cache was evicted.
+      - name: Restore Brogue CE runtime
+        id: brogue
+        uses: actions/cache@v4
+        with:
+          path: games/brogue-ce/dist
+          key: runtime-brogue-ce-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/brogue-ce/**', '!games/brogue-ce/dist/**', '!games/brogue-ce/node_modules/**', '!games/brogue-ce/**/*.md') }}
+      - name: Restore DCSS runtime
+        id: dcss
+        uses: actions/cache@v4
+        with:
+          path: games/dcss/dist
+          key: runtime-dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/dcss/**', '!games/dcss/dist/**', '!games/dcss/node_modules/**', '!games/dcss/**/*.md') }}
+      - name: Restore Sil-Q runtime
+        id: sil
+        uses: actions/cache@v4
+        with:
+          path: games/sil-q/dist
+          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/**', '!games/sil-q/dist/**', '!games/sil-q/node_modules/**', '!games/sil-q/**/*.md') }}
       - name: Cache Emscripten SDK
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
-      - run: pnpm test
-      - run: pnpm build:brogue
+      - name: Build Brogue CE runtime
+        if: steps.brogue.outputs.cache-hit != 'true'
+        run: pnpm build:brogue
       - name: Install DCSS host build tools
+        if: steps.dcss.outputs.cache-hit != 'true'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev
       - name: Cache DCSS build tree
+        if: steps.dcss.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/dcss
@@ -44,10 +75,12 @@ jobs:
           # Upstream's Makefile rebuilds whatever a changed flag or source affects.
           restore-keys: dcss-${{ runner.os }}-
       - name: Build DCSS runtime
+        if: steps.dcss.outputs.cache-hit != 'true'
         run: pnpm build:dcss
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
       - name: Build Sil-Q runtime
+        if: steps.sil.outputs.cache-hit != 'true'
         run: pnpm build:sil
         env:
           ROGUE_ARCHIVE_HARNESS: '0'

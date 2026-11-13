@@ -121,6 +121,11 @@ const STYLE = `
 .brogue-title{position:absolute;inset:0;z-index:2;display:grid;place-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;
   background:radial-gradient(120% 80% at 50% 0%,rgba(224,170,74,.12),rgba(0,0,0,0) 60%),rgba(8,7,6,.94);color:#ece3cf;
   font:15px/1.4 'Inter Variable',system-ui,sans-serif}
+/* The main menu: Brogue's title art and flames show above (the renderer draws
+   them large at the top); the buttons sit at the bottom over a fade. */
+.brogue-title[data-backdrop]{align-items:end;padding-bottom:max(16px,env(safe-area-inset-bottom));
+  background:linear-gradient(to bottom,rgba(8,7,6,0) 0,rgba(8,7,6,0) calc(var(--art-end,60%) - 220px),rgba(8,7,6,.94) var(--art-end,60%),rgba(8,7,6,.94) 100%)}
+.brogue-title[data-backdrop] .brogue-title__choice:not([data-primary]){background:rgba(26,23,18,.86);backdrop-filter:blur(2px)}
 .brogue-title[hidden]{display:none}
 .brogue-title__card{width:min(32rem,100%);display:grid;gap:14px}
 .brogue-title__heading{margin:0;font:600 clamp(24px,5vw,32px)/1.1 'Fraunces Variable',Georgia,serif;text-align:center}
@@ -197,10 +202,10 @@ export class BrogueTitlePanel {
       return element;
     };
     if (screen.kind === 'main') {
-      heading.textContent = 'Brogue';
+      // Brogue's own title art names the game above the buttons.
       sub.textContent = 'Community Edition';
       choices.forEach((choice, index) => grid.append(button(choice, index === 0)));
-      card.append(heading, sub, grid);
+      card.append(sub, grid);
     } else if (screen.kind === 'files') {
       heading.textContent = screen.prompt === 'View recording' ? 'Recordings' : 'Saved games';
       sub.textContent = 'Newest first';
@@ -229,7 +234,18 @@ export class BrogueTitlePanel {
       card.append(heading, grid);
     }
     this.#root.replaceChildren(card);
+    this.#root.toggleAttribute('data-backdrop', screen.kind === 'main');
     this.#root.hidden = false;
+  }
+
+  /** Where the title art drawn behind ends (CSS px), so the panel fades into it. */
+  setArtEnd(px: number): void {
+    this.#root.style.setProperty('--art-end', `${Math.round(px)}px`);
+  }
+
+  /** The main menu, which shows Brogue's title art behind it. */
+  get showsArt(): boolean {
+    return this.visible && this.#root.hasAttribute('data-backdrop');
   }
 
   hide(): void {

@@ -127,3 +127,33 @@ html.compact .menu li {
   min-height: 30px;
   line-height: 30px;
 }
+
+/* Character creation on phones: upstream lays species and backgrounds out in
+   columns (Simple, Intermediate, Advanced...) placed with inline
+   grid-row/grid-column, wider than a phone. Flow them into one column, column
+   by column (host.js sets each item's `order` from its upstream place), let
+   the header wrap, and let the whole popup scroll rather than a short inner
+   list. */
+html.compact .newgame-choice .header {
+  white-space: normal;
+}
+
+html.compact .newgame-choice > .body,
+html.compact .newgame-choice .grid {
+  min-height: auto;
+  flex: none;
+}
+
+html.compact .newgame-choice .grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+html.compact .newgame-choice .grid > * {
+  grid-row: auto !important;
+  grid-column: 1 !important;
+}
+
+html.compact .newgame-choice .grid .button {
+  white-space: normal;
+  min-height: 36px;
+}

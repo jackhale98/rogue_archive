@@ -18,6 +18,7 @@ const STYLE = `
   border:1px solid rgba(236,227,207,.16);border-radius:999px;background:rgba(30,26,21,.9);color:inherit;font:inherit;
   cursor:pointer;overflow:hidden}
 .dcss-hud__status[aria-expanded=true]{border-color:#e0aa4a}
+.dcss-hud__map[hidden]{display:none}
 .dcss-hud__map{flex:none;display:grid;place-items:center;width:40px;height:36px;margin-left:8px;border-radius:999px;
   border:1px solid rgba(236,227,207,.16);background:rgba(30,26,21,.9);color:inherit;cursor:pointer}
 .dcss-hud__map[aria-pressed=true]{border-color:#e0aa4a;color:#e0aa4a}
@@ -103,6 +104,12 @@ export class DcssHud {
     const place = player.place ? `${player.place}${player.depth ? `:${player.depth}` : ''}` : '';
     const lights = (player.status ?? []).filter((light) => light.light).slice(0, 4);
     const fraction = (value: number, max: number) => (max > 0 ? Math.max(0, Math.min(1, value / max)) : 1);
+    // Before a character exists (character creation), there is nothing to show yet.
+    this.#map.hidden = hpMax <= 0;
+    if (hpMax <= 0) {
+      this.#status.replaceChildren(el('span', 'dcss-hud__num', ['New character']));
+      return;
+    }
     this.#status.replaceChildren(
       el('span', 'dcss-hud__bar', [el('i')], { '--v': String(fraction(hp, hpMax)) }),
       el('span', 'dcss-hud__num', [`${hp}/${hpMax}`]),

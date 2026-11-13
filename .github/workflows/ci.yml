@@ -44,16 +44,46 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Each game's runtime is cached under a hash of everything that builds or
+      # verifies it (its directory, minus docs and output, and the toolchain).
+      # A push that does not touch a game reuses its runtime and skips its
+      # build and engine conformance, which already passed for those inputs.
+      # (A cache is saved only when the job succeeds.)
+      - name: Restore Brogue CE runtime
+        id: brogue
+        uses: actions/cache@v4
+        with:
+          path: games/brogue-ce/dist
+          key: runtime-brogue-ce-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/brogue-ce/**', '!games/brogue-ce/dist/**', '!games/brogue-ce/node_modules/**', '!games/brogue-ce/**/*.md') }}
+      - name: Restore DCSS runtime
+        id: dcss
+        uses: actions/cache@v4
+        with:
+          path: games/dcss/dist
+          key: runtime-dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/dcss/**', '!games/dcss/dist/**', '!games/dcss/node_modules/**', '!games/dcss/**/*.md') }}
+      - name: Restore Sil-Q runtime
+        id: sil
+        uses: actions/cache@v4
+        with:
+          path: games/sil-q/dist
+          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/**', '!games/sil-q/dist/**', '!games/sil-q/node_modules/**', '!games/sil-q/**/*.md') }}
       - name: Cache Emscripten SDK
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
       - name: Build Brogue CE runtime
+        if: steps.brogue.outputs.cache-hit != 'true'
         run: pnpm build:brogue
+      - name: Brogue CE engine conformance (seed catalogs, native vs WASM replay, key coverage)
+        if: steps.brogue.outputs.cache-hit != 'true'
+        run: pnpm test:engine
       - name: Install DCSS host build tools
+        if: steps.dcss.outputs.cache-hit != 'true'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev clang libc++-dev libc++abi-dev
       - name: Cache DCSS build tree
+        if: steps.dcss.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/dcss
@@ -61,14 +91,16 @@ jobs:
           # Upstream's Makefile rebuilds whatever a changed flag or source affects.
           restore-keys: dcss-${{ runner.os }}-
       - name: Build DCSS runtime
+        if: steps.dcss.outputs.cache-hit != 'true'
         run: pnpm build:dcss
       - name: DCSS engine conformance (key coverage, upstream drift, native vs WASM replay)
+        if: steps.dcss.outputs.cache-hit != 'true'
         run: pnpm test:engine:dcss
-      - name: Engine conformance (seed catalogs, native vs WASM replay, key coverage)
-        run: pnpm test:engine
       - name: Build Sil-Q runtime
+        if: steps.sil.outputs.cache-hit != 'true'
         run: pnpm build:sil
       - name: Sil-Q engine conformance (key coverage, native vs WASM replay)
+        if: steps.sil.outputs.cache-hit != 'true'
         run: pnpm test:engine:sil
       - name: Report runtime sizes
         run: |
@@ -78,6 +110,11 @@ jobs:
           done
       - name: Build site
         run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end tests

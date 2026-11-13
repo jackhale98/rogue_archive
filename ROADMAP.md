@@ -69,7 +69,8 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] CI build (cached), weekly canary for both games
 - [x] Confirm Brogue CE needed no DCSS-specific changes (shared code changed only to register the adapter; one e2e file renamed)
 - [ ] Pinch zoom of the map on phones (upstream's viewport scale)
-- [ ] Faster first launch: ship DCSS's prebuilt level/description caches
+- [x] Progress screen while DCSS starts (first launch builds its caches); character creation in one column on phones
+- [ ] Faster first launch: ship DCSS's prebuilt level/description caches (≈2.6 MB more download; check DCSS's cache-staleness rules first)
 - [ ] Test on physical phones, Firefox and Safari; measure memory and startup
 - [ ] Promote to `playable` once the above pass
 

@@ -34,6 +34,12 @@ const STYLE = `
 .dcss-launcher__start:disabled{opacity:.5;cursor:default}
 .dcss-launcher__hint{margin:0;color:#b3a88f;font-size:13px}
 .dcss-launcher__error{margin:0;color:#ef8a76;font-size:13px}
+.dcss-launcher__preparing{width:min(26rem,100%);display:grid;justify-items:center;gap:14px;text-align:center}
+.dcss-launcher__spinner{width:44px;height:44px;border-radius:50%;border:3px solid rgba(224,170,74,.2);border-top-color:#e0aa4a;
+  animation:dcss-spin 1s linear infinite}
+@keyframes dcss-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.dcss-launcher__spinner{animation-duration:3s}}
+.dcss-launcher__elapsed{margin:0;color:#e0aa4a;font-variant-numeric:tabular-nums;font-weight:600}
 `;
 
 const NAME_PATTERN = /^[A-Za-z0-9_-]{1,20}$/;
@@ -60,6 +66,11 @@ export class DcssLauncher {
   readonly #input: HTMLInputElement;
   readonly #button: HTMLButtonElement;
   readonly #error: HTMLParagraphElement;
+  readonly #card: HTMLDivElement;
+  readonly #preparing: HTMLDivElement;
+  readonly #preparingTitle: HTMLHeadingElement;
+  readonly #elapsed: HTMLParagraphElement;
+  #ticker: ReturnType<typeof setInterval> | undefined;
   #characters: SavedCharacter[] = [];
 
   constructor(container: HTMLElement, version: string, defaultName: string, callbacks: LauncherCallbacks) {
@@ -70,6 +81,7 @@ export class DcssLauncher {
     this.#root.hidden = true;
 
     const card = div('dcss-launcher__card');
+    this.#card = card;
     const heading = document.createElement('div');
     const title = document.createElement('h2');
     title.className = 'dcss-launcher__title';
@@ -127,7 +139,25 @@ export class DcssLauncher {
     });
 
     card.append(heading, this.#notice, this.#savesSection, newSection);
-    this.#root.append(card);
+
+    // Shown from Start until DCSS shows its first screen. The first launch
+    // builds DCSS's level and description caches, which takes a while on phones.
+    this.#preparing = div('dcss-launcher__preparing');
+    this.#preparing.hidden = true;
+    this.#preparing.setAttribute('role', 'status');
+    this.#preparingTitle = document.createElement('h2');
+    this.#preparingTitle.className = 'dcss-launcher__title';
+    this.#elapsed = paragraph('dcss-launcher__elapsed', '');
+    this.#preparing.append(
+      div('dcss-launcher__spinner'),
+      this.#preparingTitle,
+      paragraph(
+        'dcss-launcher__hint',
+        'The first time, DCSS builds its level and description caches: about 15 seconds on a computer, a minute or more on a phone. They are kept, so later starts are quicker.',
+      ),
+      this.#elapsed,
+    );
+    this.#root.append(card, this.#preparing);
     container.append(this.#style, this.#root);
   }
 
@@ -136,6 +166,9 @@ export class DcssLauncher {
   }
 
   show(characters: SavedCharacter[], exitReason?: string): void {
+    this.#stopTicker();
+    this.#card.hidden = false;
+    this.#preparing.hidden = true;
     this.#characters = characters;
     const notice = exitReason ? EXIT_NOTICES[exitReason] : undefined;
     this.#notice.textContent = notice ?? '';
@@ -166,7 +199,33 @@ export class DcssLauncher {
   }
 
   hide(): void {
+    this.#stopTicker();
     this.#root.hidden = true;
+  }
+
+  get preparing(): boolean {
+    return !this.#root.hidden && !this.#preparing.hidden;
+  }
+
+  /** "Entering the dungeon" while the game starts, with the time so far. */
+  showPreparing(name: string): void {
+    if (this.preparing) return;
+    this.#card.hidden = true;
+    this.#preparing.hidden = false;
+    this.#root.hidden = false;
+    this.#preparingTitle.textContent = `Preparing the dungeon for ${name}…`;
+    const started = performance.now();
+    const tick = () => {
+      this.#elapsed.textContent = `${Math.round((performance.now() - started) / 1000)} s`;
+    };
+    tick();
+    this.#stopTicker();
+    this.#ticker = setInterval(tick, 1000);
+  }
+
+  #stopTicker(): void {
+    clearInterval(this.#ticker);
+    this.#ticker = undefined;
   }
 
   /** Returns the name if it can start a new character, else shows why not. */
@@ -184,6 +243,7 @@ export class DcssLauncher {
   }
 
   destroy(): void {
+    this.#stopTicker();
     this.#style.remove();
     this.#root.remove();
   }

@@ -660,6 +660,8 @@ export function controlsFor(
     case 'launcher':
       return { actions: [], palette: [] };
     case 'loading':
+      // DCSS is starting (the start screen shows its progress); there is nothing to press yet.
+      return { actions: [], palette: [] };
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop' })], palette: PALETTE };
     case 'start':

@@ -133,6 +133,8 @@ class DcssAdapter implements GameAdapter {
   #characters: SavedCharacter[] = [];
   /** A game process is running (the launcher is hidden). */
   #playing = false;
+  /** The character being started (shown while DCSS prepares). */
+  #launchName = '';
   #version = '';
   #drawer = false;
   #run = false;
@@ -260,7 +262,8 @@ class DcssAdapter implements GameAdapter {
   }
 
   #launch(name: string): void {
-    this.#launcher?.hide();
+    this.#launcher?.showPreparing(name);
+    this.#launchName = name;
     this.#playing = true;
     this.#settings = { ...this.#settings, lastName: name };
     this.#host?.emit({ type: 'setting-changed', key: 'lastName', value: name });
@@ -548,6 +551,11 @@ class DcssAdapter implements GameAdapter {
 
   #emitContext(context: DcssContext, force = false): void {
     this.debug.context = context;
+    // Cover the client with a progress screen until DCSS shows something.
+    if (this.#playing) {
+      if (context === 'loading') this.#launcher?.showPreparing(this.#launchName);
+      else if (this.#launcher?.preparing) this.#launcher.hide();
+    }
     const player = this.#tracker.player;
     const layout = controlsFor(context, { hp: player.hp ?? 0, hpMax: player.hp_max ?? 0, run: this.#run });
     const signature = JSON.stringify([context, layout]);

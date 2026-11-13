@@ -2,10 +2,10 @@
 
 ## Pipeline
 
-`.github/workflows/deploy.yml` runs on pushes to `main` (and manually):
+`.github/workflows/deploy.yml` runs when CI has passed for a push to `main` (and manually), on that commit:
 
 1. Install pinned dependencies (`pnpm install --frozen-lockfile`).
-2. Build each game runtime from pinned source with the pinned Emscripten SDK (cached between runs).
+2. Restore each game runtime CI built and verified for these inputs. Runtimes are cached under `runtime-<game>-<hash>`, the hash covering the game's directory (minus docs and build output) and the toolchain files, so CI rebuilds and re-verifies only the games a push changed. On a cache miss deploy builds from pinned source with the pinned Emscripten SDK.
 3. `pnpm build` with `ROGUE_ARCHIVE_BASE=/<repository>/`: validate the catalog, verify and stage runtimes, build the site.
 4. Upload `apps/web/dist` with `actions/upload-pages-artifact` and publish with `actions/deploy-pages`. A concurrency group prevents stale deployments from overtaking newer ones.
 

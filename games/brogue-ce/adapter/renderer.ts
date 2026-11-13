@@ -16,6 +16,7 @@ import {
   compactViews,
   hitTest,
   screenView,
+  titleArtView,
   sidebarRect,
   type HitResult,
   type Insets,
@@ -207,6 +208,8 @@ export class BrogueRenderer {
   #lastCells: Uint8Array | null = null;
   #player: { x: number; y: number } | null = null;
   #inGame = false;
+  /** Phones at the title menu: CSS pixels at the top kept clear (toolbar), or null. */
+  #titleArtTop: number | null = null;
   #compact: CompactState | null = null;
   #pan = { x: 0, y: 0 };
   #dirty = true;
@@ -303,6 +306,23 @@ export class BrogueRenderer {
   }
 
   /** Switch between the classic screen and the phone layout. */
+  /**
+   * Phones: while large title-menu buttons cover the menu, show Brogue's title
+   * art (and its flames) large at the top instead of the whole small screen.
+   */
+  setTitleArt(topCss: number | null): void {
+    if (topCss === this.#titleArtTop) return;
+    this.#titleArtTop = topCss;
+    this.#updateLayout();
+  }
+
+  /** Where the drawn screen ends (CSS px from the top), for fading the title buttons into it. */
+  get screenBottomCss(): number {
+    const view = this.#views[0];
+    if (!view) return 0;
+    return (view.originY + ROWS * view.cellHeight) / (window.devicePixelRatio || 1);
+  }
+
   setCompact(state: CompactState | null): void {
     const before = JSON.stringify(this.#compact);
     this.#compact = state ? { ...state } : null;
@@ -691,9 +711,20 @@ export class BrogueRenderer {
         MESSAGE_STRIP_HEIGHT,
       );
       this.#layout = layout;
-      const view = screenView(width, height, layout.cellWidth, layout.cellHeight);
-      view.originX = layout.originX;
-      view.originY = layout.originY;
+      const artTop = this.#inGame ? null : this.#titleArtTop;
+      let view: View;
+      if (artTop !== null) {
+        const top = Math.round(artTop * dpr);
+        const ratio = Math.min(
+          MAX_CELL_RATIO,
+          Math.max(MIN_CELL_RATIO, layout.cellWidth / layout.cellHeight),
+        );
+        view = titleArtView(width, height, { x: 0, y: top, width, height: height - top }, ratio);
+      } else {
+        view = screenView(width, height, layout.cellWidth, layout.cellHeight);
+        view.originX = layout.originX;
+        view.originY = layout.originY;
+      }
       this.#views = [view];
       const showStrip = !this.#compact && layout.zoom > 1;
       if (this.#messageStrip.hidden === showStrip) {

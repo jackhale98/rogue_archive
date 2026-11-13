@@ -214,7 +214,7 @@
       ],
       "knownLimitations": [
         "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
-        "The first launch takes 10–15 seconds while DCSS builds its level and description caches; later launches are quicker.",
+        "The first launch takes 10–15 seconds on a computer and a minute or more on a phone while DCSS builds its level and description caches (a progress screen shows meanwhile); later launches are quicker.",
         "The download is about 19 MB on the first visit (cached afterwards for offline play).",
         "Map zoom on phones follows DCSS's own fit-to-view; pinch zoom is not yet available.",
         "No sound (DCSS's browser interface has none)."
