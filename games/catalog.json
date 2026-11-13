@@ -581,7 +581,11 @@
         },
         {
           "keys": "t · g · f · o",
-          "action": "Ranged orb on the centre cell · drop · bow fire mode · context action"
+          "action": "Ranged orb (or strong wind) on the centre cell · drop a Dead Orb · crossbow fire mode · world overview"
+        },
+        {
+          "keys": "Shift+click · i · m",
+          "action": "Always use a ranged orb there · orb inventory (Orb Strategy) · mark a mine (Minefield)"
         },
         {
           "keys": "Esc · v · F1 · F5",
@@ -589,7 +593,7 @@
         },
         {
           "keys": "Phone",
-          "action": "Tap to move, slide to choose, long-press for help (as HyperRogue's mobile version); dock with centre, wait, target, quest and menu; thumb pad"
+          "action": "Tap to move, slide to choose, long-press for help (as HyperRogue's mobile version); dock with centre, overview and quest, plus Aim (ranged orbs), Inspect, crossbow Fire, Drop, Orbs and Mark where they apply; thumb pad (wait in the centre)"
         }
       ],
       "knownLimitations": [
@@ -607,7 +611,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Dock, tap to move, long-press for help and the thumb pad exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Dock, tap to move, long-press for help, Inspect mode and the thumb pad exercised by end-to-end tests (Aim, Fire, Drop, Orbs and Mark need orbs or lands the tests cannot reach: unit-tested docks only); not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

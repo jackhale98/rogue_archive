@@ -112,7 +112,7 @@ em++ "$OBJ/hyperrogue-$STAMP.o" "$ZLIB/libz-emscripten.a" \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createHyperRogue \
   -sENVIRONMENT=web -sEXIT_RUNTIME=0 \
   -sFORCE_FILESYSTEM=1 -lidbfs.js \
-  -sEXPORTED_FUNCTIONS=_main,_use_file,_ra_save,_ra_state,_ra_land_name,_ra_resize,_ra_log_size,_ra_log_text,_ra_log_quantity,_ra_log_turn,_ra_hover_text,_emscripten_cancel_main_loop,_malloc,_free \
+  -sEXPORTED_FUNCTIONS=_main,_use_file,_ra_save,_ra_state,_ra_land_name,_ra_resize,_ra_log_size,_ra_log_text,_ra_log_quantity,_ra_log_turn,_ra_hover_text,_ra_set_touch_mode,_ra_item_name,_emscripten_cancel_main_loop,_malloc,_free \
   -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,UTF8ToString,HEAP32,addRunDependency,removeRunDependency \
   -sINCOMING_MODULE_JS_API=canvas,keyboardListeningElement,wasmBinary,locateFile,print,printErr,onAbort,preRun,postRun \
   -o "$OUT/hyperrogue.mjs"

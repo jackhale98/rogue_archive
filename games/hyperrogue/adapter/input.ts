@@ -159,7 +159,7 @@ export const HYPER_COMMANDS: readonly HyperCommand[] = [
 
   {
     id: 'target',
-    label: 'Use a ranged orb on the cell at the centre',
+    label: 'Use a ranged orb on the cell at the centre (with strong wind: jump where it blows)',
     shortLabel: 'Target',
     shortcut: 't',
     keys: [k('t')],
@@ -167,7 +167,7 @@ export const HYPER_COMMANDS: readonly HyperCommand[] = [
   },
   {
     id: 'drop',
-    label: 'Drop (an item that can be dropped)',
+    label: 'Drop a Dead Orb',
     shortLabel: 'Drop',
     shortcut: 'g',
     keys: [k('g')],
@@ -175,19 +175,67 @@ export const HYPER_COMMANDS: readonly HyperCommand[] = [
   },
   {
     id: 'fire-mode',
-    label: 'Bow: switch fire mode',
-    shortLabel: 'Bow',
+    label: 'Crossbow: fire mode on or off (aim, then confirm)',
+    shortLabel: 'Fire',
     shortcut: 'f',
     keys: [k('f')],
     category: 'Actions',
   },
   {
+    id: 'inventory',
+    label: 'Orb inventory (Orb Strategy mode)',
+    shortLabel: 'Orbs',
+    shortcut: 'i',
+    keys: [k('i')],
+    category: 'Actions',
+  },
+  {
+    id: 'mark',
+    label: 'Mark or unmark a mine on the cell under the pointer (Minefield)',
+    shortLabel: 'Mark',
+    shortcut: 'm',
+    keys: [k('m')],
+    category: 'Actions',
+  },
+  {
     id: 'context',
-    label: 'Context action (o)',
-    shortLabel: 'o',
+    label: "World overview (or the special mode's menu)",
+    shortLabel: 'Overview',
     shortcut: 'o',
     keys: [k('o')],
     category: 'Actions',
+  },
+
+  // What a tap on the map does (touch only: the adapter switches upstream's
+  // own touch modes, or marks the tapped cell). The shortcut is the desktop's
+  // equivalent.
+  {
+    id: 'aim-mode',
+    label: 'Aim: the next tap uses a ranged orb, never moves',
+    shortLabel: 'Aim',
+    shortcut: 'Shift+click',
+    keys: [],
+    category: 'Touch',
+    description:
+      'The next tap on the map uses a ranged orb there (or the game says why it cannot); once it is used, taps move again.',
+  },
+  {
+    id: 'inspect-mode',
+    label: 'Inspect: taps tell about a cell, never move',
+    shortLabel: 'Inspect',
+    shortcut: 'Right-click',
+    keys: [],
+    category: 'Touch',
+    description: 'Taps on the map show help about what is there, until switched off.',
+  },
+  {
+    id: 'mark-mode',
+    label: 'Mark: taps mark or unmark mines',
+    shortLabel: 'Mark',
+    shortcut: 'm',
+    keys: [],
+    category: 'Touch',
+    description: 'Taps on the map mark or unmark a possible mine there (m), until switched off.',
   },
 
   {
@@ -253,22 +301,84 @@ export const PAD = {
   se: 'move-se',
 } as const;
 
+/** The palette: every key command (the tap modes are offered by the dock, where they apply). */
 export const PALETTE = HYPER_COMMANDS.filter(
-  (command) => !command.id.startsWith('move-') && command.category !== 'Keys',
+  (command) => !command.id.startsWith('move-') && command.category !== 'Keys' && command.category !== 'Touch',
 ).map((command) => command.id);
 
 export const HYPER_TOUCH_LAYOUT: TouchControlLayout = {
   directionPad: PAD,
-  actions: ['recenter', 'wait', 'mission', 'menu', SHELL_COMMAND.palette],
+  actions: ['recenter', 'context', 'mission', SHELL_COMMAND.palette],
   palette: PALETTE,
 };
 
 export type HyperContext = 'loading' | 'map' | 'dialog' | 'over';
 
+/** Upstream's touch modes the dock offers (state.ts TOUCH_MODE). */
+const INSPECT = 1;
+const AIM = 4;
+
+/** What the map dock depends on: the state snapshot, and the adapter's own Mark mode. */
+export interface DockState {
+  ranged: boolean;
+  wind: boolean;
+  crossbow: boolean;
+  fireMode: boolean;
+  reload: number;
+  deadOrbs: number;
+  orbStrategy: boolean;
+  minefield: boolean;
+  /** Upstream's touch mode (state.ts TOUCH_MODE). */
+  touchMode: number;
+  markMode: boolean;
+}
+
+const QUIET: DockState = {
+  ranged: false,
+  wind: false,
+  crossbow: false,
+  fireMode: false,
+  reload: 0,
+  deadOrbs: 0,
+  orbStrategy: false,
+  minefield: false,
+  touchMode: 0,
+  markMode: false,
+};
+
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
-/** The dock for each situation. */
-export function controlsFor(context: HyperContext): TouchControlLayout {
+/** The map dock: what the situation offers first, then the view, the quest screen and More. */
+function mapActions(dock: DockState): TouchAction[] {
+  const actions: TouchAction[] = [];
+  const inspecting = dock.touchMode === INSPECT;
+  if (inspecting) actions.push(a('inspect-mode', { active: true }));
+  if (dock.ranged) actions.push(a('aim-mode', { active: dock.touchMode === AIM }));
+  if (dock.crossbow)
+    actions.push(
+      a('fire-mode', { active: dock.fireMode, label: dock.reload > 0 ? `Fire (${dock.reload})` : 'Fire' }),
+    );
+  // `t` targets the cell at the centre of the view, which after any move is
+  // the player (rejected); with strong wind it jumps where the wind blows.
+  if (dock.wind) actions.push(a('target', { label: 'Wind jump' }));
+  // `g` with nothing to drop only waits a turn.
+  if (dock.deadOrbs > 0) actions.push(a('drop', { label: 'Drop Dead Orb' }));
+  if (dock.orbStrategy) actions.push(a('inventory'));
+  if (dock.minefield) actions.push(a('mark-mode', { active: dock.markMode }));
+  actions.push(
+    a('recenter', { alternates: ['rotate-left', 'rotate-right'] }),
+    a('context', inspecting ? {} : { alternates: ['inspect-mode'] }),
+    // In fire mode Esc cancels it (the quest screen comes with the next Esc).
+    dock.fireMode
+      ? a('mission', { label: 'Cancel fire' })
+      : a('mission', { alternates: ['help', 'new-game', 'menu'] }),
+    a(SHELL_COMMAND.palette, { label: 'More' }),
+  );
+  return actions;
+}
+
+/** The dock for each situation. Waiting is the pad's centre. */
+export function controlsFor(context: HyperContext, dock: DockState = QUIET): TouchControlLayout {
   switch (context) {
     case 'loading':
       return { actions: [], palette: [] };
@@ -282,17 +392,6 @@ export function controlsFor(context: HyperContext): TouchControlLayout {
         palette: PALETTE,
       };
     case 'map':
-      return {
-        directionPad: PAD,
-        actions: [
-          a('recenter', { alternates: ['rotate-left', 'rotate-right'] }),
-          a('wait'),
-          a('target', { alternates: ['drop', 'fire-mode', 'context'] }),
-          a('mission', { alternates: ['new-game', 'help'] }),
-          a('menu'),
-          a(SHELL_COMMAND.palette, { label: 'More' }),
-        ],
-        palette: PALETTE,
-      };
+      return { directionPad: PAD, actions: mapActions(dock), palette: PALETTE };
   }
 }

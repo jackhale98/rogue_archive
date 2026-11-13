@@ -117,10 +117,11 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] WASM build with no patches: upstream's own web build (`hyperweb.cpp`), saving and config switched on with upstream's `CAP_` switches, a fixed command line; pinned zlib built from git
 - [x] Runs on the page (not a worker): canvas sized to the shell's area at up to 2x device pixels; listeners removed and the GL context released on exit
 - [x] Touch play modelled on upstream's mobile version: tap to move, slide to choose, long-press for help; dock (centre, wait, target, quest, menu) and thumb pad
+- [x] Contextual touch controls (controls audit): Aim toggle with a ranged orb (upstream's "touch for ranged" mode) and the orb a tap would use; Inspect ("touch for info"); crossbow Fire toggle with Esc relabelled; Drop only with Dead Orbs; Orbs `i` in Orb Strategy; Mark `m` in the Minefield; `t` only with strong wind; Orb of Safety hint; Wait only on the pad
 - [x] Score file and config in IndexedDB; the Android app's background save when the page is left; export/import (desktop `hyperrogue.log`)
 - [x] Message log from the game's own log
 - [x] Engine conformance: key coverage against `control.cpp`, upstream drift, native vs WebAssembly seeded games (3 seeds × 400 turns identical)
-- [x] e2e: desktop (start, moves, quest screen, log, score file import kept across reloads) and phone (dock, tap to move, long-press help, pad)
+- [x] e2e: desktop (start, moves, quest screen, log, score file import kept across reloads) and phone (dock, tap to move, long-press help, Inspect mode, pad)
 - [x] CI build, deploy, weekly canary
 - [ ] Explain seed 7's divergence (one monster's tie-break after 324 turns)
 - [ ] Measure frame rate on physical phones; test on Firefox and Safari

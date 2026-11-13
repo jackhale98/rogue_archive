@@ -35,10 +35,11 @@ import {
   findCommand,
   strokeFor,
   strokeForInput,
+  type DockState,
   type HyperContext,
   type KeyStroke,
 } from './input.ts';
-import { STATE_FIELDS, detectContext, parseState, type HyperState } from './state.ts';
+import { STATE_FIELDS, TOUCH_MODE, detectContext, hintFor, parseState, type HyperState } from './state.ts';
 
 const GAME_ID = 'hyperrogue';
 const HOME = '/hyperrogue';
@@ -50,6 +51,10 @@ const LONG_PRESS_MS = 500;
 const TAP_SLOP_PX = 12;
 /** Rendering resolution cap: legacy GL emulation at 3x on a phone is slow. */
 const MAX_PIXEL_RATIO = 2;
+/** `m`: marks (or unmarks) a mine on the cell under the pointer. */
+const MARK_KEY = strokeFor('m')!;
+/** The adapter's own touch commands (the tap modes). */
+const TAP_MODES = new Set(['aim-mode', 'inspect-mode', 'mark-mode']);
 
 interface HyperModule {
   FS: {
@@ -77,6 +82,8 @@ interface HyperModule {
   _ra_log_quantity(i: number): number;
   _ra_log_turn(i: number): number;
   _ra_hover_text(): number;
+  _ra_set_touch_mode(mode: number): number;
+  _ra_item_name(item: number): number;
   _emscripten_cancel_main_loop(): void;
   _malloc(size: number): number;
   _free(ptr: number): void;
@@ -88,6 +95,10 @@ export interface HyperDebugState {
   context: HyperContext | null;
   state: HyperState | null;
   land: string;
+  /** Taps mark mines (the dock's Mark). */
+  markMode: boolean;
+  /** The hint shown over the game (tap mode, the orb a tap would use, Orb of Safety). */
+  hint: string[];
   /** What the game says about the cell under the pointer. */
   hover(): string;
   /** The game's recent messages, oldest first. */
@@ -216,15 +227,24 @@ class HyperRogueAdapter implements GameAdapter {
   #poll: ReturnType<typeof setInterval> | undefined;
   #statePtr = 0;
   #context: HyperContext | null = null;
+  #layoutSignature = '';
   #logSignature = '';
   #touch: { id: number; x: number; y: number; moved: boolean; long: boolean; timer: number } | null = null;
   #stopped = false;
+  #hint: HTMLDivElement | null = null;
+  #hintSignature = '';
+  /** Taps mark mines (`m` on the tapped cell) instead of moving. */
+  #markMode = false;
+  /** The turn Aim was switched on: Aim lasts until a turn passes (an orb used). */
+  #aimTurn: number | null = null;
 
   constructor() {
     this.debug = {
       context: null,
       state: null,
       land: '',
+      markMode: false,
+      hint: [],
       hover: () =>
         this.#module && !this.#stopped ? this.#module.UTF8ToString(this.#module._ra_hover_text()) : '',
       messages: () => this.#readLog().map((entry) => entry.runs.map((run) => run.text).join('')),
@@ -343,7 +363,19 @@ class HyperRogueAdapter implements GameAdapter {
     const style = document.createElement('style');
     style.textContent =
       '.hr-root>canvas.hr-canvas{position:absolute;display:block;outline:none;left:0;' +
-      'top:var(--hr-top,0px)!important;width:var(--hr-width,100%)!important;height:var(--hr-height,100%)!important}';
+      'top:var(--hr-top,0px)!important;width:var(--hr-width,100%)!important;height:var(--hr-height,100%)!important}' +
+      '.hr-hint{position:absolute;left:50%;bottom:calc(var(--hr-bottom,0px) + 56px);transform:translateX(-50%);' +
+      'display:flex;flex-direction:column;align-items:center;gap:4px;max-width:calc(100% - 24px);pointer-events:none;' +
+      "font:600 13px/1.25 'Inter Variable',system-ui,sans-serif;color:#ece3cf;text-align:center}" +
+      '.hr-hint[hidden]{display:none}' +
+      '.hr-hint>span{padding:4px 10px;border-radius:999px;background:rgba(22,19,15,.82);' +
+      'border:1px solid rgba(236,227,207,.16)}';
+    // What a tap does now (Aim, Inspect, Mark, fire mode), the orb a tap
+    // would use, and the Orb of Safety: the game's own HUD is small on phones.
+    const hint = document.createElement('div');
+    hint.className = 'hr-hint';
+    hint.setAttribute('role', 'status');
+    hint.hidden = true;
     const canvas = document.createElement('canvas');
     canvas.className = 'hr-canvas';
     canvas.tabIndex = 0;
@@ -355,9 +387,10 @@ class HyperRogueAdapter implements GameAdapter {
     root.addEventListener('touchmove', (event) => this.#onTouch(event), { capture: true, passive: false });
     root.addEventListener('touchend', (event) => this.#onTouch(event), { capture: true, passive: false });
     root.addEventListener('touchcancel', (event) => this.#onTouch(event), { capture: true, passive: false });
-    root.append(style, sizer, canvas);
+    root.append(style, sizer, canvas, hint);
     mount.append(root);
     this.#root = root;
+    this.#hint = hint;
     this.#sizer = sizer;
     this.#canvas = canvas;
     this.#resizeObserver = new ResizeObserver(() => this.#scheduleResize());
@@ -378,6 +411,7 @@ class HyperRogueAdapter implements GameAdapter {
     const width = root.clientWidth;
     const height = Math.max(1, root.clientHeight - top - bottom);
     root.style.setProperty('--hr-top', `${top}px`);
+    root.style.setProperty('--hr-bottom', `${bottom}px`);
     root.style.setProperty('--hr-width', `${width}px`);
     root.style.setProperty('--hr-height', `${height}px`);
     const ratio = Math.min(MAX_PIXEL_RATIO, window.devicePixelRatio || 1);
@@ -415,8 +449,37 @@ class HyperRogueAdapter implements GameAdapter {
       return;
     }
     if (input.type !== 'command') return;
+    if (TAP_MODES.has(input.commandId)) {
+      this.#switchTapMode(input.commandId);
+      return;
+    }
+    // Turning the crossbow's fire mode on: taps aim the crossbow (upstream
+    // checks the touch modes first, so they go back to moving).
+    if (input.commandId === 'fire-mode' && this.debug.state?.crossbow && !this.debug.state.fireMode)
+      this.#setTapMode(TOUCH_MODE.move, false);
     const command = findCommand(input.commandId);
     if (command) for (const stroke of command.keys) this.#press(stroke);
+  }
+
+  /** The dock's Aim, Inspect and Mark: each switches itself on or off (and the others off). */
+  #switchTapMode(id: string): void {
+    const mode = this.debug.state?.touchMode ?? TOUCH_MODE.move;
+    if (id === 'mark-mode') this.#setTapMode(TOUCH_MODE.move, !this.#markMode);
+    else {
+      const wanted = id === 'aim-mode' ? TOUCH_MODE.ranged : TOUCH_MODE.info;
+      this.#setTapMode(mode === wanted ? TOUCH_MODE.move : wanted, false);
+    }
+    this.#update();
+  }
+
+  /** Sets upstream's touch mode (what a click on the map does) and the adapter's Mark mode. */
+  #setTapMode(mode: number, markMode: boolean): void {
+    const mod = this.#module;
+    if (!mod || this.#stopped) return;
+    const now = mod._ra_set_touch_mode(mode);
+    this.#aimTurn = now === TOUCH_MODE.ranged ? (this.debug.state?.turns ?? 0) : null;
+    this.#markMode = markMode;
+    this.debug.markMode = markMode;
   }
 
   /** One key press as a browser would send it: keydown, keypress (characters), keyup. */
@@ -493,8 +556,19 @@ class HyperRogueAdapter implements GameAdapter {
     }
     clearTimeout(touch.timer);
     this.#touch = null;
+    this.#updateHint();
     if (event.type === 'touchcancel' || touch.long) return;
     this.#mouse('mousemove', t.clientX, t.clientY);
+    if (this.#markMode && this.#context === 'map') {
+      // `m` acts on the cell under the pointer, which the game works out when
+      // it next draws: press it once a frame has passed.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (!this.#stopped && this.#markMode) this.#press(MARK_KEY);
+        }),
+      );
+      return;
+    }
     this.#mouse('mousedown', t.clientX, t.clientY);
     this.#mouse('mouseup', t.clientX, t.clientY);
   }
@@ -509,13 +583,63 @@ class HyperRogueAdapter implements GameAdapter {
     this.debug.state = state;
     this.debug.land = mod.UTF8ToString(mod._ra_land_name());
     const context = detectContext(state);
+    this.#settleTapModes(state, context);
     if (context !== this.#context) {
       this.#context = context;
       this.debug.context = context;
-      this.#host?.emit({ type: 'touch-layout', layout: controlsFor(context), context });
       this.#host?.emit({ type: 'input-context', context: { textEntry: false, mode: context } });
     }
+    const dock: DockState = { ...state, markMode: this.#markMode };
+    const layout = controlsFor(context, dock);
+    const signature = `${context}|${JSON.stringify(layout.actions)}`;
+    if (signature !== this.#layoutSignature) {
+      this.#layoutSignature = signature;
+      this.#host?.emit({ type: 'touch-layout', layout, context });
+    }
+    this.#updateHint();
     this.#updateLog();
+  }
+
+  /**
+   * Tap modes end when they no longer apply: Aim once a turn has passed (the
+   * orb was used) or no ranged orb is left; Mark outside the Minefield; all
+   * of them when the game is over.
+   */
+  #settleTapModes(state: HyperState, context: HyperContext): void {
+    const over = context === 'over';
+    if (state.touchMode === TOUCH_MODE.ranged) {
+      if (this.#aimTurn === null) this.#aimTurn = state.turns;
+      if (over || !state.ranged || state.turns !== this.#aimTurn) {
+        state.touchMode = this.#module!._ra_set_touch_mode(TOUCH_MODE.move);
+        this.#aimTurn = null;
+      }
+    } else if (state.touchMode === TOUCH_MODE.info && over) {
+      state.touchMode = this.#module!._ra_set_touch_mode(TOUCH_MODE.move);
+    }
+    if (this.#markMode && (over || !state.minefield)) {
+      this.#markMode = false;
+      this.debug.markMode = false;
+    }
+  }
+
+  #updateHint(): void {
+    const mod = this.#module;
+    const state = this.debug.state;
+    if (!mod || this.#stopped || !this.#hint) return;
+    const targetOrbName = state?.targetOrb ? mod.UTF8ToString(mod._ra_item_name(state.targetOrb)) : '';
+    const lines = hintFor(state, { markMode: this.#markMode, touching: this.#touch !== null, targetOrbName });
+    this.debug.hint = lines;
+    const signature = lines.join('\n');
+    if (signature === this.#hintSignature) return;
+    this.#hintSignature = signature;
+    this.#hint.replaceChildren(
+      ...lines.map((line) => {
+        const span = document.createElement('span');
+        span.textContent = line;
+        return span;
+      }),
+    );
+    this.#hint.hidden = lines.length === 0;
   }
 
   #readLog(): LogEntry[] {
@@ -642,7 +766,7 @@ class HyperRogueAdapter implements GameAdapter {
     const gl = this.#canvas?.getContext('webgl2') ?? this.#canvas?.getContext('webgl');
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
     this.#root?.remove();
-    this.#root = this.#sizer = this.#canvas = null;
+    this.#root = this.#sizer = this.#canvas = this.#hint = null;
     this.#module = null;
   }
 }

@@ -26,6 +26,15 @@ const EXPECTED: Record<string, RegExp> = {
   target: /sym == 't'[^\n]*\n[\s\S]{0,400}targetRangedOrb\(target, roKeyboard\)/,
   'fire-mode': /sym == 'f'[^\n]*\) bow::switch_fire_mode\(\)/,
   context: /uni == 'o' && DEFAULTNOR\(sym\)\) get_o_key\(\)\.second\(\)/,
+  inventory: /uni == 'i' && DEFAULTNOR\(sym\) && inv::on[^\n]*\n\s*pushScreen\(inv::show\)/,
+  mark: /uni == 'm' && canmove[^\n]*\n\s*mine::performMarkCommand\(mouseover\)/,
+  // Tap modes: upstream's touch modes, which ra_set_touch_mode sets (a click
+  // in "ranged" mode forces a ranged orb, as Shift+click; in "info" mode it
+  // shows help, as right-click), and Mark, which presses m on the tapped cell.
+  'aim-mode':
+    /enum class tmode \{ move, info, drag, fire, ranged \}[\s\S]*touchmode == tmode::ranged\) \{[^\n]*\n[^\n]*\n\s*targetRangedOrb\(mouseover, roMouseForce\)/,
+  'inspect-mode': /enum class tmode \{ move, info[\s\S]*touchmode == tmode::info\)\s*\n\s*gotoHelp\(help\)/,
+  'mark-mode': /uni == 'm' && canmove[^\n]*\n\s*mine::performMarkCommand\(mouseover\)/,
   recenter: /\(sym == SDLK_F3 \|\| sym == ' '\) && DEFAULTNOR\(sym\)/,
   'rotate-left': /sym == SDLK_PAGEUP\) full_rotate_view/,
   'rotate-right': /sym == SDLK_PAGEDOWN\) full_rotate_view/,
@@ -50,6 +59,11 @@ const SHORTCUT: Record<string, string> = {
   target: 't',
   'fire-mode': 'f',
   context: 'o',
+  inventory: 'i',
+  mark: 'm',
+  'aim-mode': 'Shift+click',
+  'inspect-mode': 'Right-click',
+  'mark-mode': 'm',
   recenter: 'Space',
   'rotate-left': 'PgUp',
   'rotate-right': 'PgDn',

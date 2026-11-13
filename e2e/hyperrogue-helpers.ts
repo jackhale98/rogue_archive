@@ -9,8 +9,10 @@ export interface HyperDebug {
     turns: number;
     canMove: boolean;
     land: number;
+    touchMode: number;
   } | null;
   land: string;
+  hint: string[];
   messages: string[];
 }
 
@@ -24,13 +26,16 @@ export function hyperDebug(page: Page): Promise<HyperDebug | null> {
               context: string | null;
               state: HyperDebug['state'];
               land: string;
+              hint: string[];
               messages(): string[];
             };
           };
         };
       }
     ).__rogueArchive?.adapter.debug;
-    return d ? { context: d.context, state: d.state, land: d.land, messages: d.messages() } : null;
+    return d
+      ? { context: d.context, state: d.state, land: d.land, hint: d.hint, messages: d.messages() }
+      : null;
   });
 }
 

@@ -137,11 +137,19 @@ HyperRogue draws its own interface with WebGL (upstream's web build), so the pho
 
 | Context | Dock |
 |---|---|
-| Map | Centre (fan: rotate either way) · Wait · Target (fan: drop, bow fire mode, context action) · Quest (fan: new game, help) · Menu · More, plus the pad (vi keys, Wait in the centre) |
+| Map | What applies, first: Aim (a ranged orb is held) · Fire (crossbow mode; lit while aiming, with the reload count) · Wind jump `t` (strong wind) · Drop Dead Orb `g` (Dead Orbs carried) · Orbs `i` (Orb Strategy) · Mark (in or next to the Minefield). Then Centre (fan: rotate either way) · Overview `o` (fan: Inspect) · Quest (fan: help, new game, menu; "Cancel fire" while the crossbow aims, as Esc does) · More, plus the pad (vi keys, Wait in the centre) |
 | Menus, help, quest screen | Back (Esc), OK (Enter); the game's own lines are tappable |
 | Caught (game over) | Options (the quest screen), New game, Menu |
 
-`games/hyperrogue/tests/conformance/key-coverage.ts` checks each command against `control.cpp`.
+What a tap on the map does can be switched from the dock (lit while on):
+
+- **Aim** (shown while a ranged orb is held): upstream's own "touch for ranged" mode (`touchmode`, which its `touch_interface` button cycles; the port sets it with `ra_set_touch_mode`). The next tap always targets a ranged orb there, with the game's messages if it can't, and never walks: the desktop's Shift+click. Aim ends once a turn passes (the orb was used) or no ranged orb is left. Without Aim, a tap on a distant cell still uses an orb if one applies (as upstream's mobile version); while the finger is down the hint names the orb a release would use ("Release uses Orb of Teleport", from the game's `orbToTarget`).
+- **Inspect** (Overview's fan): upstream's "touch for info" mode: taps show help about the cell (the desktop's right-click), never move, until switched off.
+- **Mark** (Minefield): taps mark or unmark a possible mine (the adapter points at the cell, then presses `m`, upstream's key for the cell under the pointer). Ends on leaving the Minefield.
+
+A small hint above the dock says which mode is on, and shows the Orb of Safety's charge while it is powered ("leaving now keeps this game"). `t` targets the cell at the centre of the view, which after any move is the player, so the dock offers it only with strong wind (where it jumps); it stays in More.
+
+`games/hyperrogue/tests/conformance/key-coverage.ts` checks each command against `control.cpp`, including the touch modes the dock switches.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
