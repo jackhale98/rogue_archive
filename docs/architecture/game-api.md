@@ -35,7 +35,7 @@ Adapters also expose `commands`, `touchLayout`, `settings` (setting descriptors 
 
 ## Events to the host
 
-`status`, `error`, `message`, `touch-layout`, `input-context` (`textEntry` true while the game wants typed text, which shows the keyboard prompt), `save-state`, `setting-changed` (persisted per game), `exit`.
+`status`, `error`, `message`, `message-log` (entries for the shell's scrollable log; ids replace earlier versions), `shell-command` (e.g. open the log), `touch-layout`, `input-context` (`textEntry` true while the game wants typed text, which shows the keyboard prompt), `save-state`, `setting-changed` (persisted per game), `exit`.
 
 ## Versioning
 

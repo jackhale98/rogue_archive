@@ -9,7 +9,9 @@ import {
   type GameHost,
   type InputContext,
   type RuntimeStatus,
+  type LogEntry,
   type TouchControlLayout,
+  SHELL_COMMAND,
 } from '@rogue-archive/game-api';
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { loadAdapterModule } from '../../app/adapters.ts';
@@ -30,6 +32,28 @@ export interface GameSession {
   /** Current touch controls, updated by the adapter as the game's context changes. */
   touchLayout: TouchControlLayout | null;
   touchContext: string;
+  /** The game's message history, oldest first (capped). */
+  log: LogEntry[];
+  /** Increments when the game asks the shell to open the log. */
+  logRequests: number;
+}
+
+const MAX_LOG_ENTRIES = 1000;
+
+/** Merges log updates: known ids are replaced in place, new ids appended. */
+export function mergeLog(current: LogEntry[], reset: boolean, entries: LogEntry[]): LogEntry[] {
+  const next = reset ? [] : current.slice();
+  const index = new Map(next.map((entry, i) => [entry.id, i]));
+  for (const entry of entries) {
+    const at = index.get(entry.id);
+    if (at === undefined) {
+      index.set(entry.id, next.length);
+      next.push(entry);
+    } else {
+      next[at] = entry;
+    }
+  }
+  return next.length > MAX_LOG_ENTRIES ? next.slice(next.length - MAX_LOG_ENTRIES) : next;
 }
 
 const INITIAL: GameSession = {
@@ -42,6 +66,8 @@ const INITIAL: GameSession = {
   settings: {},
   touchLayout: null,
   touchContext: 'title',
+  log: [],
+  logRequests: 0,
 };
 
 function toGameError(error: unknown): GameError {
@@ -110,6 +136,19 @@ export function useGameSession(
             break;
           case 'error':
             fail(event.error);
+            break;
+          case 'message-log':
+            if (!controller.signal.aborted) {
+              setSession((current) => ({
+                ...current,
+                log: mergeLog(current.log, event.reset, event.entries),
+              }));
+            }
+            break;
+          case 'shell-command':
+            if (event.command === SHELL_COMMAND.log && !controller.signal.aborted) {
+              setSession((current) => ({ ...current, logRequests: current.logRequests + 1 }));
+            }
             break;
           case 'touch-layout':
             update({ touchLayout: event.layout, touchContext: event.context });

@@ -6,6 +6,16 @@ import type { GameError, RuntimeFile, RuntimeStatus, SaveFile } from '@rogue-arc
 /** [eventType, param1, param2, controlKey, shiftKey] */
 export type BrogueEventTuple = [number, number, number, number, number];
 
+/** One entry of Brogue's message archive. `id` increases for every new entry. */
+export interface ArchivedMessage {
+  id: number;
+  turn: number;
+  count: number;
+  foldable: boolean;
+  /** Raw message bytes including Brogue's color escapes (COLOR_ESCAPE + r, g, b). */
+  bytes: number[];
+}
+
 export type ToWorker =
   | {
       type: 'init';
@@ -34,6 +44,8 @@ export type FromWorker =
       state: Int32Array;
     }
   | { type: 'graphics-mode'; mode: number }
+  /** Brogue's message history: new entries (and the updated newest one); `reset` starts over. */
+  | { type: 'messages'; reset: boolean; entries: ArchivedMessage[] }
   | { type: 'notify'; eventId: number; data1: number; data2: number; str1: string; str2: string }
   | { type: 'exit'; status: number }
   | { type: 'flushed'; id: number; error?: string }

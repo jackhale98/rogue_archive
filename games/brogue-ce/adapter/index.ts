@@ -8,6 +8,7 @@
  */
 import {
   GAME_API_VERSION,
+  SHELL_COMMAND,
   type GameAdapter,
   type GameHost,
   type GameInput,
@@ -32,6 +33,7 @@ import {
 import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
 import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
 import { BrogueHud } from './hud.ts';
+import { toLogEntry } from './messages.ts';
 import { BrogueRenderer, DEFAULT_MAP_CELL_CSS, RendererUnsupportedError } from './renderer.ts';
 import type { HitResult, OverlayKind } from './views.ts';
 import { controlsFor, detectContext, parseState, type BrogueContext, type BrogueState } from './state.ts';
@@ -312,7 +314,7 @@ class BrogueAdapter implements GameAdapter {
     if (!this.#hud) {
       this.#hud = new BrogueHud(mount, {
         onStatus: () => this.#setDrawer(!this.#drawer),
-        onMessages: () => this.sendInput({ type: 'command', commandId: 'messages' }),
+        onMessages: () => this.#host?.emit({ type: 'shell-command', command: SHELL_COMMAND.log }),
       });
       if (this.#state && this.#lastCells) this.#hud.update(this.#state, this.#lastCells);
     }
@@ -444,13 +446,20 @@ class BrogueAdapter implements GameAdapter {
         this.#lastCells = message.cells;
         this.debug.context = this.#updateContext(message.inGame, this.#state, message.cells);
         this.#applyCompact();
-        if (this.#hud && message.inGame) this.#hud.update(this.#state, message.cells);
+        if (this.#hud && message.inGame) {
+          this.#hud.update(this.#state, message.cells);
+          const covered = this.#renderer?.views.some((view) => view.name !== 'map') ?? false;
+          this.#hud.setFlavorVisible(!covered);
+        }
         break;
       case 'status':
         host?.emit({ type: 'status', status: message.status });
         break;
       case 'error':
         if (this.#started) host?.emit({ type: 'error', error: message.error });
+        break;
+      case 'messages':
+        host?.emit({ type: 'message-log', reset: message.reset, entries: message.entries.map(toLogEntry) });
         break;
       case 'graphics-mode':
         host?.emit({ type: 'setting-changed', key: 'graphicsMode', value: message.mode });

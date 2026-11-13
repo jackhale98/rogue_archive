@@ -7,6 +7,7 @@ import { href, navigate } from '../app/router.ts';
 import { useSettings } from '../app/settings.tsx';
 import { ErrorView } from '../features/game-shell/ErrorView.tsx';
 import { LoadingView } from '../features/game-shell/LoadingView.tsx';
+import { MessageLog } from '../features/game-shell/MessageLog.tsx';
 import { ShellMenu } from '../features/game-shell/ShellMenu.tsx';
 import { ActionDock, ThumbPad } from '../features/game-shell/TouchControls.tsx';
 import { useGameSession } from '../features/game-shell/useGameSession.ts';
@@ -63,7 +64,7 @@ function usePortrait(): boolean {
 }
 
 /** Space (CSS px) the floating tools take in the top-right corner of the compact layout. */
-const COMPACT_TOOLS_WIDTH = 168;
+const COMPACT_TOOLS_WIDTH = 210;
 
 function GameShell({ gameId }: { gameId: string }) {
   const game = gamesById.get(gameId)!;
@@ -75,6 +76,7 @@ function GameShell({ gameId }: { gameId: string }) {
   const { settings } = useSettings();
   const coarse = useCoarsePointer();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [viewLabel, setViewLabel] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
   const showTouch = settings.touchControls === 'always' || (settings.touchControls === 'auto' && coarse);
@@ -152,7 +154,18 @@ function GameShell({ gameId }: { gameId: string }) {
     else void document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => undefined);
   };
 
+  // The game can ask for the log (e.g. tapping its message area).
+  const [handledLogRequests, setHandledLogRequests] = useState(0);
+  if (session.logRequests !== handledLogRequests) {
+    setHandledLogRequests(session.logRequests);
+    if (session.logRequests > 0) setLogOpen(true);
+  }
+
   const onShellCommand = (command: string): boolean => {
+    if (command === SHELL_COMMAND.log) {
+      setLogOpen(true);
+      return true;
+    }
     if (command === SHELL_COMMAND.palette) {
       setMenuOpen(true);
       return true;
@@ -205,6 +218,28 @@ function GameShell({ gameId }: { gameId: string }) {
         >
           <span aria-hidden="true">⛶</span>
           <span className="tool-button__label">Full screen</span>
+        </button>
+      ) : null}
+      {running ? (
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => setLogOpen(true)}
+          aria-label="Message log"
+        >
+          <svg
+            aria-hidden="true"
+            width="18"
+            height="18"
+            viewBox="0 0 18 18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          >
+            <path d="M3 4.5h12M3 9h9M3 13.5h11" />
+          </svg>
+          <span className="tool-button__label">Log</span>
         </button>
       ) : null}
       {running ? (
@@ -309,6 +344,16 @@ function GameShell({ gameId }: { gameId: string }) {
       </div>
 
       {running ? <VirtualKeyboard ref={keyboardRef} adapter={adapter} /> : null}
+      {running ? (
+        <MessageLog
+          open={logOpen}
+          entries={session.log}
+          onClose={() => {
+            setLogOpen(false);
+            focusGame();
+          }}
+        />
+      ) : null}
       {running && runtime ? (
         <ShellMenu
           open={menuOpen}

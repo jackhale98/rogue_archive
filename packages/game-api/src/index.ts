@@ -99,7 +99,18 @@ export const SHELL_COMMAND = {
   palette: 'shell:palette',
   /** Open the device keyboard for typing to the game. */
   keyboard: 'shell:keyboard',
+  /** Open the message log. */
+  log: 'shell:log',
 } as const;
+
+/** One line of a game's message history, with optional colors. */
+export interface LogEntry {
+  /** Stable and increasing; an entry with a known id replaces the earlier version (e.g. "(x3)"). */
+  id: number;
+  /** Optional grouping label, e.g. "Turn 152". */
+  group?: string;
+  runs: { text: string; color?: string }[];
+}
 
 /** One touch button. */
 export interface TouchAction {
@@ -168,6 +179,10 @@ export type GameEvent =
   | { type: 'input-context'; context: InputContext }
   | { type: 'save-state'; state: SaveState }
   | { type: 'setting-changed'; key: string; value: unknown }
+  /** Messages for the shell's scrollable log. `reset` clears it first (e.g. a new game). */
+  | { type: 'message-log'; reset: boolean; entries: LogEntry[] }
+  /** Ask the shell to do something it owns (see SHELL_COMMAND), e.g. from a tap inside the game's own UI. */
+  | { type: 'shell-command'; command: string }
   /** The game's situation changed; show these touch controls (context is a label for tests and styling). */
   | { type: 'touch-layout'; layout: TouchControlLayout; context: string }
   | { type: 'exit'; reason: 'user' | 'game-over' | 'error' };

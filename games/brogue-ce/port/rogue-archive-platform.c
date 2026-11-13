@@ -19,6 +19,7 @@
 // Brogue's headers define true/false; include them before emscripten.h, which
 // cleanly replaces existing definitions with C/JS-compatible equivalents.
 #include <limits.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include "platform.h"
@@ -104,13 +105,38 @@ EM_JS(void, ra_graphics_mode_changed, (int mode), {
     Module.raGraphicsModeChanged(mode);
 });
 
+// Brogue's message history (GlobalsBase.c messageArchive, a ring buffer) is
+// read directly by the worker for the player-facing message log. Read-only.
+EM_JS(void, ra_message_archive, (const void *base, int capacity, int stride, int offsetCount, int offsetTurn,
+                                 int offsetFlags, int textLength, int position), {
+    Module.raMessageArchive(HEAPU8, base, capacity, stride, offsetCount, offsetTurn, offsetFlags, textLength, position);
+});
+
 EM_JS(void, ra_game_exit, (int status), {
     Module.raGameExit(status);
 });
 
 // ---------------------------------------------------------------------------
 
+// Tell the worker when Brogue's message archive gains or updates an entry.
+static void reportMessageArchive(void) {
+    static short lastPosition = -1;
+    static unsigned char lastCount = 0;
+    static unsigned long lastTurn = 0;
+    const archivedMessage *newest =
+        &messageArchive[(messageArchivePosition + MESSAGE_ARCHIVE_ENTRIES - 1) % MESSAGE_ARCHIVE_ENTRIES];
+    if (messageArchivePosition == lastPosition && newest->count == lastCount && newest->turn == lastTurn) return;
+    lastPosition = messageArchivePosition;
+    lastCount = newest->count;
+    lastTurn = newest->turn;
+    ra_message_archive(messageArchive, MESSAGE_ARCHIVE_ENTRIES, (int) sizeof(archivedMessage),
+                       (int) offsetof(archivedMessage, count), (int) offsetof(archivedMessage, turn),
+                       (int) offsetof(archivedMessage, flags), (int) sizeof(newest->message),
+                       messageArchivePosition);
+}
+
 static void present(void) {
+    reportMessageArchive();
     if (!cellsChanged) return;
     cellsChanged = false;
     int px = -1, py = -1;

@@ -116,7 +116,25 @@ check(
   'main.c no longer selects webConsole under BROGUE_WEB: review the console selection in scripts/build.sh',
 );
 
-// 5. On-screen strings the context-aware controls look for (adapter/state.ts).
+// 5. The message archive read for the message log (port + adapter/messages.ts, worker.ts).
+check(
+  define('COLOR_ESCAPE') === '25' && define('COLOR_VALUE_INTERCEPT') === '25',
+  'Message color escape encoding changed: review adapter/messages.ts',
+);
+check(define('MAX_MESSAGE_REPEATS') === '100', 'MAX_MESSAGE_REPEATS changed: review adapter/messages.ts');
+check(/FOLDABLE\s*=\s*Fl\(2\)/.test(rogueH), 'FOLDABLE flag changed: review FOLDABLE in adapter/worker.ts');
+check(
+  /typedef struct archivedMessage \{\s*char message\[COLS\*2\];\s*unsigned char count;[^}]*unsigned long turn;[^}]*unsigned long flags;[^}]*\} archivedMessage;/.test(
+    rogueH,
+  ),
+  'struct archivedMessage changed: review reportMessageArchive() in the port and raMessageArchive in the worker',
+);
+check(
+  /extern archivedMessage messageArchive\[MESSAGE_ARCHIVE_ENTRIES\];/.test(read('src/brogue/GlobalsBase.h')),
+  'messageArchive is no longer a global: the message log cannot read it',
+);
+
+// 6. On-screen strings the context-aware controls look for (adapter/state.ts).
 const allSource = ['src/brogue/IO.c', 'src/brogue/Items.c'].map(read).join('\n');
 check(allSource.includes('--MORE--'), 'The "--MORE--" prompt text changed: review detectContext()');
 check(

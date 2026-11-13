@@ -41,6 +41,22 @@ test.describe('Brogue CE', () => {
     expect(errors).toEqual([]);
   });
 
+  test('the message log shows the game message history, newest last', async ({ page }) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    // Walk into walls a few times to generate more messages.
+    for (const key of ['h', 'h', 'h', 'k', 'k', 'k']) await page.keyboard.press(key);
+    await page.getByRole('button', { name: 'Message log' }).click();
+    const log = page.getByRole('dialog', { name: 'Messages' });
+    await expect(log).toBeVisible();
+    await expect(log.getByRole('listitem').first()).toContainText('Hello and welcome, adventurer');
+    await expect(log).toContainText('Turn 0');
+    await log.getByRole('button', { name: 'Back to game' }).click();
+    await expect(log).toBeHidden();
+    await expect(page.locator('canvas.brogue-canvas')).toBeFocused();
+  });
+
   test('saves with S, survives a page reload, and loads', async ({ page }) => {
     await openBrogue(page);
     await page.keyboard.press('n');

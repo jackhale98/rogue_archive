@@ -13,10 +13,14 @@
  * or exit) so very little progress can be lost.
  */
 import type { RuntimeFile, SaveFile } from '@rogue-archive/game-api';
-import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
+import type { ArchivedMessage, BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
 
 const SAVE_DIR = '/brogue';
 const MOUSE_ENTERED_CELL = 5;
+/** Rogue.h messageFlags FOLDABLE = Fl(2). */
+const FOLDABLE = 1 << 2;
+/** Where we are in Brogue's message archive ring buffer. */
+const archive = { position: -1, lastId: 0 };
 
 interface EmscriptenFS {
   mkdir(path: string): void;
@@ -238,6 +242,49 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
     },
     raNotify(eventId: number, data1: number, data2: number, str1: string, str2: string) {
       post({ type: 'notify', eventId, data1, data2, str1, str2 });
+    },
+    raMessageArchive(
+      heap: Uint8Array,
+      base: number,
+      capacity: number,
+      stride: number,
+      offsetCount: number,
+      offsetTurn: number,
+      offsetFlags: number,
+      textLength: number,
+      position: number,
+    ) {
+      const entryAt = (index: number) => {
+        const at = base + (((index % capacity) + capacity) % capacity) * stride;
+        let end = at;
+        while (end < at + textLength && heap[end] !== 0) end++;
+        const view = new DataView(heap.buffer, heap.byteOffset);
+        return {
+          bytes: Array.from(heap.subarray(at, end)),
+          count: heap[at + offsetCount]!,
+          turn: view.getUint32(at + offsetTurn, true),
+          foldable: (view.getUint32(at + offsetFlags, true) & FOLDABLE) !== 0,
+        };
+      };
+      // Brogue clears the archive for a new game; a wrap-around leaves old entries in place.
+      const cleared =
+        archive.position < 0 || (position < archive.position && entryAt(position).bytes.length === 0);
+      const entries: ArchivedMessage[] = [];
+      if (cleared) {
+        // Everything currently stored, oldest first.
+        for (let back = capacity; back >= 1; back--) {
+          const entry = entryAt(position - back);
+          if (entry.bytes.length > 0) entries.push({ id: ++archive.lastId, ...entry });
+        }
+      } else {
+        // The previous newest entry may have been updated (a repeat count); then any new ones.
+        const added = (position - archive.position + capacity) % capacity;
+        if (archive.lastId > 0) entries.push({ id: archive.lastId, ...entryAt(archive.position - 1) });
+        for (let i = 0; i < added; i++)
+          entries.push({ id: ++archive.lastId, ...entryAt(archive.position + i) });
+      }
+      archive.position = position;
+      if (entries.length > 0 || cleared) post({ type: 'messages', reset: cleared, entries });
     },
     raGraphicsModeChanged(mode: number) {
       post({ type: 'graphics-mode', mode });

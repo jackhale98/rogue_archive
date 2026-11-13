@@ -88,6 +88,11 @@ export class BrogueHud {
     }
   }
 
+  /** The flavor line is hidden while a card or sheet covers the map. */
+  setFlavorVisible(visible: boolean): void {
+    this.#flavor.hidden = !visible;
+  }
+
   update(state: BrogueState, cells: Uint8Array): void {
     const lines = messageLines(cells).slice(this.#portrait ? 0 : 1);
     const flavor = rowText(cells, ROWS - 2).trim();

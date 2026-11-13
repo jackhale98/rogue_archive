@@ -179,6 +179,17 @@ export class BrogueRenderer {
   #cellTexture: WebGLTexture | null = null;
   #uniforms: Record<string, WebGLUniformLocation | null> = {};
   readonly #cellData = new Uint8Array(COLS * ROWS * 2 * 4);
+  /**
+   * Phones: when Brogue draws a text box over the map and we lift it into a
+   * sheet or card, the map view shows the dungeon as it was underneath
+   * (remembered from the last frame without a box) instead of the box's text.
+   */
+  readonly #underlay = new Uint8Array(COLS * ROWS * 2 * 4);
+  readonly #mapCellData = new Uint8Array(COLS * ROWS * 2 * 4);
+  #mapCellTexture: WebGLTexture | null = null;
+  #mapUsesUnderlay = false;
+  #mapCellsDirty = false;
+  #overlay: Rect | null = null;
   #atlases = new Map<string, Atlas>();
   #atlasBuildQueue = new Set<string>();
   #atlasTimer: ReturnType<typeof setTimeout> | undefined;
@@ -315,6 +326,8 @@ export class BrogueRenderer {
       data[bgOffset + dst + 3] = cells[src + 1]!;
     }
     this.#lastCells = cells;
+    this.#overlay = this.#compact && inGame ? findTextOverlay(cells) : null;
+    this.#composeMapCells();
     const player = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
     if (player?.x !== this.#player?.x || player?.y !== this.#player?.y) this.#pan = { x: 0, y: 0 };
     this.#player = player;
@@ -372,6 +385,7 @@ export class BrogueRenderer {
     for (const atlas of this.#atlases.values()) gl.deleteTexture(atlas.texture);
     this.#atlases.clear();
     gl.deleteTexture(this.#cellTexture);
+    gl.deleteTexture(this.#mapCellTexture);
     gl.deleteProgram(this.#program);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.canvas.remove();
@@ -386,6 +400,25 @@ export class BrogueRenderer {
     return { x: map.originX - centered.originX, y: map.originY - centered.originY };
   }
 
+  #composeMapCells(): void {
+    const overlay = this.#overlay;
+    if (!overlay || this.#compact?.overlayKind === 'none') {
+      if (this.#compact) this.#underlay.set(this.#cellData);
+      this.#mapUsesUnderlay = false;
+      return;
+    }
+    this.#mapCellData.set(this.#cellData);
+    const bgOffset = COLS * ROWS * 4;
+    for (let y = overlay.y; y < overlay.y + overlay.height; y++) {
+      const start = (y * COLS + overlay.x) * 4;
+      const end = start + overlay.width * 4;
+      this.#mapCellData.set(this.#underlay.subarray(start, end), start);
+      this.#mapCellData.set(this.#underlay.subarray(bgOffset + start, bgOffset + end), bgOffset + start);
+    }
+    this.#mapUsesUnderlay = true;
+    this.#mapCellsDirty = true;
+  }
+
   #computeFocus(): Rect | null {
     // Only zoomed classic play needs the camera; skip the frame scan otherwise.
     if (this.#zoom <= 1 || !this.#lastCells) return null;
@@ -396,7 +429,7 @@ export class BrogueRenderer {
     const compact = this.#compact!;
     const dpr = window.devicePixelRatio || 1;
     const cells = this.#lastCells;
-    const overlay = cells ? findTextOverlay(cells) : null;
+    const overlay = this.#overlay ?? (cells ? findTextOverlay(cells) : null);
     let drawer: Rect | null = null;
     if (compact.drawer && cells) {
       let used = 0;
@@ -479,7 +512,19 @@ export class BrogueRenderer {
       gl.texParameteri(gl.TEXTURE_2D, key, value);
     }
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, COLS, ROWS * 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    this.#mapCellTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.#mapCellTexture);
+    for (const [key, value] of [
+      [gl.TEXTURE_MIN_FILTER, gl.NEAREST],
+      [gl.TEXTURE_MAG_FILTER, gl.NEAREST],
+      [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE],
+      [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+    ] as const) {
+      gl.texParameteri(gl.TEXTURE_2D, key, value);
+    }
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, COLS, ROWS * 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    this.#mapCellsDirty = this.#mapUsesUnderlay;
     this.#cellsDirty = true;
   }
 
@@ -647,6 +692,13 @@ export class BrogueRenderer {
       this.#cellsDirty = false;
       this.#dirty = true;
     }
+    if (this.#mapCellsDirty) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, this.#mapCellTexture);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, COLS, ROWS * 2, gl.RGBA, gl.UNSIGNED_BYTE, this.#mapCellData);
+      this.#mapCellsDirty = false;
+      this.#dirty = true;
+    }
     if (!this.#dirty) return;
     this.#dirty = false;
     const { width, height } = this.canvas;
@@ -658,6 +710,11 @@ export class BrogueRenderer {
     gl.enable(gl.SCISSOR_TEST);
     gl.uniform1f(u.uHeight!, height);
     for (const view of this.#views) {
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(
+        gl.TEXTURE_2D,
+        view.name === 'map' && this.#mapUsesUnderlay ? this.#mapCellTexture : this.#cellTexture,
+      );
       const atlas = this.#atlasFor(view.cellWidth, view.cellHeight);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, atlas.texture);

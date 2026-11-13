@@ -684,3 +684,72 @@
 .save-file-list .button {
   grid-area: action;
 }
+
+/* Message log ----------------------------------------------------------------- */
+
+.message-log {
+  width: min(44rem, calc(100vw - 1rem));
+  height: min(40rem, calc(100dvh - 1rem));
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--ink-1);
+  color: var(--text);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+.message-log[open] {
+  display: flex;
+  flex-direction: column;
+}
+.message-log::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+.message-log__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+.message-log__header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+.message-log__list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: var(--space-3) var(--space-5) var(--space-6);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #e8e2d4;
+}
+.message-log__entry {
+  padding: 0.15rem 0;
+}
+.message-log__group {
+  display: block;
+  margin-top: var(--space-3);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.message-log__empty {
+  padding: var(--space-5);
+}
+.message-log__latest {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-4);
+  box-shadow: var(--shadow-panel);
+}

@@ -35,6 +35,10 @@
 
 Brogue's `modifierHeld` is answered from the real Shift/Ctrl state.
 
+## Message log
+
+The platform layer reports Brogue's message archive (`messageArchive` in `GlobalsBase.c`, a ring buffer of message text with color escapes, repeat count and turn) whenever it changes. The worker reads new and updated entries straight from WASM memory, and `adapter/messages.ts` decodes the colors and applies Brogue's presentation (capitalization, final period, "(x3)"). The shell shows them in its scrollable log. Read-only, so engine conformance is unaffected; the drift check covers the struct layout and color encoding.
+
 ## Saves
 
 - The worker mounts IDBFS at `/brogue` with `autoPersist` and `chdir`s into it, so Brogue's own files (`*.broguesave`, `*.broguerec`, `BrogueHighScores.txt`, run history) live there and are written to IndexedDB as soon as Brogue closes, renames or deletes them.

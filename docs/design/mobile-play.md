@@ -12,10 +12,10 @@ The shell is in *compact* mode when touch controls are shown and the viewport's 
 |---|---|---|
 | Dungeon map (79×29 cells) | Brogue's screen | Fills the display below the status band at ~18 CSS-px rows by default; **pinch** to resize (remembered), **drag** to look around; the camera re-centres on the player when they move, inside the area not covered by controls |
 | Health, hunger, depth | Read-only state snapshot from the platform layer | Status pill; tap it to open the sidebar drawer |
-| Messages (3 lines) | Brogue's message rows | Colored lines in the status band; tap for the message log (`M`) |
+| Messages (3 lines) | Brogue's message rows | Colored lines in the status band; tap to open the message log |
 | Flavor line ("You see…") | Row 32 | Small pill above the bottom edge |
 | Text over the map: inventory, dialogs, menus | Detected per frame (`camera.ts`) | **Sheet**: lifted out, scaled up to 30 CSS-px rows, centred over a dimmed map; tap outside = Escape |
-| Descriptions while exploring | Same detection | **Peek card** on the half of the screen away from what you're looking at, so the second tap still reaches the map |
+| Descriptions while exploring | Same detection | **Peek card** on the half of the screen away from what you're looking at, so the second tap still reaches the map. Under a card or sheet the map shows the dungeon as it was before the box appeared, not the box's text |
 | Sidebar (cols 0–19) | Brogue's screen | **Drawer**, rows in use only, scaled up; tap outside closes |
 | Bottom button row | — | Replaced by the dock |
 
@@ -33,6 +33,10 @@ All pieces show Brogue's own cells (glyphs, tiles, colours) rendered from the sa
 | Busy (auto-explore, travel, animation) | Engine not waiting for input for >350 ms | Stop | — |
 
 The game-state snapshot (HP, max HP, nutrition, strength, depth, gold, cursor, stairs, input flags) is read in `port/rogue-archive-platform.c` and never written back. Engine conformance tests confirm the game is unchanged.
+
+## Message log
+
+A scrollable log of Brogue's full message history (from its own `messageArchive`, read-only), grouped by turn, keeping Brogue's colors and repeat counts. It opens from the Log button (all devices) or by tapping the messages in the status band. It follows new messages while you're at the bottom and stays put while you scroll back, with a "Latest" button. It's a platform feature: any adapter can emit `message-log` events.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 

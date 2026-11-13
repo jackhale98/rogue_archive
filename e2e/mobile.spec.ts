@@ -180,3 +180,13 @@ test('the on-screen keyboard reaches text prompts', async ({ page }) => {
   await field.press('Enter');
   await waitForScreenText(page, 'Saved.');
 });
+
+test('tapping the messages opens the scrollable message log', async ({ page }) => {
+  await newGame(page);
+  await page.locator('.brogue-hud__messages').tap();
+  const log = page.getByRole('dialog', { name: 'Messages' });
+  await expect(log).toBeVisible();
+  await expect(log).toContainText('Dungeons of Doom');
+  await log.getByRole('button', { name: 'Back to game' }).tap();
+  await expect(log).toBeHidden();
+});
