@@ -57,6 +57,38 @@ html.compact.drawer #right_column {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
 }
 
+/* Phones: the minimap as a popup over the map (the map button in the status
+   band). The stats column becomes an invisible full-frame backdrop that only
+   shows the minimap; tapping the backdrop closes it. */
+html.compact.minimap-open #right_column {
+  display: flex;
+  visibility: hidden;
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+html.compact.minimap-open #right_column::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  visibility: visible;
+  background: rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+html.compact.minimap-open #minimap_block {
+  visibility: visible;
+  position: relative;
+  padding: 6px;
+  border: 1px solid rgba(224, 170, 74, 0.45);
+  border-radius: 12px;
+  background: #050403;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+
 /* The client sizes the stats to a fixed width when it lays out the map; in
    the drawer they use the drawer's width. */
 html.compact.drawer #stats,

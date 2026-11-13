@@ -38,7 +38,7 @@ The port replaces exactly those socket calls (`port/rogue-archive-platform.cc`) 
 - **Startup:** the first launch builds DCSS's level and description caches (about 10–15 s in the browser), which persist in the save directory; later launches skip that.
 - **Saves:** `*.cs` packages in the save directory, the same format as desktop DCSS of the same version. DCSS's save compatibility tags let newer versions load older saves (`crawl-ref/docs/develop/save_compatibility.txt`).
 - **Names:** WebTiles always starts the game with a player name; headless DCSS without one stops at an empty menu. The port adds a start screen (continue a saved character or name a new one), like a WebTiles lobby.
-- **Tests:** upstream's Lua test suite (`crawl -test`) needs a debug build. The port instead compares native and WebAssembly builds of the same objects on seeded scripted games, message for message.
+- **Tests:** upstream's Lua test suite (`crawl -test`) needs a debug build. The port instead compares native and WebAssembly builds of the same objects on seeded scripted games, message for message. A native GCC/libstdc++ build diverges from the WebAssembly build after a few turns of play, as would any two builds using different C++ standard libraries (`std::sort` orders ties differently). Built with clang and libc++, the library Emscripten uses, native and WebAssembly agree exactly.
 - **Phones:** upstream's client lays out a 42-column stats panel beside the map. On phones the panel becomes a drawer, popups use the whole frame, and the message pane is shorter. Upstream's action panel (quick-use consumables) is already touch-friendly.
 
 ## Risks

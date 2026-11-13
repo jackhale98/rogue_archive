@@ -59,10 +59,10 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Native build, then WASM build: 0.34.1 built unmodified by upstream's own Makefile (cross-compiling mode); headless WebTiles with the socket replaced by the worker; no patches
 - [x] Upstream's own WebTiles client, version-matched, in a frame (ADR 0012); start screen for saved and new characters
 - [x] Saves in IndexedDB (IDBFS autoPersist), export/import; `.cs` saves interchangeable with desktop DCSS 0.34
-- [x] Phone layout: status band, stats drawer, full-frame popups and menus, shorter message pane
+- [x] Phone layout: status band, stats drawer, minimap popup button, full-frame popups and menus, shorter message pane, long-press to describe a square
 - [x] Action structure for DCSS's ~70 commands: six-button dock with long-press fans, thumb pad with Run latch, context docks (menus, --more--, yes/no, item prompts, text, targeting, level map), full palette (docs/design/mobile-play.md#dcss)
 - [x] Message log from DCSS's message stream (colours, rollbacks)
-- [x] Engine conformance: key coverage against `cmd-keys.h`; upstream drift check; native-vs-WebAssembly replay of seeded games through the same platform interface
+- [x] Engine conformance: key coverage against `cmd-keys.h`; upstream drift check; native (clang + libc++) vs WebAssembly replay of seeded games through the same platform interface, message for message
 - [x] e2e: desktop (new character, auto-explore, log, menus, save, reload, continue) and phone (tap creation, status drawer, dock, fans)
 - [x] CI build (cached), weekly canary for both games
 - [x] Confirm Brogue CE needed no DCSS-specific changes (shared code changed only to register the adapter; one e2e file renamed)

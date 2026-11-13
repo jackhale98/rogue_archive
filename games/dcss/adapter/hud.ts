@@ -18,6 +18,9 @@ const STYLE = `
   border:1px solid rgba(236,227,207,.16);border-radius:999px;background:rgba(30,26,21,.9);color:inherit;font:inherit;
   cursor:pointer;overflow:hidden}
 .dcss-hud__status[aria-expanded=true]{border-color:#e0aa4a}
+.dcss-hud__map{flex:none;display:grid;place-items:center;width:40px;height:36px;margin-left:8px;border-radius:999px;
+  border:1px solid rgba(236,227,207,.16);background:rgba(30,26,21,.9);color:inherit;cursor:pointer}
+.dcss-hud__map[aria-pressed=true]{border-color:#e0aa4a;color:#e0aa4a}
 .dcss-hud__bar{position:relative;flex:none;width:64px;height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
 .dcss-hud__bar>i{position:absolute;inset:0 auto 0 0;width:calc(var(--v,1)*100%);border-radius:inherit;
   background:hsl(calc(var(--v,1)*110) 62% 48%)}
@@ -36,7 +39,9 @@ export class DcssHud {
   readonly #status: HTMLButtonElement;
   #signature = '';
 
-  constructor(container: HTMLElement, onStatus: () => void) {
+  readonly #map: HTMLButtonElement;
+
+  constructor(container: HTMLElement, onStatus: () => void, onMap: () => void) {
     this.#style = document.createElement('style');
     this.#style.textContent = STYLE;
     this.element = document.createElement('div');
@@ -46,7 +51,16 @@ export class DcssHud {
     this.#status.className = 'dcss-hud__status';
     this.#status.setAttribute('aria-expanded', 'false');
     this.#status.addEventListener('click', () => onStatus());
-    this.element.append(this.#status);
+    this.#map = document.createElement('button');
+    this.#map.type = 'button';
+    this.#map.className = 'dcss-hud__map';
+    this.#map.setAttribute('aria-label', 'Minimap');
+    this.#map.setAttribute('aria-pressed', 'false');
+    // A small map glyph: a folded map.
+    this.#map.innerHTML =
+      '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg>';
+    this.#map.addEventListener('click', () => onMap());
+    this.element.append(this.#status, this.#map);
     container.append(this.#style, this.element);
   }
 
@@ -59,6 +73,10 @@ export class DcssHud {
     this.element.style.setProperty('--reserve', `${portrait ? 0 : px}px`);
     // In portrait the shell's tools sit above the status row.
     this.element.style.paddingTop = portrait ? `max(${44 + 6}px, env(safe-area-inset-top))` : '';
+  }
+
+  setMapOpen(open: boolean): void {
+    this.#map.setAttribute('aria-pressed', String(open));
   }
 
   setExpanded(expanded: boolean): void {

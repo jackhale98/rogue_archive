@@ -49,6 +49,8 @@ interface ClientApi {
   key(input: KeyInput): void;
   restart(): void;
   setClasses(classes: string[]): void;
+  /** Phones: show or hide the minimap popup; returns whether it is open. */
+  toggleMinimap(): boolean;
   relayout(): void;
 }
 
@@ -350,7 +352,11 @@ class DcssAdapter implements GameAdapter {
       frame.style.width = frame.style.height = '100%';
     } else {
       if (!this.#hud) {
-        this.#hud = new DcssHud(mount, () => this.#setDrawer(!this.#drawer));
+        this.#hud = new DcssHud(
+          mount,
+          () => this.#setDrawer(!this.#drawer),
+          () => this.#hud?.setMapOpen(this.#client?.toggleMinimap() ?? false),
+        );
       }
       const rect = mount.getBoundingClientRect();
       const portrait = rect.height > rect.width;

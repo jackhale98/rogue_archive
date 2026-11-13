@@ -17,6 +17,7 @@
  *     api.key(input)            a key from the shell (dock, keyboard, ...)
  *     api.restart()             a new game process started: reset the client
  *     api.setClasses(classes)   presentation classes for <html> (e.g. compact)
+ *     api.toggleMinimap()       phones: show/hide the minimap as a popup
  *     api.relayout()            re-fit the client to the frame
  *   raBridge.focusShell()       hand keyboard focus back to the page
  */
@@ -543,17 +544,46 @@
             client.uninhibit_messages();
           });
         }
-        require(['game/game', 'game/minimap', 'game/enums'], function (game, minimap, enums) {
+        require(['game/game', 'game/minimap', 'game/enums', 'game/display'], function (
+          game,
+          minimap,
+          enums,
+          display,
+        ) {
           attach_long_press();
+          var shell_classes = [];
+          var minimap_open = false;
+          function apply_classes() {
+            document.documentElement.className = shell_classes
+              .concat(minimap_open ? ['minimap-open'] : [])
+              .join(' ');
+          }
+          /** Width for the minimap while it is shown as a popup on phones. */
+          function popup_width() {
+            return Math.min(window.innerWidth - 24, (window.innerHeight - 24) * (enums.gxm / enums.gym));
+          }
           // Phones hide the stats column (it opens as a drawer), so the client
           // sizes the minimap beside it to zero width, and drawing a zero-size
-          // canvas throws. Keep it at least one pixel per map cell.
+          // canvas throws. Keep it at least one pixel per map cell; while the
+          // minimap popup is open, use the popup's size.
           var fit_minimap = minimap.fit_to;
           minimap.fit_to = function (width) {
             var args = Array.prototype.slice.call(arguments);
-            args[0] = Math.max(width || 0, enums.gxm);
+            args[0] = minimap_open ? popup_width() : Math.max(width || 0, enums.gxm);
             return fit_minimap.apply(this, args);
           };
+          function set_minimap(open) {
+            minimap_open = open;
+            apply_classes();
+            minimap.fit_to(0);
+            display.invalidate(true);
+            display.display();
+            minimap.update_overlay();
+          }
+          // Tapping outside the popup closes it.
+          document.addEventListener('click', function (event) {
+            if (minimap_open && event.target === document.getElementById('right_column')) set_minimap(false);
+          });
           start().then(function () {
             bridge.ready({
               receive: client.receive,
@@ -563,7 +593,12 @@
                 start();
               },
               setClasses: function (classes) {
-                document.documentElement.className = classes.join(' ');
+                shell_classes = classes;
+                apply_classes();
+              },
+              toggleMinimap: function () {
+                set_minimap(!minimap_open);
+                return minimap_open;
               },
               relayout: function () {
                 $(window).trigger('resize');

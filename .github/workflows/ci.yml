@@ -52,7 +52,7 @@ jobs:
       - name: Build Brogue CE runtime
         run: pnpm build:brogue
       - name: Install DCSS host build tools
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev clang libc++-dev libc++abi-dev
       - name: Cache DCSS build tree
         uses: actions/cache@v4
         with:

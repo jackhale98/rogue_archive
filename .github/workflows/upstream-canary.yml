@@ -38,7 +38,7 @@ jobs:
           key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
       - name: Host build tools (DCSS)
         if: matrix.game == 'dcss'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev clang libc++-dev libc++abi-dev
       - name: Build against upstream ${{ matrix.ref }}
         run: games/${{ matrix.game }}/scripts/build.sh
       - name: Engine conformance and upstream drift

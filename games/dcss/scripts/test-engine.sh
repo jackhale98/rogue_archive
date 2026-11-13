@@ -9,6 +9,11 @@
 #    Makefile and linked with the replay platform layer, against the WASM
 #    harness built by build.sh, replaying seeded games
 #    (tests/conformance/scenarios.json); every message must match.
+#    The native build uses clang with LLVM's libc++, the C++ library
+#    Emscripten uses. (With GCC's libstdc++, games diverge after a few turns:
+#    the two libraries order equal elements in std::sort differently, e.g.
+#    los.cc's ray table. That is a property of the libraries, not of the
+#    WebAssembly build.) Requires clang and libc++ (apt: libc++-dev libc++abi-dev).
 set -euo pipefail
 
 GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -33,7 +38,7 @@ node --experimental-strip-types --no-warnings "$GAME_DIR/tests/conformance/key-c
 node --experimental-strip-types --no-warnings "$GAME_DIR/tests/conformance/upstream-drift.ts" "$SRC/crawl-ref/source"
 
 echo "== 2. Native build (upstream's Makefile)"
-NATIVE="$WORK/native-$UPSTREAM_COMMIT"
+NATIVE="$WORK/native-libcxx-$UPSTREAM_COMMIT"
 if [ ! -d "$NATIVE/crawl-ref/source" ]; then
   rm -rf "$NATIVE"
   # A separate tree: upstream builds in place, and this one is not cross-compiled.
@@ -43,7 +48,7 @@ if [ ! -d "$NATIVE/crawl-ref/source" ]; then
   git -C "$NATIVE" submodule foreach --quiet git clean --quiet -fdx
 fi
 NATIVE_SAVES="$WORK/native-saves"
-NATIVE_VARS=(WEBTILES=y NO_YACC=y NOWIZARD=y BUILD_PCRE=y DATADIR="$DATA" SAVEDIR="$NATIVE_SAVES")
+NATIVE_VARS=(GXX="clang++ -stdlib=libc++" GCC=clang WEBTILES=y NO_YACC=y NOWIZARD=y BUILD_PCRE=y DATADIR="$DATA" SAVEDIR="$NATIVE_SAVES")
 make --no-print-directory -C "$NATIVE/crawl-ref/source" -j"$JOBS" "${NATIVE_VARS[@]}" crawl > "$WORK/native-build.log" 2>&1 \
   || { tail -40 "$WORK/native-build.log"; exit 1; }
 native_var() {
@@ -64,8 +69,8 @@ for lib in "${LIBS[@]}"; do
     *) LINK+=("$lib") ;;
   esac
 done
-g++ -O2 -std=c++17 -c "$GAME_DIR/tests/conformance/replay-platform.cc" -o "$WORK/replay-platform.o"
-g++ "$WORK/replay-platform.o" "${OBJECTS[@]}" "${LINK[@]}" -o "$WORK/crawl-native-replay"
+clang++ -stdlib=libc++ -O2 -std=c++17 -c "$GAME_DIR/tests/conformance/replay-platform.cc" -o "$WORK/replay-platform.o"
+clang++ -stdlib=libc++ "$WORK/replay-platform.o" "${OBJECTS[@]}" "${LINK[@]}" -o "$WORK/crawl-native-replay"
 
 echo "== 3. Seeded games: native vs WebAssembly"
 RA_NATIVE_SAVES="$NATIVE_SAVES" node "$GAME_DIR/tests/conformance/replay.mjs" \

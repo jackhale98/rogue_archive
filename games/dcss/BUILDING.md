@@ -16,7 +16,7 @@ pnpm dev                   # or: pnpm build && pnpm preview
 5. Relinks the game objects with `port/rogue-archive-platform.cc` for a worker (Asyncify, JavaScript exceptions, 128 MiB initial memory with growth, IDBFS). It packs the game data from upstream's `install-data` layout and copies upstream's WebTiles client with `client-host/`. Then it compresses the module and data (`.gzip`), copies the license texts and writes `dist/runtime-manifest.json`.
 6. Links the same objects once more for Node (the conformance harness, not deployed; skip with `ROGUE_ARCHIVE_HARNESS=0`).
 
-Requirements: `git`, `make`, a host C/C++ compiler, `python3` with PyYAML, `perl`, `pkg-config` and libpng headers (for upstream's tile generator), `node` ≥ 22. CI installs `python3-yaml libpng-dev`. The conformance test also builds DCSS natively, which needs the ncurses headers (`libncurses-dev`).
+Requirements: `git`, `make`, a host C/C++ compiler, `python3` with PyYAML, `perl`, `pkg-config` and libpng headers (for upstream's tile generator), `node` ≥ 22. CI installs `python3-yaml libpng-dev`. The conformance test also builds DCSS natively with clang and libc++ (`clang libc++-dev libc++abi-dev`) and needs the ncurses headers (`libncurses-dev`).
 
 The first build takes roughly 15–20 minutes on four cores (most of it compiling about 300 C++ files twice: native tile tools and WebAssembly). Later builds reuse upstream's object files in `~/.cache/rogue-archive/dcss/src-<commit>`; upstream's Makefile rebuilds what a changed flag or file affects. Set `ROGUE_ARCHIVE_CLEAN=1` for a clean build. CI caches the tree.
 

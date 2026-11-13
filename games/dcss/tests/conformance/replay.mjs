@@ -29,20 +29,19 @@ function keyCodes(keys) {
 
 /**
  * DCSS draws two kinds of randomness that its game seed does not control, by
- * design (rng::UI and pre-seed state): which variant of a tile is shown
- * (tilepick.cc ui_random) and the placeholder title of the not-yet-created
- * player. Those presentation-only fields are ignored; everything else must
- * match, including every map cell's feature, glyph, colour and position.
+ * design: which variant of a tile is shown (rng::UI, tilepick.cc ui_random),
+ * and the placeholder player shown before a character exists (made before the
+ * seed is applied). Those are ignored; everything else must match, including
+ * every map cell's feature, glyph, colour and position.
  */
 const PRESENTATION_ONLY = new Set(['t', 'doll', 'tile', 'mcache']);
-function strip(value, preGame) {
-  if (Array.isArray(value)) return value.map((item) => strip(item, preGame));
+function strip(value) {
+  if (Array.isArray(value)) return value.map((item) => strip(item));
   if (!value || typeof value !== 'object') return value;
   const out = {};
   for (const [key, item] of Object.entries(value)) {
     if (PRESENTATION_ONLY.has(key)) continue;
-    if (preGame && value.msg === 'player' && key === 'title') continue;
-    out[key] = strip(item, preGame);
+    out[key] = strip(item);
   }
   return out;
 }
@@ -50,10 +49,13 @@ function normalize(lines) {
   let seenMap = false;
   return lines.map((line) => {
     try {
-      const message = JSON.parse(line);
-      const normalized = JSON.stringify(strip(message, !seenMap));
+      let message = JSON.parse(line);
+      // Before a character exists, the placeholder player is unseeded.
+      const placeholder = (m) => !seenMap && m.msg === 'player';
+      if (message.msgs) message = { ...message, msgs: message.msgs.filter((m) => !placeholder(m)) };
+      else if (placeholder(message)) message = { msg: 'player', placeholder: true };
       if (line.includes('"msg":"map"')) seenMap = true;
-      return normalized;
+      return JSON.stringify(strip(message));
     } catch {
       return line;
     }
