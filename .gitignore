@@ -8,3 +8,6 @@ playwright-report/
 # Built game runtimes are staged here by tools/stage-runtimes.mjs; never commit them.
 apps/web/public/runtime/
 .DS_Store
+
+# Temporary working copies made by agent tooling
+.claude/worktrees/
