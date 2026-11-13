@@ -177,3 +177,15 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Uninitialised bytes in files:** a savefile can contain stack garbage upstream writes (Rogue's 80-byte header buffer); compare the rest byte for byte and document the stretch skipped.
 - **Classic save semantics are part of the game.** Rogue deletes a savefile when it restores it; keep that, and say so where the player starts.
 
+### From HyperRogue
+
+- **Use upstream's own web build when there is one,** and its switches (`CAP_SAVE`, `CAP_CONFIG`, `EMSCRIPTEN_FIXED_ARG`) rather than patches. Check it still compiles: `embuild.sh`'s 2D-only variant didn't, `-DMAXMDIM=4` (the full build) did.
+- **A game that doesn't block runs on the page.** HyperRogue draws one frame per animation frame (`emscripten_set_main_loop`) with WebGL into the page's canvas; no worker or Asyncify. Then the adapter owns cleanup: cancel the main loop, remove the listeners the game added to `window`/`document` while starting (record them by wrapping `addEventListener` during start-up), release the GL context.
+- **Emscripten 6 reads only the module options it was told about:** list `wasmBinary`, `canvas`, `keyboardListeningElement`… in `INCOMING_MODULE_JS_API`, or a verified `wasmBinary` is silently ignored and the glue fetches the `.wasm` by URL (getting the site's HTML).
+- **Fix the command line.** A web build that reads `document.location` would take the page's `?debug=1` as game arguments; `EMSCRIPTEN_FIXED_ARG` (or the equivalent) pins it. Check which phase reads each option (HyperRogue's `-c` is phase 1, which its web start-up never reads); `chdir` in `preRun` worked here (Rogue's reset was in its Node harness).
+- **SDL 1 keys from the page:** give SDL a private `keyboardListeningElement` and dispatch synthetic `keydown`/`keypress`/`keyup` with `keyCode`/`charCode` defined on the event (they are read-only on `KeyboardEvent`). Emscripten's SDL sets the canvas's CSS size to its pixel size on resize; keep the page's size with an `!important` stylesheet rule.
+- **Touch before SDL:** SDL turns every touch into a left click; to offer long-press (right-click) or slide-to-choose, handle touches in the capture phase on a parent and synthesise mouse events.
+- **Software WebGL in CI is slow** (about a second per frame for HyperRogue): wait on the state snapshot (turns), not on the screen, and import a recorded save instead of playing to one.
+- **Read the game's own save rule before promising "continue".** HyperRogue resumes a game only with an Orb of Safety or in casual mode; the Android background save records the score. Say so in the resume hint.
+- **Upstream's "no-SDL" build may not exist; its headless mode may:** `-nogui` plus a seed (`-fixx`) and a small harness built natively and for Node gave native-vs-WebAssembly equivalence without patching.
+

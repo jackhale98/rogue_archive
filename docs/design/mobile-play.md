@@ -131,6 +131,18 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 
 `games/rogue/tests/conformance/key-coverage.ts` checks each command against `command.c`.
 
+## HyperRogue
+
+HyperRogue draws its own interface with WebGL (upstream's web build), so the phone layout keeps it whole: the canvas fills the area between the shell's floating tools and the dock, at up to twice the CSS resolution, and the game lays out its own HUD (kills, score, messages) for that size. Touch follows upstream's mobile version (`mobile.cpp`) on top of the web build's click handling: the finger shows what is under it (the game's hover), lifting it acts there (move towards the cell, attack, use a ranged orb on it, choose a menu line), and holding still for half a second asks for help about it (the desktop's right-click). Upstream's Android interface itself (`mobile.cpp`, its on-screen compass) is built around the Android app's own platform code, so it is not compiled in.
+
+| Context | Dock |
+|---|---|
+| Map | Centre (fan: rotate either way) · Wait · Target (fan: drop, bow fire mode, context action) · Quest (fan: new game, help) · Menu · More, plus the pad (vi keys, Wait in the centre) |
+| Menus, help, quest screen | Back (Esc), OK (Enter); the game's own lines are tappable |
+| Caught (game over) | Options (the quest screen), New game, Menu |
+
+`games/hyperrogue/tests/conformance/key-coverage.ts` checks each command against `control.cpp`.
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad** (160–192 CSS px across, scaled to the screen): press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.

@@ -19,6 +19,7 @@ pnpm test:engine                              # Brogue conformance: seed catalog
 pnpm build:dcss && pnpm test:engine:dcss      # DCSS: WASM build with upstream's Makefile (~15-20 min first time); native vs WASM replay
 pnpm build:sil && pnpm test:engine:sil        # Sil-Q: WASM build (<1 min); key coverage, native vs WASM replay
 pnpm build:rogue && pnpm test:engine:rogue    # Rogue: WASM build (<1 min); key coverage, native vs WASM replay
+pnpm build:hyperrogue && pnpm test:engine:hyperrogue  # HyperRogue: WASM build (~3 min first time); key coverage, drift, native vs WASM seeded games (needs libsdl1.2-dev libgl-dev zlib1g-dev)
 ROGUE_ARCHIVE_UPSTREAM_REF=master pnpm canary:brogue   # try the port against a newer upstream (never deployed)
 pnpm dev                                      # http://localhost:5173 (debug hook always on in dev)
 ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
@@ -31,6 +32,7 @@ ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 - Service-worker-served requests bypass `page.route`; use `test.use({ serviceWorkers: 'block' })` when intercepting.
 - DCSS: its debug hook is `window.__rogueArchive.adapter.debug` with `context`, `inGame`, `player`, `popups`, `menus`, `text()`; the client is in `iframe.dcss-client` (same origin). DCSS's caches ship prebuilt (build.sh runs `-builddb`; data files are pinned to `DATA_MTIME`).
 - Sil-Q: its debug hook has `context`, `inDungeon`, `state`, `screenText()`, `rowText(y)`; Sil's `-more-` takes Space/Escape. `Ctrl+X` saves and shows the scores ("press any key") before the title menu.
+- HyperRogue runs on the page (WebGL canvas `canvas.hr-canvas`, no worker); debug hook `context` (map/dialog/over), `state` (treasure, kills, turns, canMove…), `land`, `hover()`, `messages()`, `files()`. Headless Chromium draws it in software at about one frame per second, so tests wait on `state.turns` rather than the screen; it saves only on leaving (the Android app's background save), and resumes a game only with an Orb of Safety or in casual mode, as upstream.
 - Rogue: debug hook `context`, `inGame`, `state`, `saves`, `screenText()`; the start screen is `.ra-start`. `S` then `y` saves and ends the game (back to the start screen); a restored save is deleted, as in the original.
 - Wait for Brogue to be waiting for input (`waitInGame` checks `debug.context === 'map'`): keys pressed during the level's fade-in only skip the fade.
 

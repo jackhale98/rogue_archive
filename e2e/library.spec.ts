@@ -26,7 +26,7 @@ test('cards play directly; the full roadmap and watchlist fold away', async ({ p
     /#\/games\/rogue$/,
   );
   // The next three roadmap games are listed; the rest and the watchlist are folded.
-  await expect(page.getByRole('link', { name: /HyperRogue/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /NetHack/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeHidden();
   await page.getByText(/The full roadmap/).click();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();

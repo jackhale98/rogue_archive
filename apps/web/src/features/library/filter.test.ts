@@ -11,8 +11,8 @@ const catalog = withDefaults(
 describe('librarySections', () => {
   it('separates playable games, the roadmap and the watchlist in priority order', () => {
     const sections = librarySections(catalog.games, EMPTY_FILTERS);
-    expect(sections.playable.map((g) => g.id)).toEqual(['brogue-ce', 'dcss', 'sil-q', 'rogue']);
-    expect(sections.roadmap[0]!.id).toBe('hyperrogue');
+    expect(sections.playable.map((g) => g.id)).toEqual(['brogue-ce', 'dcss', 'sil-q', 'rogue', 'hyperrogue']);
+    expect(sections.roadmap[0]!.id).toBe('nethack');
     expect(sections.roadmap.map((g) => g.priority)).toEqual(
       [...sections.roadmap.map((g) => g.priority)].sort((a, b) => a - b),
     );
@@ -30,10 +30,10 @@ describe('librarySections', () => {
 
   it('filters by interface style and touch support', () => {
     const graphical = librarySections(catalog.games, { ...EMPTY_FILTERS, interfaceStyle: 'graphical' });
-    expect(graphical.playable).toHaveLength(0);
+    expect(graphical.playable.map((g) => g.id)).toEqual(['hyperrogue']);
     expect(graphical.roadmap.every((g) => g.interface.includes('graphical'))).toBe(true);
     const touch = librarySections(catalog.games, { ...EMPTY_FILTERS, touchOnly: true });
-    expect(touch.playable.map((g) => g.id)).toEqual(['brogue-ce', 'dcss', 'sil-q', 'rogue']);
+    expect(touch.playable.map((g) => g.id)).toEqual(['brogue-ce', 'dcss', 'sil-q', 'rogue', 'hyperrogue']);
     expect(touch.roadmap).toHaveLength(0);
   });
 });

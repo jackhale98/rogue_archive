@@ -60,8 +60,14 @@ jobs:
         with:
           path: games/rogue/dist
           key: runtime-rogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/rogue/**', '!games/rogue/dist/**', '!games/rogue/node_modules/**', '!games/rogue/**/*.md') }}
+      - name: Restore HyperRogue runtime
+        id: hyperrogue
+        uses: actions/cache/restore@v4
+        with:
+          path: games/hyperrogue/dist
+          key: runtime-hyperrogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/hyperrogue/**', '!games/hyperrogue/dist/**', '!games/hyperrogue/node_modules/**', '!games/hyperrogue/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -91,6 +97,11 @@ jobs:
       - name: Build Rogue runtime
         if: steps.rogue.outputs.cache-hit != 'true'
         run: pnpm build:rogue
+        env:
+          ROGUE_ARCHIVE_HARNESS: '0'
+      - name: Build HyperRogue runtime
+        if: steps.hyperrogue.outputs.cache-hit != 'true'
+        run: pnpm build:hyperrogue
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build

@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [brogue-ce, dcss, sil-q, rogue]
+        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue]
         ref: [latest-release, master]
     env:
       ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
@@ -39,6 +39,9 @@ jobs:
       - name: Host build tools (DCSS)
         if: matrix.game == 'dcss'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends python3-yaml libpng-dev libncurses-dev clang libc++-dev libc++abi-dev
+      - name: Host libraries (HyperRogue native harness)
+        if: matrix.game == 'hyperrogue'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsdl1.2-dev libgl-dev zlib1g-dev
       - name: Build against upstream ${{ matrix.ref }}
         run: games/${{ matrix.game }}/scripts/build.sh
       - name: Engine conformance and upstream drift

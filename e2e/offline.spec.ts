@@ -49,7 +49,7 @@ test('Download all makes every game available offline', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Download all for offline' }).click();
   await expect(page.getByText(/All games available offline/)).toBeVisible({ timeout: 180_000 });
-  for (const title of ['Brogue', 'Dungeon Crawl Stone Soup', 'Sil-Q', 'Rogue'])
+  for (const title of ['Brogue', 'Dungeon Crawl Stone Soup', 'Sil-Q', 'Rogue', 'HyperRogue'])
     await expect(page.getByRole('img', { name: new RegExp(`^${title} is available offline`) })).toBeVisible();
   // Settings shows the same.
   await page.goto('#/settings');

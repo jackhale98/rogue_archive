@@ -514,10 +514,11 @@
       "title": "HyperRogue",
       "subtitle": "A roguelike in non-Euclidean space",
       "description": "Collect treasure on a hyperbolic plane, where the world grows exponentially around you and geometry is the main puzzle.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 4,
       "effort": "medium-high",
       "rationale": "Unusual non-Euclidean gameplay and rendering; adds a genuinely different experience.",
+      "firstReleased": 2011,
       "authors": "Zeno Rogue and contributors",
       "upstream": {
         "name": "HyperRogue",
@@ -525,17 +526,102 @@
         "repository": "https://github.com/zenorogue/hyperrogue"
       },
       "license": {
-        "code": "To be verified",
-        "assets": "To be verified"
+        "code": "GPL-2.0-or-later",
+        "assets": "Graphics drawn by the game's code; built-in font rendered from DejaVu Sans Bold (DejaVu fonts licence). Music and sounds are not included.",
+        "report": "games/hyperrogue/LICENSES.md"
       },
       "interface": ["graphical"],
       "input": {
         "keyboard": true,
         "mouse": true,
-        "touch": false
+        "touch": true
       },
       "tags": ["Puzzle", "Experimental"],
-      "glyph": "∞"
+      "glyph": "∞",
+      "cover": {
+        "src": "covers/hyperrogue.webp",
+        "alt": "HyperRogue's Icy Land on the hyperbolic plane: the adventurer with a sword among seven-pointed ice walls, in a disc that shrinks towards its rim.",
+        "width": 1200,
+        "height": 675
+      },
+      "version": "13.1p",
+      "sourceRevision": "70453170074a0695a52f11ce7a806ac3f782a48c",
+      "renderMode": "native-canvas",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "hyperrogue",
+      "runtimeManifest": "runtime/hyperrogue/runtime-manifest.json",
+      "about": [
+        "HyperRogue is a roguelike on the hyperbolic plane: every cell has seven neighbours, the world grows exponentially as you walk, and two steps the wrong way can lose you forever. Collect treasure across more than sixty lands, each with its own monsters, terrain and magic orbs, and reach the Orbs of Yendor in Hell.",
+        "This port builds HyperRogue's own web version from the pinned upstream source, unchanged, with saving switched back on. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "Click or tap a cell",
+          "action": "Move towards it (attack by moving into a monster; use a ranged orb on a distant cell)"
+        },
+        {
+          "keys": "Right-click · long-press",
+          "action": "Help about what is there"
+        },
+        {
+          "keys": "h j k l y u b n · keypad",
+          "action": "Move in a screen direction"
+        },
+        {
+          "keys": ". · s",
+          "action": "Wait a turn"
+        },
+        {
+          "keys": "Space · ← →",
+          "action": "Centre the view on you · rotate the view"
+        },
+        {
+          "keys": "t · g · f · o",
+          "action": "Ranged orb on the centre cell · drop · bow fire mode · context action"
+        },
+        {
+          "keys": "Esc · v · F1 · F5",
+          "action": "Quest status (and ending a game) · main menu · help · new game"
+        },
+        {
+          "keys": "Phone",
+          "action": "Tap to move, slide to choose, long-press for help (as HyperRogue's mobile version); dock with centre, wait, target, quest and menu; thumb pad"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only, and frame rate on phones is unmeasured (the game draws every frame on the page's main thread).",
+        "No music or sound effects (the web version has no audio).",
+        "As in HyperRogue itself, leaving ends the game in progress and records its score; a game can be continued later only if you leave while an Orb of Safety is powered, or in casual mode (the game's special modes menu).",
+        "Upstream's web version leaves out its translations and the 'shoot 'em up' mode."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "Start, keyboard moves, the quest screen, message log, importing a desktop score file and keeping it across reloads verified by end-to-end tests (software WebGL, so frame rates there are not representative)."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Dock, tap to move, long-press for help and the thumb pad exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ]
     },
     {
       "id": "nethack",

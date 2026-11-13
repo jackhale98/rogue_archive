@@ -65,6 +65,9 @@ importers:
       '@rogue-archive/game-dcss':
         specifier: workspace:*
         version: link:../../games/dcss
+      '@rogue-archive/game-hyperrogue':
+        specifier: workspace:*
+        version: link:../../games/hyperrogue
       '@rogue-archive/game-rogue':
         specifier: workspace:*
         version: link:../../games/rogue
@@ -101,6 +104,12 @@ importers:
         version: link:../../packages/game-api
 
   games/dcss:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+
+  games/hyperrogue:
     dependencies:
       '@rogue-archive/game-api':
         specifier: workspace:*

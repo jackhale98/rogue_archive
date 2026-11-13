@@ -16,9 +16,11 @@
     "test:engine:dcss": "bash games/dcss/scripts/test-engine.sh",
     "test:engine:sil": "bash games/sil-q/scripts/test-engine.sh",
     "test:engine:rogue": "bash games/rogue/scripts/test-engine.sh",
+    "test:engine:hyperrogue": "bash games/hyperrogue/scripts/test-engine.sh",
     "build:brogue": "games/brogue-ce/scripts/build.sh",
     "build:sil": "bash games/sil-q/scripts/build.sh",
     "build:rogue": "bash games/rogue/scripts/build.sh",
+    "build:hyperrogue": "bash games/hyperrogue/scripts/build.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
     "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
     "typecheck": "tsc -p tsconfig.json",
@@ -32,7 +34,8 @@
     "canary:dcss": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/dcss/scripts/build.sh && games/dcss/scripts/test-engine.sh\"",
     "canary:brogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/brogue-ce/scripts/build.sh && games/brogue-ce/scripts/test-engine.sh\"",
     "canary:sil": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/sil-q/scripts/build.sh && games/sil-q/scripts/test-engine.sh\"",
-    "canary:rogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/rogue/scripts/build.sh && games/rogue/scripts/test-engine.sh\""
+    "canary:rogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/rogue/scripts/build.sh && games/rogue/scripts/test-engine.sh\"",
+    "canary:hyperrogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/hyperrogue/scripts/build.sh && bash games/hyperrogue/scripts/test-engine.sh\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
