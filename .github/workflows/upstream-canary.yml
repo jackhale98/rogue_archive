@@ -1,0 +1,46 @@
+name: Upstream canary (Brogue CE)
+
+# Weekly early warning: does the port still build, play and pass its tests
+# against Brogue's newest release and development branch? This never changes
+# what is deployed; updating the pin stays a deliberate, reviewed change
+# (docs/contributing/updating-a-game.md).
+on:
+  schedule:
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    name: Brogue CE ${{ matrix.ref }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [latest-release, master]
+    env:
+      ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
+      ROGUE_ARCHIVE_BASE: /${{ github.event.repository.name }}/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/rogue-archive/emsdk
+          key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
+      - name: Build against upstream ${{ matrix.ref }}
+        run: games/brogue-ce/scripts/build.sh
+      - name: Engine conformance and upstream drift
+        run: games/brogue-ce/scripts/test-engine.sh
+      - name: Build site
+        run: node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm e2e

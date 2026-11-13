@@ -345,14 +345,16 @@ static enum graphicsModes ra_setGraphicsMode(enum graphicsModes mode) {
     return mode;
 }
 
+// Designated initializers: if upstream reorders or renames members of
+// struct brogueConsole, this fails to compile instead of silently misbinding.
 struct brogueConsole rogueArchiveConsole = {
-    ra_gameLoop,
-    ra_pauseForMilliseconds,
-    ra_nextKeyOrMouseEvent,
-    ra_plotChar,
-    ra_remap,
-    ra_modifierHeld,
-    ra_notifyEvent,
-    NULL,
-    ra_setGraphicsMode
+    .gameLoop = ra_gameLoop,
+    .pauseForMilliseconds = ra_pauseForMilliseconds,
+    .nextKeyOrMouseEvent = ra_nextKeyOrMouseEvent,
+    .plotChar = ra_plotChar,
+    .remap = ra_remap,
+    .modifierHeld = ra_modifierHeld,
+    .notifyEvent = ra_notifyEvent,
+    .takeScreenshot = NULL,
+    .setGraphicsMode = ra_setGraphicsMode,
 };

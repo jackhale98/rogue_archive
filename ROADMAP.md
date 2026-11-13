@@ -40,6 +40,8 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Context-aware dock (exploring, targeting, --MORE--, yes/no, menus, busy) with long-press fans; floating thumb pad; optional vibration
 - [ ] Try it on real phones; tune default map size, dock contents and fan timing from that feedback
 - [ ] iPhone: one-time "Add to Home Screen" hint for full screen
+- [x] Update safety: build reads upstream's Makefile; drift check; weekly canary against latest release and development branch
+- [ ] Before the next minor Brogue release: decide whether to keep the previous build playable for unfinished saves
 - [ ] **Test on physical iOS Safari and Android Chrome**, then fill in the compatibility table
 - [ ] Test Firefox and desktop Safari
 - [ ] Measure peak memory and startup time on a mid-range phone

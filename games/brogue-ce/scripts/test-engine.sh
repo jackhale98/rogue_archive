@@ -15,7 +15,7 @@
 set -euo pipefail
 GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$(cd "$GAME_DIR/../.." && pwd)"
-source "$GAME_DIR/upstream.env"
+source "$GAME_DIR/scripts/upstream.sh"
 RA_CACHE="${ROGUE_ARCHIVE_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/rogue-archive}"
 WORK="$RA_CACHE/brogue-ce"
 SRC="$WORK/src-$UPSTREAM_COMMIT"
@@ -23,8 +23,9 @@ HARNESS="$WORK/harness-$UPSTREAM_COMMIT/brogue-node.cjs"
 NATIVE_DIR="$WORK/native-$UPSTREAM_COMMIT"
 [ -f "$HARNESS" ] || { echo "error: run scripts/build.sh first" >&2; exit 1; }
 
-echo "== 1. Key coverage"
+echo "== 1. Key coverage and upstream drift"
 node --experimental-strip-types "$GAME_DIR/tests/conformance/key-coverage.ts" "$SRC"
+node --experimental-strip-types "$GAME_DIR/tests/conformance/upstream-drift.ts" "$SRC"
 
 echo "== 2. Seed catalogs (WASM engine vs upstream regression catalogs)"
 TMP="$(mktemp -d)"
@@ -73,6 +74,11 @@ for file in "$GAME_DIR"/tests/recordings/*.broguesave "$GAME_DIR"/tests/recordin
   # A finished recording exits 0; an unfinished save ends with a playback panic exactly at its last byte.
   if grep -q "^exit 0$" "$TMP/native/out.txt" || grep -q "location $size!" "$TMP/native/out.txt"; then
     echo "✓ $name: identical native/WASM replay to the end ($size bytes)"
+  elif [ -n "$RA_CANARY" ]; then
+    # A newer upstream may not replay saves from the pinned version (Brogue only
+    # promises compatibility within a minor version). Native and WASM still agreed.
+    echo "! $name: native and WASM agree, but this save from the pinned version does not replay in $UPSTREAM_TAG."
+    echo "  Updating the pin to it would leave players' unfinished runs unloadable; regenerate fixtures when updating."
   else
     echo "✗ $name: replay stopped early"; cat "$TMP/native/out.txt"; exit 1
   fi

@@ -22,7 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
-    "test:engine": "games/brogue-ce/scripts/test-engine.sh"
+    "test:engine": "games/brogue-ce/scripts/test-engine.sh",
+    "canary:brogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/brogue-ce/scripts/build.sh && games/brogue-ce/scripts/test-engine.sh\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

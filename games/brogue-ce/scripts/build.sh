@@ -12,8 +12,8 @@ set -euo pipefail
 
 GAME_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROOT="$(cd "$GAME_DIR/../.." && pwd)"
-# shellcheck source=../upstream.env
-source "$GAME_DIR/upstream.env"
+# shellcheck source=upstream.sh
+source "$GAME_DIR/scripts/upstream.sh"
 # shellcheck source=../../../tools/ensure-emsdk.sh
 source "$ROOT/tools/ensure-emsdk.sh"
 
@@ -51,20 +51,34 @@ CPPFLAGS=(
   -DBROGUE_WEB
   -DwebConsole=rogueArchiveConsole
 )
+# Ask upstream's own Makefile which sources and include paths the core game
+# needs (no SDL/curses/web platforms), so files upstream adds in a new release
+# (e.g. a vendored library) are picked up without editing this script.
+upstream_make_var() {
+  make --no-print-directory -C "$SRC" -f Makefile -f - GRAPHICS=NO TERMINAL=NO WEBBROGUE=NO RELEASE=YES \
+    "print-$1" <<'MAKE'
+print-%: ; @echo $($*)
+MAKE
+}
+mapfile -t UPSTREAM_SOURCES < <(upstream_make_var sources | tr ' ' '\n' | grep '\.c$')
+INCLUDES=()
+for flag in $(upstream_make_var cflags); do
+  case "$flag" in -I*) INCLUDES+=("-I$SRC/${flag#-I}") ;; esac
+done
+if [ "${#UPSTREAM_SOURCES[@]}" -lt 20 ] || [ "${#INCLUDES[@]}" -lt 3 ]; then
+  echo "error: could not read the source list from upstream's Makefile" >&2
+  exit 1
+fi
+
 CFLAGS=(
-  -I"$SRC/src/brogue" -I"$SRC/src/platform" -I"$SRC/src/variants"
+  "${INCLUDES[@]}"
   -std=c99 -O2
   -Wall -Wno-parentheses -Wno-unused-result -Wno-unused-but-set-variable
   -Werror=implicit -Werror=format-security
 )
-SOURCES=(
-  "$SRC"/src/brogue/*.c
-  "$SRC"/src/variants/*.c
-  "$SRC/src/platform/main.c"
-  "$SRC/src/platform/platformdependent.c"
-  "$SRC/src/platform/null-platform.c"
-  "$GAME_DIR/port/rogue-archive-platform.c"
-)
+SOURCES=()
+for source in "${UPSTREAM_SOURCES[@]}"; do SOURCES+=("$SRC/$source"); done
+SOURCES+=("$GAME_DIR/port/rogue-archive-platform.c")
 LDFLAGS=(
   -O2
   -sASYNCIFY=1
