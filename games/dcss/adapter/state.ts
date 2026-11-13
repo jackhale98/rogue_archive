@@ -158,6 +158,8 @@ export class GameTracker {
     if (top === 'newgame-choice' || top === 'game-menu' || top === 'seed-selection') return 'start';
     if (top === 'msgwin-get-line') return 'text';
     if (top) return 'popup';
+    // Yes/no questions are small menus tagged "prompt" (prompt.cc yesno()).
+    if (this.menus[this.menus.length - 1] === 'prompt') return 'yesno';
     if (this.menus.length > 0) return 'menu';
     if (this.textInput) return 'text';
     switch (this.inputMode) {

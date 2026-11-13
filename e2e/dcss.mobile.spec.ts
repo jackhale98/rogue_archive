@@ -10,7 +10,7 @@ test('DCSS phone: tap through character creation, status band, contextual dock a
   // Upstream's character creation buttons are tappable.
   const frame = page.frameLocator('iframe.dcss-client');
   for (let i = 0; i < 3 && (await dcssContext(page)) === 'start'; i++) {
-    await frame.locator('.newgame-choice .button').first().tap();
+    await frame.locator('.ui-popup .newgame-choice .button').first().tap();
     await page.waitForTimeout(1000);
   }
   await waitForContext(page, 'map');

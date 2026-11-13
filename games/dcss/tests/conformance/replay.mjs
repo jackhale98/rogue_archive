@@ -28,20 +28,32 @@ function keyCodes(keys) {
 }
 
 /**
- * Before a character exists, DCSS shows a placeholder "player" whose title it
- * picks before the game's seed is applied (it differs from run to run on
- * either build). That one field is ignored; everything else must match.
+ * DCSS draws two kinds of randomness that its game seed does not control, by
+ * design (rng::UI and pre-seed state): which variant of a tile is shown
+ * (tilepick.cc ui_random) and the placeholder title of the not-yet-created
+ * player. Those presentation-only fields are ignored; everything else must
+ * match, including every map cell's feature, glyph, colour and position.
  */
+const PRESENTATION_ONLY = new Set(['t', 'doll', 'tile', 'mcache']);
+function strip(value, preGame) {
+  if (Array.isArray(value)) return value.map((item) => strip(item, preGame));
+  if (!value || typeof value !== 'object') return value;
+  const out = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (PRESENTATION_ONLY.has(key)) continue;
+    if (preGame && value.msg === 'player' && key === 'title') continue;
+    out[key] = strip(item, preGame);
+  }
+  return out;
+}
 function normalize(lines) {
   let seenMap = false;
   return lines.map((line) => {
-    if (line.includes('"msg":"map"')) seenMap = true;
-    if (seenMap || !line.includes('"title"')) return line;
     try {
       const message = JSON.parse(line);
-      const strip = (m) => (m.msg === 'player' ? { ...m, title: '(before seeding)' } : m);
-      const fixed = message.msgs ? { ...message, msgs: message.msgs.map(strip) } : strip(message);
-      return JSON.stringify(fixed);
+      const normalized = JSON.stringify(strip(message, !seenMap));
+      if (line.includes('"msg":"map"')) seenMap = true;
+      return normalized;
     } catch {
       return line;
     }

@@ -97,6 +97,12 @@ check(
   'enums.js mouse_mode order changed (adapter/state.ts InputMode)',
 );
 
+// 5. Yes/no questions are menus tagged "prompt" (adapter/state.ts).
+check(
+  /Menu pop\(flags, "prompt", KMC_CONFIRM\)/.test(read('prompt.cc')),
+  'prompt.cc yesno() no longer uses a menu tagged "prompt"',
+);
+
 if (problems.length) {
   console.error(`✗ upstream drift:\n  ${problems.join('\n  ')}`);
   process.exit(1);

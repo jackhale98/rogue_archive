@@ -13,7 +13,7 @@ const STYLE = `
 .dcss-launcher{position:absolute;inset:0;z-index:2;display:grid;place-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;
   background:radial-gradient(120% 80% at 50% 0%,rgba(224,170,74,.10),rgba(0,0,0,0) 60%),#0b0a08;color:#ece3cf;
   font:15px/1.45 'Inter Variable',system-ui,sans-serif}
-.dcss-launcher[hidden]{display:none}
+.dcss-launcher[hidden],.dcss-launcher [hidden]{display:none}
 .dcss-launcher__card{width:min(30rem,100%);display:grid;gap:18px}
 .dcss-launcher__title{margin:0;font:600 clamp(22px,4vw,28px)/1.15 'Fraunces Variable',Georgia,serif;letter-spacing:.01em}
 .dcss-launcher__version{margin:2px 0 0;color:#b3a88f;font-size:13px}

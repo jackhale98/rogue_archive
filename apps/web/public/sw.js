@@ -109,13 +109,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== SCOPE.origin || !url.pathname.startsWith(SCOPE.pathname)) return;
 
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(new Request(SHELL_URL), SHELL_CACHE).catch(() => caches.match(SHELL_URL)));
-    return;
-  }
   const path = relativePath(url);
+  // Runtime files first: a game's runtime can include pages loaded in a frame
+  // (e.g. an upstream web client), and those navigations are runtime files,
+  // not app routes.
   if (IMMUTABLE_RUNTIME.test(path)) {
     event.respondWith(cacheFirst(request, RUNTIME_CACHE));
+    return;
+  }
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(new Request(SHELL_URL), SHELL_CACHE).catch(() => caches.match(SHELL_URL)));
     return;
   }
   const manifestMatch = RUNTIME_MANIFEST.exec(path);

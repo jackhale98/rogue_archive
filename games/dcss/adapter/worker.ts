@@ -324,6 +324,8 @@ async function exited(status: number): Promise<void> {
   } catch {
     // autoPersist has already written each file as it closed.
   }
+  // The reason is read before the fresh instance resets it.
+  const reason = exitReason;
   // A fresh process for the next game, started when the player picks one.
   try {
     await instantiate();
@@ -334,17 +336,24 @@ async function exited(status: number): Promise<void> {
   post({
     type: 'exit',
     status,
-    reason: exitReason.type,
-    message: exitReason.message,
+    reason: reason.type,
+    message: reason.message,
     characters: listCharacters(),
   });
 }
 
-/** Saved characters: "<name>.cs" files (DCSS files.cc get_save_filename). */
+/**
+ * Saved characters: "<name>.cs" files in SAVEDIR/saves (DCSS files.cc
+ * get_save_filename; other game types, such as Sprint, use subdirectories).
+ */
 function listCharacters(): SavedCharacter[] {
   return listSaveFiles(SAVE_DIR, '', false)
-    .filter((file) => file.path.endsWith('.cs') && !file.path.includes('/'))
-    .map((file) => ({ name: file.path.slice(0, -3), path: file.path, modifiedAt: file.modifiedAt }))
+    .filter((file) => /^saves\/[^/]+\.cs$/.test(file.path))
+    .map((file) => ({
+      name: file.path.slice('saves/'.length, -3),
+      path: file.path,
+      modifiedAt: file.modifiedAt,
+    }))
     .sort((a, b) => b.modifiedAt - a.modifiedAt);
 }
 
@@ -407,7 +416,10 @@ async function importFiles(id: number, files: SaveFile[]): Promise<void> {
   }
   try {
     const { FS } = mod;
-    for (const file of files) {
+    for (let file of files) {
+      // A save downloaded on its own ("Name.cs", as desktop DCSS names it)
+      // belongs in the saves directory.
+      if (/^[^/]+\.cs$/.test(file.path)) file = { ...file, path: `saves/${file.path}` };
       const segments = file.path.split('/');
       if (segments.some((part) => !part || part.startsWith('.')))
         throw new Error(`Unsupported file name: ${file.path}`);

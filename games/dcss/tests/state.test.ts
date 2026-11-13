@@ -41,7 +41,9 @@ describe('DCSS context from WebTiles messages', () => {
     expect(tracker.context()).toBe('menu');
     apply(tracker, [{ msg: 'ui-push', type: 'describe-item' }]);
     expect(tracker.context()).toBe('popup');
-    apply(tracker, [{ msg: 'ui-pop' }, { msg: 'close_menu' }, { msg: 'init_input', tag: 'repeat' }]);
+    apply(tracker, [{ msg: 'ui-pop' }, { msg: 'menu', tag: 'prompt' }]);
+    expect(tracker.context()).toBe('yesno');
+    apply(tracker, [{ msg: 'close_menu' }, { msg: 'close_menu' }, { msg: 'init_input', tag: 'repeat' }]);
     expect(tracker.context()).toBe('text');
     apply(tracker, [
       { msg: 'close_input' },

@@ -7,7 +7,7 @@ test('DCSS: new character, auto-explore, menus, save and continue after reload',
   await startCharacter(page, 'Tester');
   // Character creation is upstream's own interface: species, background, weapon.
   const frame = page.frameLocator('iframe.dcss-client');
-  await expect(frame.locator('.newgame-choice')).toContainText('Please select your species');
+  await expect(frame.locator('.ui-popup .newgame-choice')).toContainText('Please select your species');
   for (let i = 0; i < 3 && (await dcssContext(page)) === 'start'; i++) {
     await page.keyboard.press('a');
     await page.waitForTimeout(800);
@@ -34,9 +34,10 @@ test('DCSS: new character, auto-explore, menus, save and continue after reload',
   await waitForContext(page, 'map');
 
   // Save and exit: back at the start screen, the character can be continued.
+  // DCSS asks "Save game and exit?"; the dock shows Yes and No for it.
   await page.keyboard.press('S');
-  await expect.poll(() => dcssContext(page), { timeout: 20_000 }).toMatch(/yesno|launcher/);
-  if ((await dcssContext(page)) === 'yesno') await page.keyboard.press('y');
+  await waitForContext(page, 'yesno', 20_000);
+  await page.keyboard.press('y');
   const launcher = page.locator('.dcss-launcher');
   await expect(launcher).toBeVisible({ timeout: 60_000 });
   await expect(launcher).toContainText('Game saved');

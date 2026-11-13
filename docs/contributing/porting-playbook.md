@@ -151,3 +151,5 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **First launch can be slow** when a game builds caches (DCSS: levels and descriptions, ~10–15 s). Keep them in the persistent save directory and exclude them from exports.
 - **A launcher may be needed:** servers often start games with arguments a player never sees (WebTiles: the player name). Provide the equivalent (start screen) instead of hoping the game asks.
 - **Upstream test suites may need debug builds.** Native-vs-WebAssembly replay of seeded games through the same platform interface (key script in, message stream out) is a strong, cheap alternative.
+- **Service workers answer navigations with the app shell.** A runtime page loaded in a frame (DCSS's client) is a navigation too; the shared worker serves runtime paths as runtime files first. Tests that start without the worker in control pass even with this bug, so run the full suite against a production build.
+- **Know where the game keeps saves.** DCSS uses `SAVEDIR/saves/<name>.cs`, not `SAVEDIR` itself; a save downloaded or imported on its own goes back there.
