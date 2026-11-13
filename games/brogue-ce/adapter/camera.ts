@@ -37,13 +37,13 @@ function isLetter(sprite: number): boolean {
  * Text glyphs are ASCII sprites in every display mode, while map features in
  * tiles mode are sprites >= 256, so this works in text, tiles and hybrid modes.
  */
-export function findTextOverlay(cells: Uint8Array): Rect | null {
+export function findTextOverlay(cells: Uint8Array, limitX = MAP_ORIGIN_X + DCOLS - 1): Rect | null {
   const spriteAt = (x: number, y: number) => {
     const offset = (y * COLS + x) * CELL_BYTES;
     return cells[offset]! | (cells[offset + 1]! << 8);
   };
   const mapLeft = MAP_ORIGIN_X;
-  const mapRight = MAP_ORIGIN_X + DCOLS - 1;
+  const mapRight = Math.min(limitX, MAP_ORIGIN_X + DCOLS - 1);
   const isText = (x: number, y: number) => {
     const sprite = spriteAt(x, y);
     return sprite > 32 && sprite < 127;
@@ -141,4 +141,87 @@ export function messageLines(cells: Uint8Array, rows = 3): MessageRun[][] {
     lines.push(runs.filter((run) => run.text.length > 0));
   }
   return lines;
+}
+
+/**
+ * Column where Brogue's inventory list starts: its entries are labelled
+ * "a) ", "b) "... at the same x. Null if no list is shown.
+ */
+export function inventoryColumn(cells: Uint8Array): number | null {
+  const spriteAt = (x: number, y: number) => {
+    const offset = (y * COLS + x) * CELL_BYTES;
+    return cells[offset]! | (cells[offset + 1]! << 8);
+  };
+  const counts = new Map<number, number>();
+  for (let y = MAP_ORIGIN_Y; y < MAP_ORIGIN_Y + DROWS; y++) {
+    for (let x = MAP_ORIGIN_X; x < COLS - 2; x++) {
+      if (
+        isLetter(spriteAt(x, y)) &&
+        spriteAt(x + 1, y) === 41 && // ')'
+        spriteAt(x + 2, y) === 32 &&
+        !isLetter(spriteAt(x - 1, y))
+      ) {
+        counts.set(x, (counts.get(x) ?? 0) + 1);
+      }
+    }
+  }
+  let best: number | null = null;
+  let bestCount = 2; // at least three entries
+  for (const [x, count] of counts) {
+    if (count > bestCount) {
+      best = x;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+/**
+ * The item details panel Brogue draws to the left of the inventory when an
+ * item is chosen (Items.c: printCarriedItemDetails), or null. On phones the
+ * sheet shows just this panel, not the whole inventory beside it.
+ */
+export function findItemDetails(cells: Uint8Array): Rect | null {
+  const column = inventoryColumn(cells);
+  if (column === null) return null;
+  const text = findTextOverlay(cells, column - 2);
+  if (!text || text.height < 4) return null;
+  // Brogue places the 40-column panel 42 columns left of the list
+  // (Items.c: max(2, mapToWindowX(DCOLS - maxLength - 42))), which can reach
+  // into the sidebar; the text search only looks over the map, so take the
+  // horizontal extent from that placement.
+  const x = Math.max(0, column - 42 - 1);
+  // The panel starts two rows into the map (mapToWindowY(2)); never reach up
+  // into the message rows (views.ts sheetSource extends boxes touching them).
+  const y = Math.max(text.y, MAP_ORIGIN_Y + 1);
+  return { x, y, width: column - 1 - x, height: text.y + text.height - y };
+}
+
+/** The details panel's action buttons (IO.c printCarriedItemDetails), as command ids. */
+const ITEM_ACTIONS: Record<string, string> = {
+  apply: 'apply',
+  equip: 'equip',
+  remove: 'unequip',
+  drop: 'drop',
+  throw: 'throw',
+  call: 'call',
+  Relabel: 'relabel',
+};
+
+export function itemActions(cells: Uint8Array, box: Rect): string[] {
+  const actions: string[] = [];
+  for (let y = box.y; y < box.y + box.height; y++) {
+    let line = '';
+    for (let x = box.x; x < box.x + box.width; x++) {
+      const offset = (y * COLS + x) * CELL_BYTES;
+      const sprite = cells[offset]! | (cells[offset + 1]! << 8);
+      line += sprite >= 32 && sprite < 127 ? String.fromCharCode(sprite) : ' ';
+    }
+    // A row of buttons: every word on it is an action (description text never is).
+    const words = line.trim().split(/\s+/).filter(Boolean);
+    if (words.length > 0 && words.every((word) => word in ITEM_ACTIONS)) {
+      for (const word of words) actions.push(ITEM_ACTIONS[word]!);
+    }
+  }
+  return actions;
 }

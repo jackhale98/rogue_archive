@@ -161,6 +161,22 @@ export const BROGUE_COMMANDS: readonly BrogueCommand[] = [
   },
   { id: 'next-target', label: 'Next target', shortcut: 'Tab', keyCode: Key.TAB, category: 'Prompts' },
   {
+    id: 'previous-item',
+    label: 'Previous item',
+    shortLabel: '▲ Item',
+    shortcut: '↑',
+    keyCode: Key.UP_ARROW,
+    category: 'Prompts',
+  },
+  {
+    id: 'next-item',
+    label: 'Next item',
+    shortLabel: '▼ Item',
+    shortcut: '↓',
+    keyCode: Key.DOWN_ARROW,
+    category: 'Prompts',
+  },
+  {
     id: 'shift',
     label: 'Shift (next action)',
     shortLabel: 'Shift',

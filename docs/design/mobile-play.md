@@ -21,6 +21,8 @@ The shell is in *compact* mode when touch controls are shown and the viewport's 
 
 All pieces show Brogue's own cells (glyphs, tiles, colours) rendered from the same buffer; taps map back to the original cells, so Brogue only ever sees ordinary mouse events.
 
+**Item details** (`games/brogue-ce/adapter/camera.ts` `findItemDetails`, `itemActions`): when an item is chosen in the inventory, Brogue draws its details panel beside the list. The sheet then shows only that panel (found from the list's `a)`, `b)` labels and Brogue's placement rule), so the text stays large. The dock offers the panel's own buttons, with the likely one emphasized: Apply, Equip or Remove, then Throw and Drop, with Relabel and Call on a long-press. It also has ▲/▼ Item to step through the pack, and Back.
+
 **Title screen** (`games/brogue-ce/adapter/title.ts`): Brogue's title menu is a few small text buttons on the full screen. On phones it is replaced by large buttons (New game, Load saved game, Seeded game, Recordings, High scores, Stats, Variant, Mode) that send Brogue's own hotkeys, opening the right flyout first. The file picker ("Open saved game:", "View recording:") becomes a list of saves with dates, plus Newer, Older and Back. Other title screens (high scores, the seed prompt) show Brogue's screen with Back, OK and Type in the dock. Brogue's own flags still say "in game" after saving and returning to the title, so the adapter treats the title menu on screen as the end of the game until the dungeon's depth line returns.
 
 ## Context-aware controls (`games/brogue-ce/adapter/state.ts`)

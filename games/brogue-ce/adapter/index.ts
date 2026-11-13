@@ -32,7 +32,7 @@ import {
 } from './constants.ts';
 import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
 import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
-import { findTextOverlay } from './camera.ts';
+import { findItemDetails, findTextOverlay, itemActions } from './camera.ts';
 import { readDescription } from './describe.ts';
 import { BrogueHud } from './hud.ts';
 import { BrogueReader } from './reader.ts';
@@ -73,6 +73,8 @@ export interface BrogueDebugState {
   screenText(): string;
   /** Names of the views currently drawn (e.g. ["map", "sheet"]), for tests. */
   views(): string[];
+  /** Cells shown by the phone sheet, if one is open. */
+  sheet(): { x: number; y: number; width: number; height: number } | null;
   /** Client (CSS pixel) center of a screen cell, for tests. */
   cellToClient(x: number, y: number): { x: number; y: number } | null;
 }
@@ -208,6 +210,7 @@ class BrogueAdapter implements GameAdapter {
       screenText: () => Array.from({ length: ROWS }, (_, y) => rowText(y)).join('\n'),
       cellToClient: (x: number, y: number) => this.#renderer?.cellToClient(x, y) ?? null,
       views: () => this.#renderer?.views.map((view) => view.name) ?? [],
+      sheet: () => this.#renderer?.views.find((view) => view.name === 'sheet')?.src ?? null,
     };
   }
 
@@ -367,7 +370,11 @@ class BrogueAdapter implements GameAdapter {
     // other boxes go to the reader (offered with a chip, or opened on long-press)
     // so the map stays fully visible.
     const overlayKind: OverlayKind =
-      context === 'menu' || context === 'yesno' ? 'sheet' : context === 'title' ? 'none' : 'hidden';
+      context === 'menu' || context === 'item' || context === 'yesno'
+        ? 'sheet'
+        : context === 'title'
+          ? 'none'
+          : 'hidden';
     if (!this.#reader) {
       this.#reader = new BrogueReader(mount, (description) => {
         // Don't offer the box being shown again until it goes away.
@@ -614,7 +621,9 @@ class BrogueAdapter implements GameAdapter {
   }
 
   #publishContext(context: BrogueContext, state: BrogueState): void {
-    let layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift);
+    const details = context === 'item' && this.#lastCells ? findItemDetails(this.#lastCells) : null;
+    const actions = details && this.#lastCells ? itemActions(this.#lastCells, details) : [];
+    let layout = controlsFor(context, state, BROGUE_TOUCH_LAYOUT.palette, this.#stickyShift, actions);
     // The title panel has its own large buttons (and Back where it applies).
     if (context === 'title' && this.#titlePanel?.visible) layout = { ...layout, actions: [] };
     const signature = `${context}:${JSON.stringify(layout.actions)}`;

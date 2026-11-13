@@ -11,7 +11,7 @@
  * SDL_SetTextureColorMod). Cells are whole device pixels so text stays crisp.
  */
 import { buildAtlas, type SourceSheet } from './atlas.ts';
-import { cameraFocus, findTextOverlay, messageLines, type Rect } from './camera.ts';
+import { cameraFocus, findItemDetails, findTextOverlay, messageLines, type Rect } from './camera.ts';
 import {
   compactViews,
   hitTest,
@@ -373,7 +373,8 @@ export class BrogueRenderer {
       data[bgOffset + dst + 3] = cells[src + 1]!;
     }
     this.#lastCells = cells;
-    this.#overlay = this.#compact && inGame ? findTextOverlay(cells) : null;
+    // With an item's details open beside the inventory, show just the details.
+    this.#overlay = this.#compact && inGame ? (findItemDetails(cells) ?? findTextOverlay(cells)) : null;
     this.#composeMapCells();
     const player = inGame && playerX >= 0 ? { x: MAP_ORIGIN_X + playerX, y: MAP_ORIGIN_Y + playerY } : null;
     if (player?.x !== this.#player?.x || player?.y !== this.#player?.y) this.#pan = { x: 0, y: 0 };

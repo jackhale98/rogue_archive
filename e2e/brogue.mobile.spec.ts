@@ -207,7 +207,10 @@ test('Shift latches for one action: Shift + tap in a menu shows item details ins
   const point = await cellCenter(page, { x: food.x + 2, y: food.y });
   await page.touchscreen.tap(point.x, point.y);
   await waitForScreenText(page, 'A ration of food');
-  await expect(page.getByRole('button', { name: /^Shift ⓘ/ })).toHaveAttribute('aria-pressed', 'false');
+  // The food's details are shown, with its actions in the dock (Shift has released).
+  await expect.poll(() => gameContext(page)).toBe('item');
+  await expect(page.getByRole('button', { name: 'Apply / use (a)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Shift ⓘ/ })).toHaveCount(0);
 });
 
 test('title screen: large buttons start, save and load a game', async ({ page }) => {
@@ -236,4 +239,30 @@ test('title screen: large buttons start, save and load a game', async ({ page })
   await save.tap();
   await waitInGame(page);
   await expect.poll(() => player(page)).toMatchObject({ x: before.x, y: before.y });
+});
+
+test("inventory: an item's details fill the sheet and the dock offers its actions", async ({ page }) => {
+  await newGame(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: 'Pack (i)' }).tap();
+  await expect.poll(() => gameContext(page)).toBe('menu');
+  // The starting dagger (b) is wielded: Remove is the likely action.
+  await page.keyboard.press('b');
+  await expect.poll(() => gameContext(page)).toBe('item');
+  await expect(dock.getByRole('button', { name: 'Remove (r)' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Throw (t)' })).toBeVisible();
+  await expect(dock.getByRole('button', { name: 'Drop (d)' })).toBeVisible();
+  await expect.poll(() => gameViews(page)).toEqual(['map', 'sheet']);
+  // Only the details panel is shown (40 columns), not the inventory beside it.
+  const sheet = await page.evaluate(() =>
+    (
+      window as unknown as { __rogueArchive: { adapter: { debug: { sheet(): { width: number } | null } } } }
+    ).__rogueArchive.adapter.debug.sheet(),
+  );
+  expect(sheet?.width).toBeLessThanOrEqual(44);
+  // Stepping to the next item keeps the details view; Back returns to the list.
+  await dock.getByRole('button', { name: /▼ Item/ }).tap();
+  await expect.poll(() => gameContext(page)).toBe('item');
+  await dock.getByRole('button', { name: /Back/ }).tap();
+  await expect.poll(() => gameContext(page)).not.toBe('item');
 });

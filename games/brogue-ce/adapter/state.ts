@@ -10,7 +10,7 @@
  */
 import { SHELL_COMMAND, type TouchAction, type TouchControlLayout } from '@rogue-archive/game-api';
 import { CELL_BYTES, COLS } from './constants.ts';
-import { findTextOverlay } from './camera.ts';
+import { findItemDetails, findTextOverlay } from './camera.ts';
 
 export interface BrogueState {
   hp: number;
@@ -58,7 +58,7 @@ export function hungerLabel(nutrition: number): string | null {
   return null;
 }
 
-export type BrogueContext = 'title' | 'busy' | 'more' | 'yesno' | 'menu' | 'targeting' | 'map';
+export type BrogueContext = 'title' | 'busy' | 'more' | 'yesno' | 'menu' | 'item' | 'targeting' | 'map';
 
 function screenRows(cells: Uint8Array, from: number, to: number): string {
   let text = '';
@@ -89,6 +89,8 @@ export function detectContext(inGame: boolean, state: BrogueState, cells: Uint8A
       const box = screenRows(cells, overlay.y, overlay.y + overlay.height);
       if (/\bYes\b/.test(box) && /\bNo\b/.test(box)) return 'yesno';
     }
+    // An item chosen in the inventory: its details panel with action buttons.
+    if (findItemDetails(cells)) return 'item';
     return 'menu';
   }
   const messages = screenRows(cells, 0, 3);
@@ -112,12 +114,36 @@ function a(command: string, extra: Omit<TouchAction, 'command'> = {}): TouchActi
   return { command, ...extra };
 }
 
+/** The action an item's details most likely lead to: use it, else wear it, else take it off. */
+function primaryItemAction(ids: string[]): string | undefined {
+  return ['apply', 'equip', 'unequip', 'throw', 'drop'].find((id) => ids.includes(id));
+}
+
+/**
+ * The details panel's actions for the dock: the main ones as buttons (the
+ * likely one emphasized), naming items (Relabel, Call) as long-press options
+ * on the last of them, to keep the dock short.
+ */
+function itemDock(ids: string[]): TouchAction[] {
+  const naming: string[] = ids.filter((id) => id === 'relabel' || id === 'call');
+  const main = ids.filter((id) => !naming.includes(id));
+  const primary = primaryItemAction(main);
+  return main.map((id, index) =>
+    a(id, {
+      ...(id === primary ? { emphasis: 'primary' as const } : {}),
+      ...(index === main.length - 1 && naming.length ? { alternates: naming } : {}),
+    }),
+  );
+}
+
 /** Touch controls for each context. Long-press alternates fan out from their button. */
 export function controlsFor(
   context: BrogueContext,
   state: BrogueState,
   palette: string[],
   shift = false,
+  /** For 'item': the details panel's actions (camera.ts itemActions). */
+  itemActionIds: string[] = [],
 ): TouchControlLayout {
   // A latching Shift: tap it, then the next action is sent with Shift held.
   const shiftAction = (label: string) => a('shift', { label, active: shift });
@@ -150,6 +176,17 @@ export function controlsFor(
           shiftAction('Shift ⓘ'),
           a('confirm', { label: 'OK' }),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+        ],
+        palette,
+      };
+    case 'item':
+      // The panel's own buttons, plus stepping through the inventory and Back.
+      return {
+        actions: [
+          ...itemDock(itemActionIds),
+          a('previous-item', { alternates: ['next-item'] }),
+          a('next-item'),
+          a('cancel', { label: 'Back' }),
         ],
         palette,
       };
