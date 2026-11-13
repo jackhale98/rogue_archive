@@ -1,0 +1,380 @@
+{
+  "schemaVersion": 1,
+  "games": [
+    {
+      "id": "brogue-ce",
+      "title": "Brogue",
+      "subtitle": "Community Edition",
+      "description": "A luminous, tightly designed dungeon dive: twenty-six levels, no experience points, and every item a decision. Find the Amulet of Yendor at the bottom.",
+      "about": [
+        "Brogue was created by Brian Walker and is now maintained by the community as Brogue: Community Edition. It strips the classic roguelike down to its essentials—no classes, no grinding—and builds its depth from item identification, allies, terrain and light.",
+        "This port compiles the official Brogue CE source to WebAssembly without changing any game code. The screen is drawn from Brogue's own tile sheet in text, tiles or hybrid mode, and the game's keyboard and mouse controls work exactly as on the desktop."
+      ],
+      "status": "experimental",
+      "priority": 0,
+      "effort": "medium",
+      "rationale": "First implementation: validates tile rendering, map interaction, touch controls and responsive gameplay.",
+      "firstReleased": 2009,
+      "authors": "Brian Walker; Brogue: Community Edition contributors",
+      "upstream": {
+        "name": "Brogue: Community Edition",
+        "repository": "https://github.com/tmewett/BrogueCE"
+      },
+      "version": "1.15.1",
+      "sourceRevision": "1ba4240b7a928ddf0ffb772717bf1d433cd63804",
+      "license": {
+        "code": "AGPL-3.0-or-later",
+        "assets": "Tile sheet: CC BY-SA 4.0 (Brogue CE maintainers, based on Oryx Design Lab tiles distributed with Brogue under the AGPL)",
+        "report": "games/brogue-ce/LICENSES.md"
+      },
+      "interface": ["ascii", "tiles"],
+      "renderMode": "tile-map",
+      "input": { "keyboard": true, "mouse": true, "touch": true },
+      "saves": { "local": true, "export": true },
+      "offline": true,
+      "tags": ["Classic", "Turn-based", "Permadeath", "Short runs"],
+      "adapter": "brogue-ce",
+      "runtimeManifest": "runtime/brogue-ce/runtime-manifest.json",
+      "glyph": "@",
+      "cover": {
+        "src": "covers/brogue-ce.webp",
+        "alt": "Brogue in tiles mode: the adventurer in a torch-lit dungeon with the stats sidebar on the left.",
+        "width": 1200,
+        "height": 675
+      },
+      "controlsSummary": [
+        { "keys": "Arrow keys · hjklyubn · numpad", "action": "Move or attack; Shift to run" },
+        {
+          "keys": "Mouse / tap",
+          "action": "Hover or tap to inspect and show a path; click or tap again to travel"
+        },
+        { "keys": "x", "action": "Explore automatically" },
+        { "keys": "> / <", "action": "Travel to stairs down / up" },
+        { "keys": "i · a · e · r · d · t", "action": "Inventory, apply, equip, remove, drop, throw" },
+        { "keys": "s · z · Z", "action": "Search, rest, rest until better" },
+        { "keys": "S", "action": "Save the game and return to the title screen" },
+        { "keys": "G", "action": "Cycle text, tiles and hybrid display" },
+        { "keys": "?", "action": "Full in-game help" }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical iOS or Android devices; touch controls are verified only in desktop browser emulation.",
+        "The full 100×34 screen is small on phones; landscape orientation and the zoom control are recommended.",
+        "The tile downscaler is a simplified version of Brogue's desktop renderer (no sub-pixel sharpening or wall-top shading), so very small sizes can look softer than on desktop.",
+        "Screenshots (the desktop build's Print Screen command) are not supported in the browser."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "New game, movement, save, reload and load verified by end-to-end tests."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Tap and on-screen controls exercised; not a substitute for a real device."
+        },
+        { "environment": "Firefox desktop", "result": "untested" },
+        { "environment": "Safari (macOS / iOS)", "result": "untested" },
+        { "environment": "Chrome for Android", "result": "untested" }
+      ]
+    },
+    {
+      "id": "dcss",
+      "title": "Dungeon Crawl Stone Soup",
+      "subtitle": "The community-developed classic",
+      "description": "A deep, open-source dungeon crawl with dozens of species and backgrounds, a sprawling branch structure and a design culture of removing tedium.",
+      "status": "researching",
+      "priority": 1,
+      "effort": "medium-high",
+      "rationale": "Second implementation: validates terminal and tiles interfaces, complex prompts, menus, targeting and command handling.",
+      "firstReleased": 2006,
+      "authors": "The Dungeon Crawl Stone Soup development team",
+      "upstream": {
+        "name": "Dungeon Crawl Stone Soup",
+        "website": "https://crawl.develz.org/",
+        "repository": "https://github.com/crawl/crawl"
+      },
+      "license": {
+        "code": "GPL-2.0-or-later, with some files under other compatible licenses (per-file audit pending)",
+        "assets": "Tiles and other assets: audit pending"
+      },
+      "interface": ["ascii", "tiles"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Classic", "Turn-based", "Permadeath"],
+      "glyph": "D"
+    },
+    {
+      "id": "sil-q",
+      "title": "Sil-Q",
+      "subtitle": "Tactical descent into Angband",
+      "description": "A tactical roguelike set in Tolkien's First Age, where stealth, positioning and a single run to steal a Silmaril matter more than loot.",
+      "status": "planned",
+      "priority": 2,
+      "effort": "medium",
+      "rationale": "Distinct tactical roguelike; existing browser/WASM work provides a useful starting point.",
+      "authors": "Sil-Q maintainers, building on Sil by Dan Hutchison and Kanga",
+      "upstream": { "name": "Sil-Q", "repository": "https://github.com/sil-quirk/sil-q" },
+      "license": {
+        "code": "Distinct licensing route; to be verified",
+        "assets": "Existing browser build excludes certain graphics and sound; audit pending"
+      },
+      "interface": ["ascii"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Tactical", "Turn-based"],
+      "glyph": "@"
+    },
+    {
+      "id": "rogue",
+      "title": "Rogue",
+      "subtitle": "5.4.4 source release",
+      "description": "The game that named the genre: explore the Dungeons of Doom, identify what you find, and bring back the Amulet of Yendor.",
+      "status": "planned",
+      "priority": 3,
+      "effort": "low-medium",
+      "rationale": "Small, classic terminal roguelike; relatively straightforward integration.",
+      "firstReleased": 1980,
+      "authors": "Michael Toy, Glenn Wichman, Ken Arnold and later contributors",
+      "upstream": { "name": "Rogue 5.4.4", "repository": "https://github.com/Davidslv/rogue" },
+      "license": {
+        "code": "BSD-style license of the later redistributable 5.4.4 source release (to be verified)",
+        "assets": "Text-only; included notices to be audited"
+      },
+      "interface": ["ascii"],
+      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "tags": ["Classic", "Historic"],
+      "glyph": "R"
+    },
+    {
+      "id": "hyperrogue",
+      "title": "HyperRogue",
+      "subtitle": "A roguelike in non-Euclidean space",
+      "description": "Collect treasure on a hyperbolic plane, where the world grows exponentially around you and geometry is the main puzzle.",
+      "status": "planned",
+      "priority": 4,
+      "effort": "medium-high",
+      "rationale": "Unusual non-Euclidean gameplay and rendering; adds a genuinely different experience.",
+      "authors": "Zeno Rogue and contributors",
+      "upstream": {
+        "name": "HyperRogue",
+        "website": "https://roguetemple.com/z/hyper/",
+        "repository": "https://github.com/zenorogue/hyperrogue"
+      },
+      "license": { "code": "To be verified", "assets": "To be verified" },
+      "interface": ["graphical"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Puzzle", "Experimental"],
+      "glyph": "∞"
+    },
+    {
+      "id": "nethack",
+      "title": "NetHack",
+      "subtitle": "5.0.0",
+      "description": "The genre-defining dungeon adventure, famous for how much it anticipates: almost anything you try has been thought of.",
+      "status": "planned",
+      "priority": 5,
+      "effort": "medium-high",
+      "rationale": "Genre-defining game; substantial interface and integration work.",
+      "firstReleased": 1987,
+      "authors": "The NetHack DevTeam",
+      "upstream": {
+        "name": "NetHack",
+        "website": "https://www.nethack.org/",
+        "repository": "https://github.com/NetHack/NetHack"
+      },
+      "license": {
+        "code": "NetHack General Public License",
+        "assets": "Text-only core; tiles to be audited separately"
+      },
+      "interface": ["ascii"],
+      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "tags": ["Classic", "Turn-based", "Permadeath"],
+      "glyph": "@"
+    },
+    {
+      "id": "angband",
+      "title": "Angband",
+      "subtitle": "The long descent to Morgoth",
+      "description": "A vast, traditional dungeon dive of a hundred levels beneath Angband, with a mature codebase and a classic terminal interface.",
+      "status": "planned",
+      "priority": 6,
+      "effort": "medium",
+      "rationale": "Mature C codebase and traditional terminal interface.",
+      "firstReleased": 1990,
+      "authors": "The Angband development team",
+      "upstream": {
+        "name": "Angband",
+        "website": "https://rephial.org/",
+        "repository": "https://github.com/angband/angband"
+      },
+      "license": {
+        "code": "GPL-2.0 or the Angband license (route to be selected for redistribution)",
+        "assets": "Graphics and sound to be audited separately"
+      },
+      "interface": ["ascii", "tiles"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Classic", "Turn-based"],
+      "glyph": "A"
+    },
+    {
+      "id": "drl",
+      "title": "DRL",
+      "subtitle": "Formerly DoomRL",
+      "description": "A fast, brutal roguelike in the spirit of a classic first-person shooter: shotguns, demons, and very little time to think.",
+      "status": "planned",
+      "priority": 7,
+      "effort": "medium-high",
+      "rationale": "Distinctive Doom-inspired roguelike; Pascal runtime and asset considerations.",
+      "firstReleased": 2002,
+      "authors": "ChaosForge",
+      "upstream": { "name": "DRL", "repository": "https://github.com/chaosforgeorg/drl" },
+      "license": {
+        "code": "GPL-2.0 (source repository)",
+        "assets": "Separate binary game data, graphics and audio; audit pending"
+      },
+      "interface": ["ascii", "graphical"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Action", "Turn-based"],
+      "glyph": "D"
+    },
+    {
+      "id": "allure-of-the-stars",
+      "title": "Allure of the Stars",
+      "subtitle": "Sci-fi tactical roguelike",
+      "description": "A text-based science-fiction roguelike of squad tactics aboard a derelict cruise liner, built on the LambdaHack engine.",
+      "status": "planned",
+      "priority": 8,
+      "effort": "medium-high",
+      "rationale": "Interesting text-based sci-fi roguelike with an existing browser implementation.",
+      "authors": "Mikolaj Konarski and contributors",
+      "upstream": {
+        "name": "Allure of the Stars",
+        "repository": "https://github.com/AllureOfTheStars/Allure"
+      },
+      "license": { "code": "To be verified", "assets": "To be verified" },
+      "interface": ["ascii"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Sci-fi", "Tactical"],
+      "glyph": "*"
+    },
+    {
+      "id": "cataclysm-dda",
+      "title": "Cataclysm: Dark Days Ahead",
+      "subtitle": "Post-apocalyptic survival",
+      "description": "An enormous open-world survival roguelike: scavenge, craft, build vehicles and outlast a collapsed world.",
+      "status": "planned",
+      "priority": 9,
+      "effort": "high",
+      "rationale": "Upstream already has an Emscripten build workflow, but large data, memory needs and complex mobile UX keep this high effort.",
+      "firstReleased": 2013,
+      "authors": "CleverRaven and contributors",
+      "upstream": {
+        "name": "Cataclysm: Dark Days Ahead",
+        "website": "https://cataclysmdda.org/",
+        "repository": "https://github.com/CleverRaven/Cataclysm-DDA"
+      },
+      "license": {
+        "code": "CC BY-SA 3.0 for project code and content; bundled third-party components carry their own notices",
+        "assets": "Tilesets, fonts and sounds to be audited individually"
+      },
+      "interface": ["ascii", "tiles"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "tags": ["Survival", "Open world", "Crafting"],
+      "glyph": "C"
+    },
+    {
+      "id": "shattered-pixel-dungeon",
+      "title": "Shattered Pixel Dungeon",
+      "subtitle": "Mobile-first pixel-art roguelike",
+      "description": "A polished, approachable pixel-art dungeon crawler designed for touch from the start.",
+      "status": "planned",
+      "priority": 10,
+      "effort": "high",
+      "rationale": "Excellent mobile-oriented gameplay, but a Java/libGDX porting effort.",
+      "firstReleased": 2014,
+      "authors": "Evan Debenham, building on Pixel Dungeon by Watabou",
+      "upstream": {
+        "name": "Shattered Pixel Dungeon",
+        "repository": "https://github.com/00-Evan/shattered-pixel-dungeon"
+      },
+      "license": {
+        "code": "To be verified separately from assets",
+        "assets": "To be verified separately from code"
+      },
+      "interface": ["graphical"],
+      "input": { "keyboard": true, "mouse": true, "touch": true },
+      "tags": ["Pixel art", "Mobile-friendly"],
+      "glyph": "P"
+    },
+    {
+      "id": "ivan",
+      "title": "IVAN",
+      "subtitle": "Iter Vehemens ad Necem",
+      "description": "A traditional roguelike with a detailed body-part combat model and a dark sense of humour, built on its own C++ engine.",
+      "status": "planned",
+      "priority": 11,
+      "effort": "high",
+      "rationale": "Interesting traditional roguelike with a custom C++ engine.",
+      "authors": "Timo Kiviluoto and the IVAN community",
+      "upstream": { "name": "IVAN", "repository": "https://github.com/Attnam/ivan" },
+      "license": { "code": "To be verified", "assets": "To be verified" },
+      "interface": ["graphical"],
+      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "tags": ["Classic", "Detailed combat"],
+      "glyph": "I"
+    },
+    {
+      "id": "infra-arcana",
+      "title": "Infra Arcana",
+      "subtitle": "Lovecraftian horror",
+      "description": "An atmospheric roguelike of cultists, dynamite and dwindling sanity in the 1920s.",
+      "status": "planned",
+      "priority": 12,
+      "effort": "high",
+      "rationale": "Atmospheric roguelike; requires additional runtime and licensing investigation.",
+      "authors": "Martin Törnqvist and contributors",
+      "upstream": { "name": "Infra Arcana", "repository": "https://github.com/InfraArcana/ia" },
+      "license": { "code": "To be investigated", "assets": "To be investigated" },
+      "interface": ["ascii", "tiles"],
+      "input": { "keyboard": true, "mouse": false, "touch": false },
+      "tags": ["Horror", "Turn-based"],
+      "glyph": "?"
+    },
+    {
+      "id": "tome",
+      "title": "Tales of Maj'Eyal",
+      "subtitle": "Watchlist",
+      "description": "A large, graphical, class-driven roguelike on the T-Engine4. Kept off the distribution catalog until its asset licensing is resolved.",
+      "status": "blocked",
+      "priority": 100,
+      "authors": "DarkGod (Nicolas Casalini) and contributors",
+      "upstream": { "name": "Tales of Maj'Eyal", "website": "https://te4.org/" },
+      "license": {
+        "code": "GPL-3.0 (engine and game code)",
+        "assets": "Official graphics, music and sound are licensed for use with Tales of Maj'Eyal only"
+      },
+      "interface": ["graphical"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "blockers": [
+        "Official graphics, audio and music are granted for use with Tales of Maj'Eyal only; redistribution rights are unresolved."
+      ],
+      "glyph": "T"
+    },
+    {
+      "id": "gearhead",
+      "title": "GearHead",
+      "subtitle": "Watchlist",
+      "description": "A mecha roguelike RPG. Kept on the watchlist because of noncommercial restrictions on its assets.",
+      "status": "blocked",
+      "priority": 101,
+      "authors": "Joseph Hewitt",
+      "upstream": { "name": "GearHead" },
+      "license": { "code": "To be verified", "assets": "Noncommercial restrictions on assets" },
+      "interface": ["ascii", "graphical"],
+      "input": { "keyboard": true, "mouse": true, "touch": false },
+      "blockers": [
+        "Asset licenses carry noncommercial restrictions that are incompatible with open redistribution."
+      ],
+      "glyph": "G"
+    }
+  ]
+}

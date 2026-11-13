@@ -1,0 +1,60 @@
+# Brogue CE port — how it works
+
+## Architecture
+
+```
+ UI thread                                         Web Worker
+┌──────────────────────────────┐   postMessage   ┌─────────────────────────────────┐
+│ GameShell (shared, React)    │ ──────────────▶ │ worker.ts                        │
+│   keyboard / touch / menus   │   input, flush  │   verifies + loads brogue.wasm   │
+│ BrogueAdapter (adapter/)     │                 │   IDBFS /brogue (autoPersist)    │
+│   input.ts  → Brogue events  │ ◀────────────── │ brogue.wasm (upstream, Asyncify) │
+│   renderer.ts (WebGL2)       │  frames (cells) │   rogue-archive-platform.c       │
+│   atlas.ts  (tiles.png)      │                 │     = struct brogueConsole       │
+└──────────────────────────────┘                 └─────────────────────────────────┘
+```
+
+- `port/rogue-archive-platform.c` implements `struct brogueConsole`. `plotChar` writes 8 bytes per cell (sprite index, foreground RGB, background RGB) into a buffer; at every pause or input wait the whole 100×34 buffer is posted to the page (27 KB). `nextKeyOrMouseEvent` and `pauseForMilliseconds` yield through Asyncify (`EM_ASYNC_JS`, `emscripten_sleep`), so the worker keeps receiving messages while the game waits.
+- When Brogue animates while waiting (`colorsDance`), the platform shuffles colors every 36 ms, as the SDL build does. Otherwise it sleeps until input arrives and uses no CPU.
+- Sprite selection (`fontIndex`) is copied from upstream, so text, tiles and hybrid modes behave identically, including the in-game `G` toggle.
+
+## Input
+
+| Physical input | Brogue event |
+|---|---|
+| Printable ASCII keys | `KEYSTROKE` with the character (shifted symbols such as `>` work) |
+| Arrows, Esc, Enter, Backspace, Tab | Brogue's arrow, `ESCAPE_KEY`, `RETURN_KEY`, `DELETE_KEY`, `TAB_KEY` codes |
+| Ctrl+letter | Letter plus `controlKey`, as SDL does |
+| Numpad digits | `NUMPAD_n` |
+| Mouse move / buttons | `MOUSE_ENTERED_CELL`, `MOUSE_DOWN/UP`, `RIGHT_MOUSE_DOWN/UP` |
+| Touch tap (title, sidebar, menus outside the map) | Hover + click |
+| Touch tap on the dungeon map | First tap previews (shows the path and description, like hovering); a second tap on the same cell clicks, which travels or acts. Setting: *Tapping the map → Act immediately* |
+| Long press | Inspect (hover only) |
+| On-screen pad / buttons / command list | The exact upstream key for that command (`adapter/input.ts`) |
+| On-screen keyboard | One keystroke per typed ASCII character, for save names and seeds |
+
+Brogue's `modifierHeld` is answered from the real Shift/Ctrl state.
+
+## Saves
+
+- The worker mounts IDBFS at `/brogue` with `autoPersist` and `chdir`s into it, so Brogue's own files (`*.broguesave`, `*.broguerec`, `BrogueHighScores.txt`, run history) live there and are written to IndexedDB as soon as Brogue closes, renames or deletes them.
+- **Normal save:** `S` in game (Brogue's own flow). It returns to the title screen; *Play → Load Game* lists saves.
+- **Leaving mid-game / tab hidden:** the shell asks the adapter to `persist()`. At its next input wait the platform calls upstream `flushBufferToFile()`, the same call Brogue makes whenever its recording buffer fills, then syncs IndexedDB. The game in progress remains as `LastGame.broguesave`, which Brogue lists under *Load Game*. This is Brogue's own recovery mechanism; nothing about the save format changes.
+- **Export/import:** the in-game menu exports every file in `/brogue` as a `.roguearchive` file and imports them back. Import never overwrites: a clashing name is imported as `name (imported).ext`.
+
+## Display
+
+- WebGL2 is required (all current target browsers have it); otherwise the launcher explains why the game cannot start.
+- Cells are whole device pixels. Fit mode keeps the cell width-to-height ratio between 0.42 and 0.75 (the sheet's native ratio is 0.55).
+- **Zoom** (toolbar) cycles fit / 1.6× / 2.2× and follows the player. Menus and the title screen always fit. Portrait screens start zoomed unless the player has chosen otherwise.
+
+## Known limitations
+
+See the game page or `games/catalog.json`. In short: not yet verified on physical phones; the downscaler is simpler than upstream's; no screenshots (`takeScreenshot` is not implemented); the player-built seed catalog and recording playback work but are untested.
+
+## Testing
+
+- Unit: `games/brogue-ce/tests/adapter.test.ts` (key mapping vs upstream, command catalog, layout math, sprite fitting).
+- End-to-end: `e2e/brogue.spec.ts` and `e2e/mobile.spec.ts`. These start a real game; move with keys, the pad and taps; check preview-then-travel; save with `S`, reload the page and load the save; export and import saves; type through the on-screen keyboard; and verify that a tampered or missing runtime fails with an actionable error.
+
+Tests read the screen through a debug hook (`window.__rogueArchive`) that exists only in development builds or with `?debug` in the URL.

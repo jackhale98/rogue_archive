@@ -1,0 +1,393 @@
+/* In-game shell: the game owns the stage; the shell stays out of its way. */
+
+/* The play screen always uses the dark palette so the game sits in a dark frame. */
+.play {
+  color-scheme: dark;
+  --ink-0: #100e0b;
+  --ink-1: #16130f;
+  --ink-2: #1e1a15;
+  --ink-3: #2a251e;
+  --line: #3a3329;
+  --text: #ece3cf;
+  --text-muted: #b3a88f;
+  --accent: #e0aa4a;
+  --accent-strong: #f0be62;
+  --accent-ink: #1a1308;
+  --danger: #e2735f;
+  --success: #9ccf8a;
+  --focus: #f6c86b;
+  --surface: var(--ink-2);
+  --surface-raised: var(--ink-3);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  background: #000;
+  color: var(--text);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  overscroll-behavior: none;
+}
+
+.play__bar {
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  background: var(--ink-1);
+  border-bottom: 1px solid var(--line);
+}
+.play__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-s);
+  color: var(--text);
+  text-decoration: none;
+}
+.play__back:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.play__title {
+  font-size: 1rem;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.play__tools {
+  display: flex;
+  gap: var(--space-1);
+}
+.tool-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+  justify-content: center;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.tool-button:hover {
+  background: var(--surface);
+}
+.tool-button--primary {
+  border-color: var(--line);
+}
+.tool-button span[aria-hidden='true'] {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.text-entry-banner {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 560;
+}
+.text-entry-banner .button {
+  background: var(--accent-ink);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+.play__stage {
+  grid-row: 3;
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'screen';
+  min-height: 0;
+}
+.play__screen {
+  grid-area: screen;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+/* Touch layouts --------------------------------------------------------- */
+
+.play[data-touch='on'] .play__stage {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'actions screen pad';
+}
+.play[data-touch='on'][data-hand='left'] .play__stage {
+  grid-template-areas: 'pad screen actions';
+}
+.play__rail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  background: var(--ink-0);
+  min-width: 0;
+}
+.play__rail--actions {
+  grid-area: actions;
+}
+.play__rail--pad {
+  grid-area: pad;
+}
+
+@media (orientation: portrait) {
+  .play[data-touch='on'] .play__stage,
+  .play[data-touch='on'][data-hand='left'] .play__stage {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas: 'screen screen' 'actions pad';
+  }
+  .play[data-touch='on'][data-hand='left'] .play__stage {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: 'screen screen' 'pad actions';
+  }
+}
+
+.touch-pad {
+  --pad-button: clamp(2.6rem, 12vmin, 3.6rem);
+  display: grid;
+  grid-template-columns: repeat(3, var(--pad-button));
+  grid-template-rows: repeat(3, var(--pad-button));
+  gap: 0.3rem;
+}
+.touch-pad__button,
+.touch-actions__button {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  border: 1px solid var(--line);
+  background: var(--ink-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.touch-pad__button {
+  border-radius: var(--radius-m);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.touch-pad__button--center {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+.touch-pad__button:active,
+.touch-actions__button:active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.touch-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  width: clamp(8.5rem, 22vmin, 11rem);
+}
+.touch-actions__button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.2rem;
+  border-radius: var(--radius-s);
+  font-size: 0.72rem;
+  line-height: 1.15;
+}
+.touch-actions__key {
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  padding: 0 0.3em;
+}
+@media (orientation: portrait) {
+  .touch-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: auto;
+    flex: 1;
+  }
+  .play__rail--actions {
+    justify-content: stretch;
+  }
+}
+
+/* Overlays and dialogs --------------------------------------------------- */
+
+.shell-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--ink-0) 88%, transparent);
+  z-index: 2;
+}
+.shell-panel {
+  width: min(28rem, 100%);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  box-shadow: var(--shadow-panel);
+}
+.shell-panel__title {
+  font-size: 1.8rem;
+}
+.shell-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+.stage-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0;
+}
+.stage-list__item {
+  padding: var(--space-1) 0;
+  color: var(--text-muted);
+}
+.stage-list__item--active {
+  color: var(--text);
+  font-weight: 600;
+}
+.stage-list__item--done {
+  color: var(--success);
+}
+.progress {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+.progress progress {
+  width: 100%;
+  height: 0.5rem;
+  accent-color: var(--accent);
+}
+
+.shell-menu {
+  width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-panel);
+}
+.shell-menu::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+.shell-menu__header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  z-index: 1;
+}
+.shell-menu__header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.shell-menu__section {
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--line);
+}
+.shell-menu__section:last-child {
+  border-bottom: 0;
+}
+.shell-menu__section h3 {
+  font-size: 1.15rem;
+}
+.command-group h4 {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.command-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.command-list__button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+.command-list__button:hover {
+  border-color: var(--accent);
+}
+.import-confirm {
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  margin-bottom: var(--space-3);
+}
+
+/* The on-screen keyboard field must be focusable and >=16px (iOS zooms otherwise), but invisible. */
+.virtual-keyboard {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  font-size: 16px;
+  border: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 640px), (max-height: 480px) {
+  .tool-button__label,
+  .play__back-label {
+    display: none;
+  }
+  .play__bar {
+    min-height: 2.5rem;
+  }
+}

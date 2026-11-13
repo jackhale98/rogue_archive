@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.cache/
+*.tsbuildinfo
+test-results/
+playwright-report/
+# Built game runtimes are staged here by tools/stage-runtimes.mjs; never commit them.
+apps/web/public/runtime/
+.DS_Store

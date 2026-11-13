@@ -1,0 +1,92 @@
+/* Design tokens. Dark is the default archive mood; light is a warm parchment. */
+:root {
+  color-scheme: dark;
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --ink-0: #100e0b;
+  --ink-1: #16130f;
+  --ink-2: #1e1a15;
+  --ink-3: #2a251e;
+  --line: #3a3329;
+  --text: #ece3cf;
+  --text-muted: #b3a88f;
+  --accent: #e0aa4a;
+  --accent-strong: #f0be62;
+  --accent-ink: #1a1308;
+  --danger: #e2735f;
+  --success: #9ccf8a;
+  --focus: #f6c86b;
+
+  --bg: var(--ink-1);
+  --surface: var(--ink-2);
+  --surface-raised: var(--ink-3);
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --content-width: 72rem;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  --shadow-panel: 0 18px 50px rgb(0 0 0 / 0.45);
+  --motion: 160ms ease-out;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --ink-0: #e9dfc9;
+    --ink-1: #f4ecdb;
+    --ink-2: #fbf6ea;
+    --ink-3: #efe4cd;
+    --line: #d6c7a6;
+    --text: #231d14;
+    --text-muted: #6a5d45;
+    --accent: #9a5e0c;
+    --accent-strong: #7d4b06;
+    --accent-ink: #fff8ea;
+    --danger: #a83a26;
+    --success: #3f7a2c;
+    --focus: #9a5e0c;
+    --shadow-panel: 0 18px 50px rgb(60 40 10 / 0.18);
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --ink-0: #e9dfc9;
+  --ink-1: #f4ecdb;
+  --ink-2: #fbf6ea;
+  --ink-3: #efe4cd;
+  --line: #d6c7a6;
+  --text: #231d14;
+  --text-muted: #6a5d45;
+  --accent: #9a5e0c;
+  --accent-strong: #7d4b06;
+  --accent-ink: #fff8ea;
+  --danger: #a83a26;
+  --success: #3f7a2c;
+  --focus: #9a5e0c;
+  --shadow-panel: 0 18px 50px rgb(60 40 10 / 0.18);
+}
+
+:root[data-text-size='large'] {
+  font-size: 112.5%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion: 0ms linear;
+  }
+}
+:root[data-motion='reduce'] {
+  --motion: 0ms linear;
+}

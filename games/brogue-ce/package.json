@@ -1,0 +1,14 @@
+{
+  "name": "@rogue-archive/game-brogue-ce",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rogue Archive adapter for Brogue: Community Edition.",
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "exports": {
+    ".": "./adapter/index.ts"
+  },
+  "dependencies": {
+    "@rogue-archive/game-api": "workspace:*"
+  }
+}

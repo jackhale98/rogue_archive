@@ -1,0 +1,542 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/**
+ * Rogue Archive adapter for Brogue: Community Edition.
+ *
+ * Owns everything game-specific: the worker running the WebAssembly build,
+ * the cell renderer, key/pointer/touch translation and save file handling.
+ * The shared platform only sees the GameAdapter contract.
+ */
+import {
+  GAME_API_VERSION,
+  type GameAdapter,
+  type GameHost,
+  type GameInput,
+  type GameModule,
+  type GameSettingDescriptor,
+  type InitializeOptions,
+  type RuntimeFile,
+  type SaveFile,
+} from '@rogue-archive/game-api';
+import { decodeSheet } from './atlas.ts';
+import {
+  COLS,
+  DCOLS,
+  DROWS,
+  EventType,
+  GraphicsMode,
+  MAP_ORIGIN_X,
+  MAP_ORIGIN_Y,
+  ROWS,
+} from './constants.ts';
+import { BROGUE_COMMANDS, BROGUE_TOUCH_LAYOUT, commandToBrogue, keyToBrogue, textToBrogue } from './input.ts';
+import type { BrogueEventTuple, FromWorker, ToWorker } from './protocol.ts';
+import { BrogueRenderer, RendererUnsupportedError } from './renderer.ts';
+
+export const GAME_ID = 'brogue-ce';
+
+const ZOOM_STEPS = [
+  { zoom: 1, label: 'Fit screen' },
+  { zoom: 1.6, label: 'Zoom 1.6×' },
+  { zoom: 2.2, label: 'Zoom 2.2×' },
+] as const;
+
+const FLUSH_TIMEOUT_MS = 8000;
+const LONG_PRESS_MS = 450;
+const TAP_SLOP_PX = 12;
+
+export type TapMode = 'preview' | 'immediate';
+
+/** Exposed for tests and debugging (`?debug`): the latest raw frame. */
+export interface BrogueDebugState {
+  cells: Uint8Array | null;
+  inGame: boolean;
+  playerX: number;
+  playerY: number;
+  graphicsMode: number;
+  /** Text of one screen row (glyphs < 128 only; others become '?'). */
+  rowText(y: number): string;
+  screenText(): string;
+  /** Client (CSS pixel) center of a screen cell, for tests. */
+  cellToClient(x: number, y: number): { x: number; y: number } | null;
+}
+
+function isInMap(cell: { x: number; y: number }): boolean {
+  return (
+    cell.x >= MAP_ORIGIN_X &&
+    cell.x < MAP_ORIGIN_X + DCOLS &&
+    cell.y >= MAP_ORIGIN_Y &&
+    cell.y < MAP_ORIGIN_Y + DROWS
+  );
+}
+
+function findFile(files: RuntimeFile[], path: string): RuntimeFile {
+  const file = files.find((candidate) => candidate.path === path);
+  if (!file) throw new Error(`Runtime manifest is missing ${path}`);
+  return file;
+}
+
+async function fetchVerified(url: string, file: RuntimeFile, signal: AbortSignal): Promise<Blob> {
+  const response = await fetch(url, { signal });
+  if (!response.ok)
+    throw Object.assign(new Error(`Could not download ${file.path} (HTTP ${response.status}).`), {
+      kind: 'network',
+    });
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const hex = Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+  if (hex !== file.sha256)
+    throw Object.assign(new Error(`${file.path} failed its integrity check.`), { kind: 'integrity' });
+  return new Blob([bytes], { type: 'image/png' });
+}
+
+class BrogueAdapter implements GameAdapter {
+  readonly apiVersion = GAME_API_VERSION;
+  readonly gameId = GAME_ID;
+  readonly capabilities = {
+    keyboard: true,
+    pointer: true,
+    touch: true,
+    save: true,
+    saveExport: true,
+    offline: true,
+    audio: false,
+  };
+  readonly commands = BROGUE_COMMANDS;
+  readonly touchLayout = BROGUE_TOUCH_LAYOUT;
+  readonly settings: readonly GameSettingDescriptor[] = [
+    {
+      key: 'tapMode',
+      label: 'Tapping the map',
+      description: 'Preview shows the path and what is there first; tap the same spot again to go.',
+      options: [
+        { value: 'preview', label: 'Preview, then confirm' },
+        { value: 'immediate', label: 'Act immediately' },
+      ],
+      default: 'preview',
+      appliesOn: 'immediately',
+    },
+    {
+      key: 'graphicsMode',
+      label: 'Starting display',
+      description: 'Brogue can also switch at any time with the G key.',
+      options: [
+        { value: GraphicsMode.TEXT, label: 'Text (classic)' },
+        { value: GraphicsMode.TILES, label: 'Tiles' },
+        { value: GraphicsMode.HYBRID, label: 'Hybrid' },
+      ],
+      default: GraphicsMode.TEXT,
+      appliesOn: 'next-launch',
+    },
+  ];
+  readonly resumeHint =
+    'Brogue keeps your unfinished game as “LastGame”. Choose Load Saved Game on the title screen to continue it.';
+
+  #host: GameHost | null = null;
+  #worker: Worker | null = null;
+  #renderer: BrogueRenderer | null = null;
+  #settings: Record<string, unknown> = {};
+  #requestId = 0;
+  #pending = new Map<number, (message: FromWorker) => void>();
+  #started = false;
+  #exited = false;
+  #zoomIndex = 0;
+  #lastHover: { x: number; y: number } | null = null;
+  #inGame = false;
+  #modifiers = { shift: false, ctrl: false };
+  #cleanup: (() => void)[] = [];
+  readonly debug: BrogueDebugState;
+
+  constructor() {
+    const rowText = (y: number): string => {
+      const cells = this.debug.cells;
+      if (!cells) return '';
+      let text = '';
+      for (let x = 0; x < COLS; x++) {
+        const offset = (y * COLS + x) * 8;
+        const sprite = cells[offset]! | (cells[offset + 1]! << 8);
+        text += sprite >= 32 && sprite < 127 ? String.fromCharCode(sprite) : sprite === 0 ? ' ' : '?';
+      }
+      return text;
+    };
+    this.debug = {
+      cells: null,
+      inGame: false,
+      playerX: -1,
+      playerY: -1,
+      graphicsMode: GraphicsMode.TEXT,
+      rowText,
+      screenText: () => Array.from({ length: ROWS }, (_, y) => rowText(y)).join('\n'),
+      cellToClient: (x: number, y: number) => {
+        const renderer = this.#renderer;
+        const layout = renderer?.layout;
+        if (!renderer || !layout) return null;
+        const rect = renderer.canvas.getBoundingClientRect();
+        return {
+          x: rect.left + (layout.originX + (x + 0.5) * layout.cellWidth) / layout.dpr,
+          y: rect.top + (layout.originY + (y + 0.5) * layout.cellHeight) / layout.dpr,
+        };
+      },
+    };
+  }
+
+  async initialize(host: GameHost, options: InitializeOptions): Promise<void> {
+    this.#host = host;
+    this.#settings = options.settings;
+    const { runtime, runtimeBaseUrl, signal } = options;
+
+    if (typeof WebAssembly !== 'object') {
+      throw Object.assign(new Error('This browser does not support WebAssembly.'), { kind: 'unsupported' });
+    }
+    const glue = findFile(runtime.files, 'brogue.mjs');
+    const wasm = findFile(runtime.files, 'brogue.wasm');
+    const tiles = findFile(runtime.files, 'tiles.png');
+    const url = (file: RuntimeFile) => new URL(file.path, runtimeBaseUrl).href;
+
+    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'brogue-ce' });
+    this.#worker = worker;
+    const ready = new Promise<void>((resolve, reject) => {
+      worker.onmessage = (event: MessageEvent<FromWorker>) => {
+        const message = event.data;
+        if (message.type === 'ready') resolve();
+        else if (message.type === 'error' && !this.#started) {
+          reject(
+            Object.assign(new Error(message.error.message), {
+              kind: message.error.kind,
+              action: message.error.action,
+            }),
+          );
+        }
+        this.#onWorkerMessage(message);
+      };
+      worker.onerror = (event) => {
+        event.preventDefault();
+        reject(
+          Object.assign(new Error(event.message || 'The game worker failed to start.'), { kind: 'crash' }),
+        );
+      };
+    });
+    signal.addEventListener('abort', () => void this.shutdown(), { once: true });
+
+    this.#post({ type: 'init', glue: { url: url(glue), file: glue }, wasm: { url: url(wasm), file: wasm } });
+    const sheetPromise = fetchVerified(url(tiles), tiles, signal).then(decodeSheet);
+    const [sheet] = await Promise.all([sheetPromise, ready]);
+    if (signal.aborted) return;
+
+    try {
+      this.#renderer = new BrogueRenderer(options.mount, sheet);
+    } catch (error) {
+      if (error instanceof RendererUnsupportedError) throw Object.assign(error, { kind: 'unsupported' });
+      throw error;
+    }
+    // Without a saved choice, portrait screens start zoomed: the full 100x34
+    // screen is unreadably small at phone widths.
+    const rect = options.mount.getBoundingClientRect();
+    const portraitDefault = rect.height > rect.width ? ZOOM_STEPS.length - 1 : 0;
+    const zoom = Number(this.#settings.zoomIndex ?? portraitDefault);
+    this.#zoomIndex = Number.isInteger(zoom) && zoom >= 0 && zoom < ZOOM_STEPS.length ? zoom : 0;
+    this.#renderer.setZoom(ZOOM_STEPS[this.#zoomIndex]!.zoom);
+    this.#attachPointer(this.#renderer.canvas);
+    this.#attachModifierTracking();
+    host.emit({ type: 'status', status: { stage: 'ready' } });
+  }
+
+  async start(): Promise<void> {
+    if (this.#started) return;
+    this.#started = true;
+    const mode = Number(this.#settings.graphicsMode ?? GraphicsMode.TEXT);
+    const args =
+      mode === GraphicsMode.TILES ? ['--graphics'] : mode === GraphicsMode.HYBRID ? ['--hybrid'] : [];
+    this.#post({ type: 'start', args });
+    this.#renderer?.canvas.focus({ preventScroll: true });
+  }
+
+  sendInput(input: GameInput): void {
+    let events: BrogueEventTuple[] = [];
+    if (input.type === 'key') {
+      this.#setModifiers(input.modifiers.shift, input.modifiers.ctrl);
+      const event = keyToBrogue(input);
+      if (event) events = [event];
+    } else if (input.type === 'text') {
+      events = textToBrogue(input.text);
+    } else if (input.type === 'command') {
+      const event = commandToBrogue(input.commandId);
+      if (event) events = [event];
+    }
+    for (const event of events) this.#post({ type: 'event', event });
+  }
+
+  async persist(): Promise<void> {
+    if (!this.#worker || this.#exited) return;
+    const reply = await this.#request<'flushed'>((id) => ({ type: 'flush', id }), FLUSH_TIMEOUT_MS);
+    if (reply.error) throw new Error(reply.error);
+  }
+
+  setVisible(visible: boolean): void {
+    if (!visible)
+      void this.persist().catch((error: unknown) => this.#host?.logger.warn('persist failed', error));
+  }
+
+  applySetting(key: string, value: string | number): void {
+    this.#settings = { ...this.#settings, [key]: value };
+  }
+
+  cycleView(): string {
+    this.#zoomIndex = (this.#zoomIndex + 1) % ZOOM_STEPS.length;
+    const step = ZOOM_STEPS[this.#zoomIndex]!;
+    this.#renderer?.setZoom(step.zoom);
+    this.#host?.emit({ type: 'setting-changed', key: 'zoomIndex', value: this.#zoomIndex });
+    return step.label;
+  }
+
+  get viewLabel(): string {
+    return ZOOM_STEPS[this.#zoomIndex]!.label;
+  }
+
+  async exportSaves(): Promise<SaveFile[]> {
+    const reply = await this.#request<'exported'>((id) => ({ type: 'export', id }), FLUSH_TIMEOUT_MS * 2);
+    if (reply.error) throw new Error(reply.error);
+    return reply.files;
+  }
+
+  async importSaves(files: SaveFile[]): Promise<void> {
+    const reply = await this.#request<'imported'>(
+      (id) => ({ type: 'import', id, files }),
+      FLUSH_TIMEOUT_MS * 2,
+    );
+    if (reply.error) throw new Error(reply.error);
+  }
+
+  #shutdownPromise: Promise<void> | null = null;
+
+  shutdown(): Promise<void> {
+    this.#shutdownPromise ??= this.#shutdown();
+    return this.#shutdownPromise;
+  }
+
+  async #shutdown(): Promise<void> {
+    const worker = this.#worker;
+    if (!worker) return;
+    if (this.#started && !this.#exited) {
+      try {
+        await this.persist();
+      } catch (error) {
+        this.#host?.logger.warn('Could not persist before shutdown', error);
+      }
+    }
+    worker.terminate();
+    this.#worker = null;
+    for (const cleanup of this.#cleanup.splice(0)) cleanup();
+    this.#renderer?.destroy();
+    this.#renderer = null;
+    for (const resolve of this.#pending.values())
+      resolve({ type: 'flushed', id: -1, error: 'Game stopped.' });
+    this.#pending.clear();
+  }
+
+  #post(message: ToWorker): void {
+    this.#worker?.postMessage(message);
+  }
+
+  #request<T extends 'flushed' | 'exported' | 'imported'>(
+    build: (id: number) => ToWorker,
+    timeoutMs: number,
+  ): Promise<Extract<FromWorker, { type: T }>> {
+    const id = ++this.#requestId;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.#pending.delete(id);
+        reject(new Error('The game did not respond in time.'));
+      }, timeoutMs);
+      this.#pending.set(id, (message) => {
+        clearTimeout(timer);
+        resolve(message as Extract<FromWorker, { type: T }>);
+      });
+      this.#post(build(id));
+    });
+  }
+
+  #onWorkerMessage(message: FromWorker): void {
+    const host = this.#host;
+    switch (message.type) {
+      case 'frame':
+        this.#inGame = message.inGame;
+        this.debug.cells = message.cells;
+        this.debug.inGame = message.inGame;
+        this.debug.playerX = message.playerX;
+        this.debug.playerY = message.playerY;
+        this.debug.graphicsMode = message.mode;
+        this.#renderer?.setFrame(message.cells, message.playerX, message.playerY, message.inGame);
+        break;
+      case 'status':
+        host?.emit({ type: 'status', status: message.status });
+        break;
+      case 'error':
+        if (this.#started) host?.emit({ type: 'error', error: message.error });
+        break;
+      case 'text-input':
+        host?.emit({
+          type: 'input-context',
+          context: { textEntry: message.active, mode: message.active ? 'text' : 'game' },
+        });
+        break;
+      case 'graphics-mode':
+        host?.emit({ type: 'setting-changed', key: 'graphicsMode', value: message.mode });
+        break;
+      case 'exit':
+        this.#exited = true;
+        host?.emit({ type: 'exit', reason: 'user' });
+        break;
+      case 'flushed':
+      case 'exported':
+      case 'imported': {
+        const resolve = this.#pending.get(message.id);
+        this.#pending.delete(message.id);
+        resolve?.(message);
+        break;
+      }
+      case 'log':
+        if (message.level === 'info') host?.logger.debug(message.text);
+        else host?.logger.warn(message.text);
+        break;
+      case 'notify':
+      case 'ready':
+        break;
+    }
+  }
+
+  #sendPointer(type: number, cell: { x: number; y: number }): void {
+    this.#post({
+      type: 'event',
+      event: [type, cell.x, cell.y, this.#modifiers.ctrl ? 1 : 0, this.#modifiers.shift ? 1 : 0],
+    });
+  }
+
+  #hover(cell: { x: number; y: number }): void {
+    if (this.#lastHover && this.#lastHover.x === cell.x && this.#lastHover.y === cell.y) return;
+    this.#lastHover = cell;
+    this.#sendPointer(EventType.MOUSE_ENTERED_CELL, cell);
+  }
+
+  #click(cell: { x: number; y: number }): void {
+    this.#hover(cell);
+    this.#sendPointer(EventType.MOUSE_DOWN, cell);
+    this.#sendPointer(EventType.MOUSE_UP, cell);
+  }
+
+  #attachPointer(canvas: HTMLCanvasElement): void {
+    const renderer = () => this.#renderer;
+    let touchStart: { x: number; y: number; at: number; id: number } | null = null;
+    let longPressTimer: ReturnType<typeof setTimeout> | undefined;
+    let longPressed = false;
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType === 'touch') {
+        if (
+          touchStart &&
+          Math.hypot(event.clientX - touchStart.x, event.clientY - touchStart.y) > TAP_SLOP_PX
+        ) {
+          clearTimeout(longPressTimer);
+          touchStart = null;
+        }
+        return;
+      }
+      const cell = renderer()?.cellAt(event.clientX, event.clientY);
+      if (cell) this.#hover(cell);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      canvas.focus({ preventScroll: true });
+      const cell = renderer()?.cellAt(event.clientX, event.clientY);
+      if (!cell) return;
+      if (event.pointerType === 'touch') {
+        touchStart = { x: event.clientX, y: event.clientY, at: performance.now(), id: event.pointerId };
+        longPressed = false;
+        clearTimeout(longPressTimer);
+        // Long press inspects a cell (hover) without acting on it.
+        longPressTimer = setTimeout(() => {
+          longPressed = true;
+          this.#lastHover = null;
+          this.#hover(cell);
+        }, LONG_PRESS_MS);
+        return;
+      }
+      if (event.button === 0) {
+        this.#hover(cell);
+        this.#sendPointer(EventType.MOUSE_DOWN, cell);
+      } else if (event.button === 2) {
+        this.#sendPointer(EventType.RIGHT_MOUSE_DOWN, cell);
+      }
+    };
+
+    const onPointerUp = (event: PointerEvent) => {
+      const cell = renderer()?.cellAt(event.clientX, event.clientY);
+      if (event.pointerType === 'touch') {
+        clearTimeout(longPressTimer);
+        const start = touchStart;
+        touchStart = null;
+        if (!start || start.id !== event.pointerId || longPressed || !cell) return;
+        const tapMode: TapMode = this.#settings.tapMode === 'immediate' ? 'immediate' : 'preview';
+        const alreadyPreviewed = this.#lastHover?.x === cell.x && this.#lastHover?.y === cell.y;
+        if (tapMode === 'preview' && this.#inGame && isInMap(cell) && !alreadyPreviewed) {
+          // First tap shows the path and description; a second tap on the same cell acts.
+          this.#hover(cell);
+        } else {
+          this.#click(cell);
+        }
+        return;
+      }
+      if (!cell) return;
+      if (event.button === 0) this.#sendPointer(EventType.MOUSE_UP, cell);
+      else if (event.button === 2) this.#sendPointer(EventType.RIGHT_MOUSE_UP, cell);
+    };
+
+    const onContextMenu = (event: Event) => event.preventDefault();
+    const onPointerCancel = () => {
+      clearTimeout(longPressTimer);
+      touchStart = null;
+    };
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
+    canvas.addEventListener('contextmenu', onContextMenu);
+    this.#cleanup.push(() => {
+      clearTimeout(longPressTimer);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerCancel);
+      canvas.removeEventListener('contextmenu', onContextMenu);
+    });
+  }
+
+  #setModifiers(shift: boolean, ctrl: boolean): void {
+    if (shift === this.#modifiers.shift && ctrl === this.#modifiers.ctrl) return;
+    this.#modifiers = { shift, ctrl };
+    this.#post({ type: 'modifiers', shift, ctrl });
+  }
+
+  /** Brogue asks whether Shift/Ctrl are held (e.g. for shift-click); track them precisely. */
+  #attachModifierTracking(): void {
+    const update = (event: KeyboardEvent) => this.#setModifiers(event.shiftKey, event.ctrlKey);
+    const reset = () => this.#setModifiers(false, false);
+    window.addEventListener('keydown', update, true);
+    window.addEventListener('keyup', update, true);
+    window.addEventListener('blur', reset);
+    this.#cleanup.push(() => {
+      window.removeEventListener('keydown', update, true);
+      window.removeEventListener('keyup', update, true);
+      window.removeEventListener('blur', reset);
+    });
+  }
+}
+
+export function createAdapter(): GameAdapter & {
+  readonly debug: BrogueDebugState;
+  readonly viewLabel: string;
+} {
+  return new BrogueAdapter();
+}
+
+const module: GameModule = { createAdapter };
+export default module;

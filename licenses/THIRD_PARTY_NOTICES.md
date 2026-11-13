@@ -1,0 +1,24 @@
+# Third-party notices
+
+## Games
+
+| Game | Code | Assets | Report |
+|---|---|---|---|
+| Brogue: Community Edition 1.15.1 (`tmewett/BrogueCE` @ `1ba4240b`) | AGPL-3.0-or-later | `tiles.png`: CC BY-SA 4.0, © Brogue: Community Edition maintainers; originally by Antony Boucher, based on Oryx Design Lab's "Brogue Tiles" distributed with Brogue under the AGPL | [games/brogue-ce/LICENSES.md](../games/brogue-ce/LICENSES.md) |
+
+The complete corresponding source of each game build is this repository at the deployed commit, together with the upstream revision pinned in `games/<id>/upstream.env`. Each game's license texts are shipped next to its runtime (`runtime/<id>/<buildId>/licenses/`).
+
+## Compiled into game runtimes
+
+- **Emscripten** 6.0.13 runtime and system libraries: MIT / University of Illinois/NCSA Open Source License. Includes musl libc (MIT) and LLVM compiler-rt (Apache-2.0 WITH LLVM-exception).
+
+## Bundled into the web app
+
+| Package | License |
+|---|---|
+| React, React DOM | MIT |
+| idb | ISC |
+| Fraunces (via @fontsource-variable/fraunces) | SIL Open Font License 1.1 |
+| Inter (via @fontsource-variable/inter) | SIL Open Font License 1.1 |
+
+Build-time tools (Vite, TypeScript, ESLint, Vitest, Playwright, Zod for CI validation) are not distributed.

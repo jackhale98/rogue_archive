@@ -1,0 +1,126 @@
+import { expect, test } from '@playwright/test';
+import { openBrogue, player, screenText, waitForScreenText, waitInGame } from './helpers.ts';
+
+test.describe('Brogue CE', () => {
+  test('starts a real game and moves the player with original keys', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    await waitForScreenText(page, 'Depth: 1');
+    await waitForScreenText(page, 'Amulet of Yendor');
+
+    // Try each direction until one moves (walls vary by seed); a move must change position.
+    const start = await player(page);
+    let moved = false;
+    for (const key of ['l', 'h', 'k', 'j', 'y', 'u', 'b', 'n']) {
+      await page.keyboard.press(key);
+      await expect
+        .poll(async () => (await player(page)).x !== start.x || (await player(page)).y !== start.y, {
+          timeout: 1500,
+        })
+        .toBe(true)
+        .then(() => (moved = true))
+        .catch(() => undefined);
+      if (moved) break;
+    }
+    expect(moved).toBe(true);
+
+    // Graphics mode switch is handled by the game itself.
+    await page.keyboard.press('Shift+G');
+    await waitForScreenText(page, 'Switched to graphical tiles');
+    expect(errors).toEqual([]);
+  });
+
+  test('saves with S, survives a page reload, and loads', async ({ page }) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    const before = await player(page);
+
+    await page.keyboard.press('Shift+S');
+    await waitForScreenText(page, 'Save this game');
+    await page.keyboard.press('Enter');
+    await waitForScreenText(page, 'Save game as');
+    await expect(page.getByText('The game is asking you to type.')).toBeVisible();
+    await page.keyboard.press('Enter');
+    await waitForScreenText(page, 'Saved.');
+    await page.keyboard.press(' ');
+    await waitForScreenText(page, 'New Game');
+
+    await page.reload();
+    await waitForScreenText(page, 'New Game');
+    await page.keyboard.press('p');
+    await page.keyboard.press('l');
+    await waitForScreenText(page, 'Open saved game:');
+    expect(await screenText(page)).toContain('Saved CE 1.15.1');
+    await page.keyboard.press('a');
+    await waitInGame(page);
+    await expect.poll(() => player(page)).toMatchObject({ x: before.x, y: before.y });
+  });
+
+  test('leaving mid-game keeps progress as LastGame', async ({ page }) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    await page.getByRole('link', { name: 'Library' }).click();
+    await expect(page).toHaveURL(/#\/games\/brogue-ce$/);
+    await expect(page.getByText(/LastGame/)).toBeVisible();
+
+    await page.getByRole('link', { name: 'Play Brogue' }).click();
+    await waitForScreenText(page, 'New Game');
+    await page.keyboard.press('p');
+    await page.keyboard.press('l');
+    await waitForScreenText(page, 'LastGame');
+  });
+
+  test('exports and re-imports saves through the shell menu', async ({ page }, testInfo) => {
+    await openBrogue(page);
+    await page.keyboard.press('n');
+    await waitInGame(page);
+    await page.getByRole('button', { name: 'Menu' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Export saves' }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^brogue-ce-saves-\d{4}-\d{2}-\d{2}\.roguearchive$/);
+    const path = testInfo.outputPath('saves.roguearchive');
+    await download.saveAs(path);
+    await expect(dialog.getByText(/Exported \d+ file/)).toBeVisible();
+
+    await dialog.locator('input[type=file]').setInputFiles(path);
+    await expect(dialog.getByText(/^Import \d+ file/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Import', exact: true }).click();
+    await expect(dialog.getByText(/Imported \d+ file/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Back to game' }).click();
+    await expect(dialog).toBeHidden();
+  });
+
+  test('shows an actionable error when the runtime is missing', async ({ page }) => {
+    await page.route('**/runtime/brogue-ce/runtime-manifest.json', (route) =>
+      route.fulfill({ status: 404, body: '' }),
+    );
+    await page.goto('#/play/brogue-ce');
+    await expect(page.getByRole('alert')).toContainText('has not been built for this deployment');
+    await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  });
+});
+
+test.describe('Brogue CE runtime integrity', () => {
+  // Route interception does not see requests answered by the service worker.
+  test.use({ serviceWorkers: 'block' });
+
+  test('rejects tampered runtime files', async ({ page }) => {
+    await page.route(/\/runtime\/brogue-ce\/[0-9a-f]{16}\/brogue\.wasm$/, async (route) => {
+      const response = await route.fetch();
+      const body = Buffer.from(await response.body());
+      body[body.length - 1] = body[body.length - 1]! ^ 0xff;
+      await route.fulfill({ response, body });
+    });
+    await page.goto('#/play/brogue-ce');
+    await expect(page.getByRole('alert')).toContainText('integrity');
+  });
+});

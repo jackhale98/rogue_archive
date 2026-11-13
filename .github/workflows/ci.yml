@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Type check, lint, unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm validate:catalog
+
+  build-and-e2e:
+    name: Build games, site and end-to-end tests
+    runs-on: ubuntu-latest
+    needs: checks
+    env:
+      ROGUE_ARCHIVE_BASE: /${{ github.event.repository.name }}/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Cache Emscripten SDK
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/rogue-archive/emsdk
+          key: emsdk-${{ runner.os }}-${{ hashFiles('tools/toolchain.env') }}
+      - name: Build Brogue CE runtime
+        run: pnpm build:brogue
+      - name: Report runtime sizes
+        run: |
+          echo "### Runtime sizes" >> "$GITHUB_STEP_SUMMARY"
+          for manifest in games/*/dist/runtime-manifest.json; do
+            node -e 'const m=require("./"+process.argv[1]);const t=m.files.reduce((s,f)=>s+f.size,0);console.log(`- ${m.gameId} ${m.buildId}: ${(t/1048576).toFixed(2)} MB`)' "$manifest" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: Build site
+        run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: pnpm e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

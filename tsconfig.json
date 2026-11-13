@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "apps/web/src",
+    "apps/web/vite.config.ts",
+    "packages/*/src",
+    "packages/*/test",
+    "games/*/adapter",
+    "games/*/tests",
+    "tools/*.ts",
+    "e2e",
+    "vitest.config.ts",
+    "playwright.config.ts"
+  ]
+}

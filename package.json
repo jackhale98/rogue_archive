@@ -1,0 +1,40 @@
+{
+  "name": "rogue-archive",
+  "private": true,
+  "description": "A curated, static, local-first library of classic roguelikes playable in the browser.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @rogue-archive/web dev",
+    "build": "pnpm validate:catalog && pnpm stage:runtimes && pnpm --filter @rogue-archive/web build",
+    "preview": "pnpm --filter @rogue-archive/web preview",
+    "build:brogue": "games/brogue-ce/scripts/build.sh",
+    "stage:runtimes": "node tools/stage-runtimes.mjs",
+    "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.2",
+    "eslint": "10.14.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "fake-indexeddb": "6.2.8",
+    "globals": "17.14.0",
+    "jsdom": "31.0.0",
+    "prettier": "3.10.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.2",
+    "vitest": "5.1.0"
+  }
+}
