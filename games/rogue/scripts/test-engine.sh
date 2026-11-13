@@ -44,12 +44,12 @@ CPPFLAGS=(-I"$GAME_DIR/port" -I"$SRC" -DHAVE_CONFIG_H -DSCOREFILE='"rogue54.scr"
 objects=()
 for source in "${SOURCES[@]}"; do
   objects+=("$NATIVE/${source%.c}.o")
-  "$CC" "${CPPFLAGS[@]}" -O2 -w -c "$SRC/$source" -o "$NATIVE/${source%.c}.o" &
+  "$CC" "${CPPFLAGS[@]}" -std=gnu17 -O2 -w -c "$SRC/$source" -o "$NATIVE/${source%.c}.o" &
   while [ "$(jobs -rp | wc -l)" -ge "$(nproc)" ]; do wait -n; done
 done
-"$CC" "${CPPFLAGS[@]}" -O2 -w -c "$GAME_DIR/port/platform.c" -o "$NATIVE/platform.o" &
-"$CC" "${CPPFLAGS[@]}" -O2 -w -DRA_REPLAY -c "$GAME_DIR/port/curses-web.c" -o "$NATIVE/curses-replay.o" &
-"$CC" -O2 -w -c "$GAME_DIR/tests/conformance/replay-platform.c" -o "$NATIVE/replay-platform.o" &
+"$CC" "${CPPFLAGS[@]}" -std=gnu17 -O2 -w -c "$GAME_DIR/port/platform.c" -o "$NATIVE/platform.o" &
+"$CC" "${CPPFLAGS[@]}" -std=gnu17 -O2 -w -DRA_REPLAY -c "$GAME_DIR/port/curses-web.c" -o "$NATIVE/curses-replay.o" &
+"$CC" -std=gnu17 -O2 -w -c "$GAME_DIR/tests/conformance/replay-platform.c" -o "$NATIVE/replay-platform.o" &
 wait
 "$CC" "${objects[@]}" "$NATIVE/platform.o" "$NATIVE/curses-replay.o" "$NATIVE/replay-platform.o" -o "$NATIVE/rogue"
 

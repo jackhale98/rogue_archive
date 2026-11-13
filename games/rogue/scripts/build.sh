@@ -59,7 +59,9 @@ fi
 
 # port/ comes first on the include path: its curses.h and config.h are used.
 CPPFLAGS=(-I"$GAME_DIR/port" -I"$SRC" -DHAVE_CONFIG_H)
-CFLAGS=(-O2 -w)
+# Rogue is K&R-era C (`void (*d_func)()` called with an argument): C23
+# compilers reject it, so the dialect is pinned (and in test-engine.sh).
+CFLAGS=(-std=gnu17 -O2 -w)
 
 rm -rf "$OBJ" && mkdir -p "$OBJ"
 objects=()
