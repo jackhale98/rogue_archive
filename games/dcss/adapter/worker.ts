@@ -23,6 +23,15 @@ import type { FromWorker, SavedCharacter, ToWorker, VerifiedFile } from './proto
 const SAVE_DIR = '/saves';
 /** Regenerable caches DCSS keeps in its save directory; not part of exports. */
 const CACHE_DIRS = new Set(['des', 'db']);
+/** DCSS keeps its caches beside the saves (SAVEDIR/saves/des, saves/db). */
+const CACHE_PARENT = `${SAVE_DIR}/saves`;
+/** The caches built with the game (scripts/build.sh), in the read-only data package. */
+const SHIPPED_CACHE = '/crawl/cache';
+/**
+ * The data files' modification time (seconds), as set by scripts/build.sh when
+ * it built the caches: DCSS treats a cache as current when it matches.
+ */
+const DATA_MTIME = 1_000_000_000;
 const ATTACH = '{"msg":"attach","primary":true}';
 
 interface EmscriptenFS {
@@ -36,6 +45,12 @@ interface EmscriptenFS {
   readFile(path: string): Uint8Array;
   writeFile(path: string, data: Uint8Array): void;
   analyzePath(path: string): { exists: boolean };
+  lstat(path: string): { mode: number; mtime: Date | number };
+  isLink(mode: number): boolean;
+  symlink(target: string, path: string): void;
+  unlink(path: string): void;
+  rmdir(path: string): void;
+  utime(path: string, atime: number, mtime: number): void;
 }
 
 interface CrawlModule {
@@ -299,6 +314,55 @@ async function instantiate(): Promise<void> {
   } catch (error) {
     throw Object.assign(new Error(`Saved games could not be read: ${String(error)}`), { kind: 'storage' });
   }
+  if (linkShippedCaches(mod.FS)) await syncFs().catch(() => undefined);
+}
+
+/**
+ * Points DCSS's cache directories at the caches shipped with the game, so the
+ * first launch neither builds them (a minute and too much memory on phones)
+ * nor stores 13 MB of them in IndexedDB. Earlier versions built them here and
+ * kept them in IndexedDB; those copies are removed. Returns whether anything
+ * in the save directory changed.
+ */
+function linkShippedCaches(FS: EmscriptenFS): boolean {
+  if (!FS.analyzePath(SHIPPED_CACHE).exists) return false;
+  // The data files carry the time the caches were built against.
+  const touch = (path: string) => {
+    for (const name of FS.readdir(path)) {
+      if (name === '.' || name === '..') continue;
+      const child = `${path}/${name}`;
+      FS.utime(child, DATA_MTIME * 1000, DATA_MTIME * 1000);
+      if (FS.isDir(FS.lstat(child).mode)) touch(child);
+    }
+  };
+  touch('/crawl/data');
+  let changed = false;
+  if (!FS.analyzePath(CACHE_PARENT).exists) {
+    FS.mkdir(CACHE_PARENT);
+    changed = true;
+  }
+  for (const name of CACHE_DIRS) {
+    const path = `${CACHE_PARENT}/${name}`;
+    const target = `${SHIPPED_CACHE}/${name}`;
+    if (FS.analyzePath(path).exists) {
+      if (FS.isLink(FS.lstat(path).mode)) continue;
+      removeTree(FS, path);
+    }
+    FS.symlink(target, path);
+    changed = true;
+  }
+  return changed;
+}
+
+function removeTree(FS: EmscriptenFS, path: string): void {
+  if (FS.isDir(FS.lstat(path).mode)) {
+    for (const name of FS.readdir(path)) {
+      if (name !== '.' && name !== '..') removeTree(FS, `${path}/${name}`);
+    }
+    FS.rmdir(path);
+  } else {
+    FS.unlink(path);
+  }
 }
 
 function start(): void {
@@ -374,9 +438,11 @@ function listSaveFiles(dir = SAVE_DIR, prefix = '', withBytes = true): SaveFile[
   const files: SaveFile[] = [];
   for (const name of FS.readdir(dir)) {
     if (name === '.' || name === '..') continue;
-    if (!prefix && CACHE_DIRS.has(name)) continue;
+    // Caches are regenerable (and, as links, point into the game data).
+    if (CACHE_DIRS.has(name)) continue;
     const path = `${dir}/${name}`;
-    const stat = FS.stat(path);
+    const stat = FS.lstat(path);
+    if (FS.isLink(stat.mode)) continue;
     if (FS.isDir(stat.mode)) {
       files.push(...listSaveFiles(path, `${prefix}${name}/`, withBytes));
       continue;

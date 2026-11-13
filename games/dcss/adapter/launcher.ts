@@ -140,8 +140,7 @@ export class DcssLauncher {
 
     card.append(heading, this.#notice, this.#savesSection, newSection);
 
-    // Shown from Start until DCSS shows its first screen. The first launch
-    // builds DCSS's level and description caches, which takes a while on phones.
+    // Shown from Start until DCSS shows its first screen.
     this.#preparing = div('dcss-launcher__preparing');
     this.#preparing.hidden = true;
     this.#preparing.setAttribute('role', 'status');
@@ -151,10 +150,7 @@ export class DcssLauncher {
     this.#preparing.append(
       div('dcss-launcher__spinner'),
       this.#preparingTitle,
-      paragraph(
-        'dcss-launcher__hint',
-        'The first time, DCSS builds its level and description caches: about 15 seconds on a computer, a minute or more on a phone. They are kept, so later starts are quicker.',
-      ),
+      paragraph('dcss-launcher__hint', 'This takes a few seconds.'),
       this.#elapsed,
     );
     this.#root.append(card, this.#preparing);

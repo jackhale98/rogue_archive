@@ -144,10 +144,11 @@ STAGE="$WORK/stage"
 rm -rf "$STAGE"
 make --no-print-directory -C "$CRAWL" "${MAKE_VARS[@]}" DESTDIR="$STAGE" install-data > /dev/null
 
-rm -rf "$OUT" && mkdir -p "$OUT"
-python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$OUT/crawl-data.data" \
-  --preload "$STAGE/crawl/data@/crawl/data" --js-output="$WORK/crawl-data.js" \
-  --no-node --export-name=Module > /dev/null
+# DCSS checks its level and database caches against the data files'
+# modification times. Every data file gets the same fixed time here and in the
+# browser (adapter/worker.ts DATA_MTIME), so caches built now are valid there.
+DATA_MTIME=1000000000
+find "$STAGE/crawl/data" -exec touch -h -d "@$DATA_MTIME" {} +
 
 COMMON_LDFLAGS=(
   -O2
@@ -158,6 +159,41 @@ COMMON_LDFLAGS=(
   -sINITIAL_MEMORY=134217728
   -sALLOW_MEMORY_GROWTH=1
 )
+
+# The Node harness: the same objects and platform layer linked for Node, with
+# the game data mounted from the staging directory (tests/conformance/
+# replay-hooks.js). It generates the caches below, and scripts/test-engine.sh
+# uses it to compare against a native build. Not deployed.
+HARNESS="$WORK/harness-$UPSTREAM_COMMIT"
+rm -rf "$HARNESS" && mkdir -p "$HARNESS"
+em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
+  -sENVIRONMENT=node -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lnodefs.js \
+  -sEXPORTED_RUNTIME_METHODS=FS,NODEFS \
+  --pre-js "$GAME_DIR/tests/conformance/replay-hooks.js" \
+  -o "$HARNESS/crawl-node.cjs"
+
+# DCSS's level (des) and database (db) caches, built once here with DCSS's own
+# -builddb by the same WebAssembly code the browser runs (the format depends
+# on the word size, so a native build's caches would not do). Building them
+# in the browser took a minute on phones and exhausted iOS Safari's memory.
+CACHEGEN="$WORK/cachegen"
+rm -rf "$CACHEGEN" && mkdir -p "$CACHEGEN"
+RA_DATA_DIR="$STAGE/crawl/data" RA_SAVES_DIR="$CACHEGEN" node "$HARNESS/crawl-node.cjs" -headless -builddb
+for dir in des db; do
+  if [ ! -d "$CACHEGEN/saves/$dir" ]; then
+    echo "error: -builddb did not produce saves/$dir" >&2
+    exit 1
+  fi
+done
+find "$CACHEGEN/saves" -name '*.lk' -delete
+
+rm -rf "$OUT" && mkdir -p "$OUT"
+python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$OUT/crawl-data.data" \
+  --preload "$STAGE/crawl/data@/crawl/data" \
+  --preload "$CACHEGEN/saves/des@/crawl/cache/des" \
+  --preload "$CACHEGEN/saves/db@/crawl/cache/db" \
+  --js-output="$WORK/crawl-data.js" --no-node --export-name=Module > /dev/null
+
 em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createCrawl \
   -sENVIRONMENT=worker -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 \
@@ -199,20 +235,6 @@ for file in crawl.wasm crawl-data.data; do
   gzip -9 -n "$OUT/$file"
   mv "$OUT/$file.gz" "$OUT/$file.gzip"
 done
-
-# Conformance harness: the same objects and platform layer linked for Node,
-# with the game data mounted from the staging directory and a key script
-# standing in for the browser (tests/conformance/replay-hooks.js). Used by
-# scripts/test-engine.sh to compare against a native build. Not deployed.
-HARNESS="$WORK/harness-$UPSTREAM_COMMIT"
-if [ "${ROGUE_ARCHIVE_HARNESS:-1}" != "0" ]; then
-  rm -rf "$HARNESS" && mkdir -p "$HARNESS"
-  em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
-    -sENVIRONMENT=node -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -lnodefs.js \
-    -sEXPORTED_RUNTIME_METHODS=FS,NODEFS \
-    --pre-js "$GAME_DIR/tests/conformance/replay-hooks.js" \
-    -o "$HARNESS/crawl-node.cjs"
-fi
 
 node "$ROOT/tools/write-runtime-manifest.mjs" \
   --dir "$OUT" \

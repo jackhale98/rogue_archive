@@ -28,7 +28,7 @@ ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 - E2E tests read the game screen through `window.__rogueArchive.adapter.debug` (dev builds or `?debug` in the URL): `screenText()`, `rowText(y)`, `cellToClient(x, y)`, `inGame`, `playerX/Y`.
 - Brogue's `--MORE--` prompts accept Space/Escape/click, not Enter. Dialogs drawn over the map can leave map glyphs in the "spaces" of `screenText()`; match contiguous substrings.
 - Service-worker-served requests bypass `page.route`; use `test.use({ serviceWorkers: 'block' })` when intercepting.
-- DCSS: its debug hook is `window.__rogueArchive.adapter.debug` with `context`, `inGame`, `player`, `popups`, `menus`, `text()`; the client is in `iframe.dcss-client` (same origin). The first launch builds DCSS's caches (10–15 s).
+- DCSS: its debug hook is `window.__rogueArchive.adapter.debug` with `context`, `inGame`, `player`, `popups`, `menus`, `text()`; the client is in `iframe.dcss-client` (same origin). DCSS's caches ship prebuilt (build.sh runs `-builddb`; data files are pinned to `DATA_MTIME`).
 - Sil-Q: its debug hook has `context`, `inDungeon`, `state`, `screenText()`, `rowText(y)`; Sil's `-more-` takes Space/Escape. `Ctrl+X` saves and shows the scores ("press any key") before the title menu.
 - Wait for Brogue to be waiting for input (`waitInGame` checks `debug.context === 'map'`): keys pressed during the level's fade-in only skip the fade.
 

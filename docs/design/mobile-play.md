@@ -108,7 +108,7 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 
 ### DCSS start-up and character creation on phones
 
-- From Start until DCSS shows its first screen, the start screen shows "Preparing the dungeon for *name*…" with a spinner and the seconds elapsed. The first launch builds DCSS's level and description caches (about 12 s on a desktop, a minute or more on a phone); the dock stays empty meanwhile.
+- From Start until DCSS shows its first screen, the start screen shows "Preparing the dungeon for *name*…" with a spinner and the seconds elapsed. DCSS's caches ship prebuilt, so this takes a second or two; the dock stays empty meanwhile.
 - Character creation's species and background columns are flowed into one scrolling column on phones, column by column with each group's heading (`client-host/host.css`; `host.js` orders the items from upstream's grid placement). The status band reads "New character" until the character exists.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)

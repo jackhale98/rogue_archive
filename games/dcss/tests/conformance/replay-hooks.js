@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Conformance-test hooks for the Node harness (linked with --pre-js): the
+// Hooks for the Node harness (linked with --pre-js). Conformance replays: the
 // same key script and output as tests/conformance/replay-platform.cc, for the
-// real platform layer (port/rogue-archive-platform.cc).
+// real platform layer (port/rogue-archive-platform.cc). The build also runs
+// the harness with -builddb to generate the caches the site ships.
 (function () {
   if (typeof process === 'undefined') return;
   var fs = require('fs');
@@ -10,6 +11,12 @@
     FS.mkdir('/crawl');
     FS.mkdir('/crawl/data');
     FS.mount(NODEFS, { root: process.env.RA_DATA_DIR }, '/crawl/data');
+    // Build-time cache generation (scripts/build.sh, -builddb) writes DCSS's
+    // level and database caches into a real directory.
+    if (process.env.RA_SAVES_DIR) {
+      FS.mkdir('/saves');
+      FS.mount(NODEFS, { root: process.env.RA_SAVES_DIR }, '/saves');
+    }
   });
   var inbox = ['{"msg":"attach","primary":true}'];
   var keys = (process.env.RA_REPLAY_KEYS || '')

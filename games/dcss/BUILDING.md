@@ -14,7 +14,7 @@ pnpm dev                   # or: pnpm build && pnpm preview
 3. Resets the checkout to pristine and applies `patches/*.patch` (none today).
 4. Runs upstream's Makefile with `CROSSHOST=wasm32-emscripten` and `WEBTILES=y`, with compiler wrappers (`wasm32-emscripten-g++` → `em++ -fexceptions`, …) and the compatibility shims in `port/compat/` as the "curses" library. Upstream builds its contrib libraries, generates its sources and tile sheets with host tools, and compiles the game.
 5. Relinks the game objects with `port/rogue-archive-platform.cc` for a worker (Asyncify, JavaScript exceptions, 128 MiB initial memory with growth, IDBFS). It packs the game data from upstream's `install-data` layout and copies upstream's WebTiles client with `client-host/`. Then it compresses the module and data (`.gzip`), copies the license texts and writes `dist/runtime-manifest.json`.
-6. Links the same objects once more for Node (the conformance harness, not deployed; skip with `ROGUE_ARCHIVE_HARNESS=0`).
+6. Links the same objects for Node (the harness), gives every data file a fixed modification time, and runs `-builddb` with it to generate DCSS's level and database caches, which go into the data package (`/crawl/cache`). The harness is also used by the conformance test; it is not deployed.
 
 Requirements: `git`, `make`, a host C/C++ compiler, `python3` with PyYAML, `perl`, `pkg-config` and libpng headers (for upstream's tile generator), `node` ≥ 22. CI installs `python3-yaml libpng-dev`. The conformance test also builds DCSS natively with clang and libc++ (`clang libc++-dev libc++abi-dev`) and needs the ncurses headers (`libncurses-dev`).
 

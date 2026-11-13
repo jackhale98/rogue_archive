@@ -77,8 +77,6 @@ jobs:
       - name: Build DCSS runtime
         if: steps.dcss.outputs.cache-hit != 'true'
         run: pnpm build:dcss
-        env:
-          ROGUE_ARCHIVE_HARNESS: '0'
       - name: Build Sil-Q runtime
         if: steps.sil.outputs.cache-hit != 'true'
         run: pnpm build:sil
