@@ -128,7 +128,7 @@
       "title": "Dungeon Crawl Stone Soup",
       "subtitle": "The community-developed classic",
       "description": "A deep, open-source dungeon crawl with dozens of species and backgrounds, a sprawling branch structure and a design culture of removing tedium.",
-      "status": "researching",
+      "status": "experimental",
       "priority": 1,
       "effort": "medium-high",
       "rationale": "Second implementation: validates terminal and tiles interfaces, complex prompts, menus, targeting and command handling.",
@@ -140,17 +140,32 @@
         "repository": "https://github.com/crawl/crawl"
       },
       "license": {
-        "code": "GPL-2.0-or-later, with some files under other compatible licenses (per-file audit pending)",
-        "assets": "Tiles and other assets: audit pending"
+        "code": "GPL-2.0-or-later (with bundled Lua (MIT), SQLite (public domain), PCRE (BSD), zlib (zlib) and jQuery/RequireJS (MIT) in the browser client)",
+        "assets": "Tiles: CC0 1.0 (DCSS tiles project); fonts: DejaVu (free license)",
+        "report": "games/dcss/LICENSES.md"
       },
       "interface": ["ascii", "tiles"],
       "input": {
         "keyboard": true,
         "mouse": true,
-        "touch": false
+        "touch": true
       },
       "tags": ["Classic", "Turn-based", "Permadeath"],
-      "glyph": "D"
+      "glyph": "D",
+      "about": [
+        "Dungeon Crawl Stone Soup grew out of Linley's Dungeon Crawl and has been developed in the open by a large volunteer team since 2006. It is known for its many species, backgrounds and gods, a branching dungeon, and a design philosophy that removes tedium rather than adding it.",
+        "This port compiles the official DCSS source to WebAssembly without changing any game code, and shows it with DCSS's own WebTiles client, the same one the official online servers use. It runs entirely in your browser: no server and no account."
+      ],
+      "version": "0.34.1",
+      "sourceRevision": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796",
+      "renderMode": "custom",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "dcss",
+      "runtimeManifest": "runtime/dcss/runtime-manifest.json"
     },
     {
       "id": "sil-q",

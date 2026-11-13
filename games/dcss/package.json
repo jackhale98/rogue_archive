@@ -1,0 +1,14 @@
+{
+  "name": "@rogue-archive/game-dcss",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rogue Archive adapter for Dungeon Crawl Stone Soup.",
+  "license": "GPL-2.0-or-later",
+  "type": "module",
+  "exports": {
+    ".": "./adapter/index.ts"
+  },
+  "dependencies": {
+    "@rogue-archive/game-api": "workspace:*"
+  }
+}

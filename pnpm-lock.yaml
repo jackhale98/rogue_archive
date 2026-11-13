@@ -62,6 +62,9 @@ importers:
       '@rogue-archive/game-brogue-ce':
         specifier: workspace:*
         version: link:../../games/brogue-ce
+      '@rogue-archive/game-dcss':
+        specifier: workspace:*
+        version: link:../../games/dcss
       '@rogue-archive/game-storage':
         specifier: workspace:*
         version: link:../../packages/game-storage
@@ -86,6 +89,12 @@ importers:
         version: 8.3.8(@types/node@24.19.2)
 
   games/brogue-ce:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+
+  games/dcss:
     dependencies:
       '@rogue-archive/game-api':
         specifier: workspace:*

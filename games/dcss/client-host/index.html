@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<!--
+  Hosts upstream's WebTiles game client (game/, version-matched to the game)
+  inside Rogue Archive. Loaded in an iframe by the DCSS adapter; host.js
+  provides the "comm" and "client" modules a WebTiles server would, connected
+  to the game running in the adapter's Web Worker instead of a WebSocket.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Dungeon Crawl Stone Soup</title>
+    <link rel="stylesheet" href="lobby-style.css" />
+    <link rel="stylesheet" href="fonts/fonts.css" />
+    <link rel="stylesheet" href="game/style.css" />
+    <link rel="stylesheet" href="game/simplebar.css" />
+    <link rel="stylesheet" href="host.css" />
+    <script src="scripts/contrib/require.js"></script>
+    <script src="host.js"></script>
+  </head>
+  <body>
+    <div id="game"></div>
+  </body>
+</html>
