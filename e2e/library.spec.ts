@@ -54,3 +54,10 @@ test('deep links survive a reload', async ({ page }) => {
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Settings', level: 1 })).toBeVisible();
 });
+
+test('settings explain how long saves are kept', async ({ page }) => {
+  await page.goto('#/settings');
+  await expect(page.getByRole('heading', { name: 'Keeping your saves' })).toBeVisible();
+  // Chromium answers persisted() either way; the page states which.
+  await expect(page.getByText(/agreed to keep this site's data|may clear this site's data/)).toBeVisible();
+});

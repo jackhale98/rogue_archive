@@ -23,6 +23,8 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Session host: manifest loading, integrity checks, status and errors, input routing, persist on hide/exit
 - [x] Touch control primitives (pad with hold-to-repeat, action buttons, command list, on-screen keyboard)
 - [x] IndexedDB settings and recent games; `.roguearchive` save export/import format
+- [x] Ask for persistent storage once a game runs; Settings → Keeping your saves (status, space used, Safari's 7-day rule and the Home Screen app)
+- [ ] Optional cloud sync of saves to the player's own Dropbox or OneDrive (browser-only OAuth with PKCE, app folder; see docs/architecture/storage.md)
 - [ ] A fake adapter for platform contract tests (the Brogue adapter currently exercises the contract end to end)
 
 ## Phase 3 — Brogue CE 🟡 experimental

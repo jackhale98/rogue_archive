@@ -2,6 +2,7 @@ import { isLaunchable } from '@rogue-archive/catalog';
 import { SHELL_COMMAND } from '@rogue-archive/game-api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gamesById } from '../app/catalog.ts';
+import { requestDurableStorage } from '../app/durable-storage.ts';
 import { setFlash } from '../app/flash.ts';
 import { href, navigate } from '../app/router.ts';
 import { useSettings } from '../app/settings.tsx';
@@ -91,6 +92,11 @@ function GameShell({ gameId }: { gameId: string }) {
   useEffect(() => {
     document.title = `${game.title} · Rogue Archive`;
   }, [game]);
+
+  // Saves live in this browser: once a game runs, ask it not to clear them to free space.
+  useEffect(() => {
+    if (running) void requestDurableStorage();
+  }, [running]);
 
   // Tell the adapter how it is presented, and which edges our controls cover.
   useEffect(() => {

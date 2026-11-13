@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  isAppleWebKit,
+  isInstalledApp,
+  requestDurableStorage,
+  storageStatus,
+  type StorageStatus,
+} from '../app/durable-storage.ts';
 import { useSettings, type PlatformSettings } from '../app/settings.tsx';
 
 interface Choice<K extends keyof PlatformSettings> {
@@ -85,6 +92,67 @@ async function clearSiteData(): Promise<void> {
   if ('caches' in window) await Promise.all((await caches.keys()).map((key) => caches.delete(key)));
 }
 
+function megabytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024);
+  return mb < 10 ? `${mb.toFixed(1)} MB` : `${Math.round(mb)} MB`;
+}
+
+/** How long this browser keeps saves, and a way to ask it to keep them. */
+function KeepingSaves() {
+  const [status, setStatus] = useState<StorageStatus | null>(null);
+  const [declined, setDeclined] = useState(false);
+  useEffect(() => {
+    void storageStatus().then(setStatus);
+  }, []);
+  if (!status) return null;
+  const ask = () =>
+    void requestDurableStorage(true).then(async (granted) => {
+      setDeclined(!granted);
+      setStatus(await storageStatus());
+    });
+  const apple = isAppleWebKit();
+  const installed = isInstalledApp();
+  return (
+    <>
+      <h2 className="section-title">Keeping your saves</h2>
+      <p role="status">
+        {!status.supported
+          ? 'This browser does not say how long it keeps site data.'
+          : status.persisted
+            ? "This browser has agreed to keep this site's data: it will not clear your saves to free up space. They are removed only if you clear them (here or in the browser's settings)."
+            : "This browser may clear this site's data, saves included, if the device runs short of space (sites used least recently go first)."}
+        {status.usage !== undefined
+          ? ` Saves, settings and offline copies use ${megabytes(status.usage)}.`
+          : ''}
+      </p>
+      {status.supported && !status.persisted ? (
+        <>
+          <button type="button" className="button" onClick={ask}>
+            Ask the browser to keep saves
+          </button>
+          {declined ? (
+            <p className="muted">
+              The browser said no for now. Browsers decide for themselves; most agree once a site is installed
+              as an app or used regularly.
+            </p>
+          ) : null}
+        </>
+      ) : null}
+      {apple ? (
+        <p>
+          {installed
+            ? "On Apple devices, an app added to the Home Screen keeps its own storage, separate from Safari's."
+            : "Safari can delete a site's data after 7 days of using Safari without visiting the site. To keep saves longer, add Rogue Archive to your Home Screen (Share, then Add to Home Screen) and play from there. The Home Screen app has its own storage: export saves here and import them there."}
+        </p>
+      ) : null}
+      <p className="muted">
+        Saves never leave your device. To keep a copy elsewhere, use Export saves in each game's menu; the
+        file can be imported here or on another device.
+      </p>
+    </>
+  );
+}
+
 export function SettingsPage() {
   const { settings, update } = useSettings();
   const [confirming, setConfirming] = useState(false);
@@ -114,6 +182,8 @@ export function SettingsPage() {
           </label>
         ))}
       </div>
+
+      <KeepingSaves />
 
       <h2 className="section-title">Local data</h2>
       <p>

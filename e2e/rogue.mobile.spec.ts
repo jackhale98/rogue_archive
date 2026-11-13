@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import { rogueContext, screenText, startRogue, waitForContext } from './rogue-helpers.ts';
 
 test.describe.configure({ timeout: 180_000 });
+// A tap that cannot happen fails at that step instead of at the test timeout.
+test.use({ actionTimeout: 15_000 });
 
 test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction prompt', async ({ page }) => {
   await startRogue(page, 'Thumbs');
@@ -10,14 +12,19 @@ test('Rogue phone: status band, thumb pad, dock, inventory sheet and direction p
   for (const name of [/^Search/, /^Fight/, /^Pack/, /^Stairs/, /^Look/])
     await expect(dock.getByRole('button', { name })).toBeVisible();
 
-  // The pad moves the hero. (A monster can interrupt with --More--, which
-  // replaces the pad with Continue until acknowledged.)
+  // The pad moves the hero. The dungeon is random: a monster can interrupt
+  // with --More-- (Continue), and a trap or item can leave a question or a
+  // list on screen; settle() gets back to the map before each step.
   const pad = page.getByRole('group', { name: 'Movement' });
   const settle = async () => {
-    for (let i = 0; i < 10 && (await rogueContext(page)) !== 'map'; i++) {
-      if ((await rogueContext(page)) === 'more') await dock.getByRole('button', { name: /Continue/ }).tap();
+    for (let i = 0; i < 20; i++) {
+      const context = await rogueContext(page);
+      if (context === 'map') return;
+      if (context === 'more') await dock.getByRole('button', { name: /Continue/ }).tap();
+      else if (context !== 'busy') await page.keyboard.press('Escape');
       await page.waitForTimeout(200);
     }
+    await waitForContext(page, 'map', 5_000);
   };
   for (const name of [/Move left/, /Move right/, /Move up \(/, /Move down \(/]) {
     await settle();
