@@ -162,9 +162,12 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
 
   return (
     <article className="page detail">
-      <p className="breadcrumb">
-        <a href={href('/')}>Library</a> <span aria-hidden="true">/</span> {game.title}
-      </p>
+      {/* The browser's back button may lead into the last game played; this always leads to the library. */}
+      <nav className="detail__nav" aria-label="Breadcrumb">
+        <a className="back-link" href={href('/')}>
+          <span aria-hidden="true">←</span> Library
+        </a>
+      </nav>
       <header className="detail__header">
         <div className="detail__intro">
           <p className="detail__eyebrow">

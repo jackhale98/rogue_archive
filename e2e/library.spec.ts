@@ -97,3 +97,17 @@ test('the library searches, filters and sorts', async ({ page }) => {
   // No game is labelled with a status.
   await expect(page.getByText(/^(Playable|Experimental)$/)).toHaveCount(0);
 });
+
+test('a game page leads back to the library, where it was left', async ({ page }) => {
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.goto('./');
+  const card = page.locator('.game-card').filter({ hasText: 'NetHack' });
+  await card.scrollIntoViewIfNeeded();
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(0);
+  await card.getByRole('link', { name: /^Details/ }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'NetHack' })).toBeVisible();
+  await page.locator('.back-link').click();
+  await page.locator('nav[aria-label="Breadcrumb"]').waitFor({ state: 'detached' });
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scrolled / 2);
+});

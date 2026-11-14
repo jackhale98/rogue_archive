@@ -214,7 +214,29 @@ function RoadmapList({ games }: { games: CatalogGame[] }) {
   );
 }
 
+const SCROLL_KEY = 'rogue-archive:library-scroll';
+
+/** Back from a game's page, the library opens where it was left (per tab; best effort). */
+function useRememberedScroll(): void {
+  useEffect(() => {
+    try {
+      const saved = Number(sessionStorage.getItem(SCROLL_KEY));
+      if (saved > 0) requestAnimationFrame(() => window.scrollTo(0, saved));
+    } catch {
+      // Storage unavailable: start at the top.
+    }
+    return () => {
+      try {
+        sessionStorage.setItem(SCROLL_KEY, String(Math.round(window.scrollY)));
+      } catch {
+        // Storage unavailable: nothing to remember.
+      }
+    };
+  }, []);
+}
+
 export function LibraryPage() {
+  useRememberedScroll();
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS);
   const all = useMemo(() => librarySections(catalog.games, EMPTY_FILTERS), []);
   const sections = useMemo(() => librarySections(catalog.games, filters), [filters]);
