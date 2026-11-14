@@ -130,3 +130,37 @@ export async function tileAt(page: Page, x: number, y: number): Promise<number> 
     [x, y],
   );
 }
+
+/** Opens Angband and taps through its splash screen to its savefile menu. */
+export async function openByTaps(page: Page) {
+  await page.goto('?debug=1#/play/angband');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect.poll(() => angbandContext(page), { timeout: 120_000 }).toMatch(/more|select/);
+  if ((await angbandContext(page)) === 'more') await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await waitForContext(page, 'select');
+  return dock;
+}
+
+/** A new character by taps (Angband's defaults), as far as the town. */
+export async function createByTaps(page: Page, name: string) {
+  const dock = await openByTaps(page);
+  await dock.getByRole('button', { name: 'New character' }).tap();
+  await waitForContext(page, 'birth');
+  // Creation's lettered choices are buttons; the pad moves through the menus.
+  await expect(dock.getByRole('button', { name: 'a) Human' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Movement' })).toBeVisible();
+  for (let i = 0; i < 8 && (await angbandContext(page)) !== 'text'; i++) {
+    await dock.getByRole('button', { name: /^OK/ }).tap();
+    await page.waitForTimeout(400);
+  }
+  await waitForContext(page, 'text');
+  await expect.poll(() => screenText(page)).toContain('Enter a name for your character');
+  await page.keyboard.type(name);
+  await dock.getByRole('button', { name: /^OK/ }).tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForContext(page, 'more');
+  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await waitForContext(page, 'map');
+  return dock;
+}

@@ -1,8 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   angband,
   angbandContext,
   cellToClient,
+  createByTaps,
   playerCell,
   screenText,
   sendCommand,
@@ -11,40 +12,6 @@ import {
 } from './angband-helpers.ts';
 
 test.describe.configure({ timeout: 240_000 });
-
-/** Opens Angband and taps through its splash screen to its savefile menu. */
-async function openByTaps(page: Page) {
-  await page.goto('?debug=1#/play/angband');
-  const dock = page.getByRole('group', { name: 'Actions' });
-  await expect.poll(() => angbandContext(page), { timeout: 120_000 }).toMatch(/more|select/);
-  if ((await angbandContext(page)) === 'more') await dock.getByRole('button', { name: /^Continue/ }).tap();
-  await waitForContext(page, 'select');
-  return dock;
-}
-
-/** A new character by taps (Angband's defaults), as far as the town. */
-async function createByTaps(page: Page, name: string) {
-  const dock = await openByTaps(page);
-  await dock.getByRole('button', { name: 'New character' }).tap();
-  await waitForContext(page, 'birth');
-  // Creation's lettered choices are buttons; the pad moves through the menus.
-  await expect(dock.getByRole('button', { name: 'a) Human' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Movement' })).toBeVisible();
-  for (let i = 0; i < 8 && (await angbandContext(page)) !== 'text'; i++) {
-    await dock.getByRole('button', { name: /^OK/ }).tap();
-    await page.waitForTimeout(400);
-  }
-  await waitForContext(page, 'text');
-  await expect.poll(() => screenText(page)).toContain('Enter a name for your character');
-  await page.keyboard.type(name);
-  await dock.getByRole('button', { name: /^OK/ }).tap();
-  await waitForContext(page, 'yesno');
-  await dock.getByRole('button', { name: /^Yes/ }).tap();
-  await waitForContext(page, 'more');
-  await dock.getByRole('button', { name: /^Continue/ }).tap();
-  await waitForContext(page, 'map');
-  return dock;
-}
 
 test('Angband phone: creation by taps, status band, dock, item prompt, travel and look by touch, tiles, continue', async ({
   page,
@@ -152,7 +119,13 @@ test('Angband phone: one tap attacks an adjacent monster', async ({ page }) => {
           if (!best || d < Math.max(Math.abs(best.x - me.x), Math.abs(best.y - me.y))) best = { x, y };
         }
     if (!best) {
-      await sendCommand(page, 'hold');
+      // Nobody in sight: rest until someone comes along (resting stops when a monster appears).
+      await page.keyboard.press('R');
+      await waitForContext(page, 'text');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.type('500');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1500);
     } else {
       // Travel to the cell next to it (a path cannot end on a monster), or step into it.
       const near = Math.max(Math.abs(best.x - me.x), Math.abs(best.y - me.y)) <= 2;
