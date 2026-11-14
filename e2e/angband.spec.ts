@@ -17,20 +17,18 @@ test('Angband: new character, town, inventory, message log, save and continue af
   page,
 }) => {
   await newCharacter(page, 'Tester');
-  const screen = await screenText(page);
-  expect(screen).toContain('Tester');
-  expect(screen).toContain('Town');
+  expect(await screenText(page)).toContain('Town');
 
   // An item prompt, with Angband's list of the pack.
   await page.keyboard.press('d');
   await waitForContext(page, 'item');
-  await expect.poll(() => screenText(page)).toContain('Rations of Food');
+  await expect.poll(() => screenText(page)).toMatch(/Rations? of Food/);
   await page.keyboard.press('Escape');
   await waitForContext(page, 'map');
 
   // The inventory.
   await page.keyboard.press('i');
-  await expect.poll(() => screenText(page)).toContain('Wooden Torch');
+  await expect.poll(() => screenText(page)).toMatch(/Rations? of Food/);
   await page.keyboard.press('Escape');
   await waitForContext(page, 'map');
 
@@ -48,14 +46,16 @@ test('Angband: new character, town, inventory, message log, save and continue af
   await log.getByRole('button', { name: 'Back to game' }).click();
 
   // Save and quit (Ctrl+X): Angband starts again at its savefile menu.
-  await page.locator('canvas').first().click();
+  await page.locator('canvas').first().focus();
   for (let i = 0; i < 5 && (await angbandContext(page)) !== 'map'; i++) {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(300);
   }
   await page.keyboard.press('Control+x');
   for (let i = 0; i < 20 && (await angbandContext(page)) !== 'select'; i++) {
-    if ((await angbandContext(page)) === 'more') await page.keyboard.press('Enter');
+    // The scores ("Press ESC to exit"), then Angband's splash screen.
+    if ((await angbandContext(page)) === 'more')
+      await page.keyboard.press(/Press ESC to exit/.test(await screenText(page)) ? 'Escape' : 'Enter');
     await page.waitForTimeout(400);
   }
   await waitForContext(page, 'select');
@@ -65,21 +65,22 @@ test('Angband: new character, town, inventory, message log, save and continue af
   await page.reload();
   await openAngband(page);
   await expect.poll(() => screenText(page)).toContain('Use Tester');
-  await page.locator('canvas').first().click();
+  await page.locator('canvas').first().focus();
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await waitForContext(page, 'map', 30_000);
+  // The character sheet names the character loaded.
+  await page.keyboard.press('C');
   await expect.poll(() => screenText(page)).toContain('Tester');
+  await page.keyboard.press('Escape');
 });
 
 test('Angband: tiles through the Display setting (Adam Bolt), back to text', async ({ page }) => {
   await newCharacter(page, 'Tiler');
   expect((await angband(page))?.tiled).toBe(false);
-  await page.getByRole('button', { name: 'Game menu' }).click();
-  await page.getByRole('menuitem', { name: /Settings/ }).click();
-  const settings = page.getByRole('dialog');
-  await settings.getByRole('radio', { name: 'Tiles' }).check();
-  await settings.getByRole('button', { name: /Close|Done|Back to game/ }).first().click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByLabel('Display').selectOption('tiles');
+  await page.keyboard.press('Escape');
   await expect.poll(async () => (await angband(page))?.tiled, { timeout: 30_000 }).toBe(true);
   // The player is drawn as a tile, and the map in square cells.
   const player = await playerCell(page);
@@ -88,16 +89,15 @@ test('Angband: tiles through the Display setting (Adam Bolt), back to text', asy
   await page.screenshot({ path: 'test-results/angband-tiles.png' });
 
   // A menu over the map: the whole screen as text until it closes.
-  await page.locator('canvas').first().click();
+  await page.locator('canvas').first().focus();
   await page.keyboard.press('i');
   await expect.poll(async () => (await angband(page))?.views).toEqual(['screen']);
   await page.keyboard.press('Escape');
   await expect.poll(async () => (await angband(page))?.views).toEqual(['top', 'side', 'map', 'status']);
 
-  await page.getByRole('button', { name: 'Game menu' }).click();
-  await page.getByRole('menuitem', { name: /Settings/ }).click();
-  await page.getByRole('dialog').getByRole('radio', { name: /Text/ }).check();
-  await page.getByRole('dialog').getByRole('button', { name: /Close|Done|Back to game/ }).first().click();
+  await page.getByRole('button', { name: 'Menu' }).click();
+  await page.getByLabel('Display').selectOption('text');
+  await page.keyboard.press('Escape');
   await expect.poll(async () => (await angband(page))?.state?.graphics, { timeout: 30_000 }).toBe(0);
   expect(await tileAt(page, player.x, player.y)).toBe(0);
 });

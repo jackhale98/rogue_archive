@@ -341,6 +341,8 @@ export interface DockState {
   depth?: number;
   /** The prompt line (aim prompts say whether a target is set). */
   prompt?: string;
+  /** The bottom line (where pages such as the scores say how to leave them). */
+  bottom?: string;
 }
 
 /** Below this share of health the danger dock leads with healing. */
@@ -498,6 +500,12 @@ export function controlsFor(
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop' })], palette: PALETTE };
     case 'more':
+      // Pages such as the scores leave with Escape, and page with any other key.
+      if (/Press ESC to exit/.test(state.bottom ?? ''))
+        return {
+          actions: [a('cancel', { label: 'Done', emphasis: 'primary', wide: true }), a('page')],
+          palette: PALETTE,
+        };
       return {
         actions: [a('continue', { emphasis: 'primary', wide: true }), a('cancel', { label: 'Skip' })],
         palette: PALETTE,

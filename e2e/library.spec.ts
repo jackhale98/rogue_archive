@@ -52,10 +52,10 @@ test('game detail shows provenance, controls and limitations', async ({ page }) 
 });
 
 test('roadmap games are not launchable', async ({ page }) => {
-  await page.goto('#/games/angband');
+  await page.goto('#/games/drl');
   await expect(page.getByText('This game is on the roadmap and is not playable yet.')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Play / })).toHaveCount(0);
-  await page.goto('#/play/angband');
+  await page.goto('#/play/drl');
   await expect(page.getByRole('heading', { name: 'Nothing down here' })).toBeVisible();
 });
 

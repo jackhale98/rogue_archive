@@ -204,7 +204,7 @@ export function isTargeting(top: string): boolean {
 
 /** "Press any key", "-more-", "Press Return": the game waits for any key. */
 const CONTINUE =
-  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key to continue|\(press any key\)/i;
+  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key to (?:continue|page forward)|\(press any key\)/i;
 
 /** A store or the home: the shopkeeper's line and "Gold Remaining" at the bottom. */
 export function isStore(grid: Grid): boolean {

@@ -289,7 +289,8 @@ function run(): void {
   played = false;
   post({ type: 'status', status: { stage: 'running' } });
   try {
-    mod.callMain(args);
+    // A copy: Emscripten's callMain puts the program name in front of the array it is given.
+    mod.callMain([...args]);
   } catch (error) {
     if ((error as { name?: string } | null)?.name !== 'ExitStatus') reportFatal(error);
   }

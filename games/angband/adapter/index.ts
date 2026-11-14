@@ -654,7 +654,14 @@ class AngbandAdapter implements GameAdapter {
     this.#saveMenu = grid && context === 'select' ? (saveMenu(grid) ?? []) : [];
     const layout = controlsFor(
       context,
-      { ...state, hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run, prompt: top },
+      {
+        ...state,
+        hp: state?.hp ?? 0,
+        maxHp: state?.maxHp ?? 0,
+        run: this.#run,
+        prompt: top,
+        bottom: grid ? rowText(grid, grid.rows - 1) : '',
+      },
       choices,
       context === 'item' ? itemPrompt(top) : null,
       this.#saveMenu,

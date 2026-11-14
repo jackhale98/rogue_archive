@@ -60,9 +60,11 @@ export async function waitForContext(page: Page, context: string, timeout = 60_0
 /** Opens Angband and gets past its splash screen to its savefile menu. */
 export async function openAngband(page: Page): Promise<void> {
   await page.goto('?debug=1#/play/angband');
-  await expect.poll(() => screenText(page), { timeout: 120_000 }).toMatch(/Press any key to continue|Select the save/);
+  await expect
+    .poll(() => screenText(page), { timeout: 120_000 })
+    .toMatch(/Press any key to continue|Select the save/);
   if (/Press any key to continue/.test(await screenText(page))) {
-    await page.locator('canvas').first().click();
+    await page.locator('canvas').first().focus();
     await page.keyboard.press(' ');
   }
   await waitForContext(page, 'select');
@@ -81,16 +83,21 @@ export async function sendCommand(page: Page, commandId: string): Promise<void> 
  */
 export async function newCharacter(page: Page, name: string): Promise<void> {
   await openAngband(page);
-  await page.locator('canvas').first().click();
+  await page.locator('canvas').first().focus();
   // "New game" is the first row of the savefile menu.
   await page.keyboard.press('Home');
   await page.keyboard.press('Enter');
   await expect.poll(() => screenText(page)).toContain('Please select your character traits');
-  for (let i = 0; i < 4; i++) {
+  // Race, class, how to roll stats, the point-based stats: each step waits for the next screen.
+  for (const next of [
+    'Class affects',
+    'how to generate',
+    'left/right to modify',
+    'Enter a name for your character',
+  ]) {
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(200);
+    await expect.poll(() => screenText(page)).toContain(next);
   }
-  await expect.poll(() => screenText(page)).toContain('Enter a name for your character');
   await page.keyboard.type(name);
   await page.keyboard.press('Enter');
   await expect.poll(() => screenText(page)).toContain('Accept character history? [y/n]');

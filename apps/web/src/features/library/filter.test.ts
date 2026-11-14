@@ -18,8 +18,9 @@ describe('librarySections', () => {
       'rogue',
       'hyperrogue',
       'nethack',
+      'angband',
     ]);
-    expect(sections.roadmap[0]!.id).toBe('angband');
+    expect(sections.roadmap[0]!.id).toBe('drl');
     expect(sections.roadmap.map((g) => g.priority)).toEqual(
       [...sections.roadmap.map((g) => g.priority)].sort((a, b) => a - b),
     );
@@ -47,6 +48,7 @@ describe('librarySections', () => {
       'rogue',
       'hyperrogue',
       'nethack',
+      'angband',
     ]);
     expect(touch.roadmap).toHaveLength(0);
   });
@@ -56,7 +58,15 @@ describe('library order', () => {
   it('sorts by title (ignoring a leading article) and by release year either way', () => {
     const order = (sort: LibraryFilters['sort']) =>
       librarySections(catalog.games, { ...EMPTY_FILTERS, sort }).playable.map((g) => g.id);
-    expect(order('title')).toEqual(['brogue-ce', 'dcss', 'hyperrogue', 'nethack', 'rogue', 'sil-q']);
+    expect(order('title')).toEqual([
+      'angband',
+      'brogue-ce',
+      'dcss',
+      'hyperrogue',
+      'nethack',
+      'rogue',
+      'sil-q',
+    ]);
     const years = (sort: LibraryFilters['sort']) =>
       librarySections(catalog.games, { ...EMPTY_FILTERS, sort }).playable.map((g) => g.firstReleased!);
     expect(years('oldest')).toEqual([...years('oldest')].sort((a, b) => a - b));
