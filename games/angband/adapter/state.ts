@@ -199,7 +199,7 @@ export function aimPrompt(top: string): { targetSet: boolean } | null {
  * the cursor and ends with its offset from the player ("..., 4 S, 0 E.").
  */
 export function isTargeting(top: string): boolean {
-  return /, \d+ [NS], \d+ [EW]\.?\s*$/.test(top.trimEnd());
+  return /, \d+ [NS], \d+ [EW]\b/.test(top);
 }
 
 /** "Press any key", "-more-", "Press Return": the game waits for any key. */

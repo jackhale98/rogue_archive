@@ -267,7 +267,9 @@ describe('keys', () => {
     expect(commandKeys(findCommand('inventory')!, true)).toEqual(['i'.charCodeAt(0)]);
     expect(new Set(ANGBAND_COMMANDS.map((command) => command.id)).size).toBe(ANGBAND_COMMANDS.length);
     for (const id of PALETTE) expect(findCommand(id), id).toBeDefined();
-    expect(findCommand('look')!.shortcut).toBe('l (roguelike x)');
+    expect(findCommand('look')!.shortcut).toBe('l');
+    expect(findCommand('look')!.description).toBe('Roguelike keyset: x.');
+    expect(findCommand('rest')!.shortcut).toBe('R');
   });
 });
 

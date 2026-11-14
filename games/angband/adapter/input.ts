@@ -126,12 +126,16 @@ const c = (
 ): AngbandCommand => ({ id, label, shortLabel, keys, category, ...extra });
 
 const name = (code: number): string =>
-  code < 32 ? `Ctrl+${String.fromCharCode(code + 64)}` : String.fromCharCode(code);
+  code === KC.TAB ? 'Tab' : code < 32 ? `Ctrl+${String.fromCharCode(code + 64)}` : String.fromCharCode(code);
 
-/** The keys of both keysets, for the shortcut shown on buttons. */
-function shortcut(keys: number[], rogue?: number[]): string {
-  const orig = keys.map(name).join('');
-  return rogue && rogue.join() !== keys.join() ? `${orig} (roguelike ${rogue.map(name).join('')})` : orig;
+/** The original keyset's key, shown on buttons (Rest's Enter answers its prompt). */
+const shortcut = (keys: number[]): string => name(keys[0]!);
+
+/** The roguelike keyset's key, in the command list's description, where it differs. */
+function rogueNote(command: AngbandCommand): string | undefined {
+  if (!command.rogue || command.rogue.join() === command.keys.join()) return command.description;
+  const note = `Roguelike keyset: ${command.rogue.map(name).join('')}.`;
+  return command.description ? `${command.description} ${note}` : note;
 }
 
 const RAW: AngbandCommand[] = [
@@ -241,7 +245,8 @@ const RAW: AngbandCommand[] = [
 
 export const ANGBAND_COMMANDS: readonly AngbandCommand[] = RAW.map((command) => ({
   ...command,
-  shortcut: command.shortcut ?? shortcut(command.keys, command.rogue),
+  shortcut: command.shortcut ?? shortcut(command.keys),
+  description: rogueNote(command),
 }));
 
 const BY_ID = new Map(ANGBAND_COMMANDS.map((command) => [command.id, command]));
