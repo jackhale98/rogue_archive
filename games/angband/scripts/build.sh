@@ -107,9 +107,11 @@ done
 find "$STAGE/lib" -name Makefile -delete
 
 rm -rf "$OUT" && mkdir -p "$OUT/tiles"
-python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$OUT/angband-data.data" \
+# Run from the output directory with a relative name: the packager writes the
+# package's path into the loader, and an absolute one would differ by checkout.
+(cd "$OUT" && python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" angband-data.data \
   --preload "$STAGE/lib@/angband/lib" --js-output="$WORK/angband-data.js" \
-  --no-node --export-name=Module > /dev/null
+  --no-node --export-name=Module > /dev/null)
 # The tile sheets themselves are drawn by the page, not read by the game.
 for tileset in "${TILESETS[@]}"; do
   sheet="$(sed -n "/^directory:$tileset\$/,/^size:/p" "$SRC/lib/tiles/list.txt" | sed -n 's/^size:[0-9]*:[0-9]*://p')"

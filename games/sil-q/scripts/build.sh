@@ -90,9 +90,11 @@ for dir in apex data edit pref save user; do cp -r "$SRC/lib/$dir" "$STAGE/lib/"
 mkdir -p "$STAGE/lib/xtra" && cp -r "$SRC/lib/xtra/tutorial" "$STAGE/lib/xtra/" 2>/dev/null || true
 
 rm -rf "$OUT" && mkdir -p "$OUT"
-python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$OUT/sil-data.data" \
+# Run from the output directory with a relative name: the packager writes the
+# package's path into the loader, and an absolute one would differ by checkout.
+(cd "$OUT" && python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" sil-data.data \
   --preload "$STAGE/lib@/sil/lib" --js-output="$WORK/sil-data.js" \
-  --no-node --export-name=Module > /dev/null
+  --no-node --export-name=Module > /dev/null)
 
 COMMON_LDFLAGS=(
   -O2

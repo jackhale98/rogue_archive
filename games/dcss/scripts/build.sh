@@ -188,11 +188,13 @@ done
 find "$CACHEGEN/saves" -name '*.lk' -delete
 
 rm -rf "$OUT" && mkdir -p "$OUT"
-python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$OUT/crawl-data.data" \
+# Run from the output directory with a relative name: the packager writes the
+# package's path into the loader, and an absolute one would differ by checkout.
+(cd "$OUT" && python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" crawl-data.data \
   --preload "$STAGE/crawl/data@/crawl/data" \
   --preload "$CACHEGEN/saves/des@/crawl/cache/des" \
   --preload "$CACHEGEN/saves/db@/crawl/cache/db" \
-  --js-output="$WORK/crawl-data.js" --no-node --export-name=Module > /dev/null
+  --js-output="$WORK/crawl-data.js" --no-node --export-name=Module > /dev/null)
 
 em++ "$PLATFORM_OBJ" "${OBJECTS[@]}" "${LINK_LIBS[@]}" "${COMMON_LDFLAGS[@]}" \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createCrawl \
