@@ -6,7 +6,16 @@ export interface NetHackDebug {
   tiled: boolean;
   prompt: string;
   menu: { how: number; title: string; items: { key: number; text: string }[] } | null;
-  state: { x: number; y: number; moves: number; hp: number; depth: number; inGame: boolean } | null;
+  state: {
+    x: number;
+    y: number;
+    moves: number;
+    hp: number;
+    depth: number;
+    inGame: boolean;
+    adjacent: number[];
+    target: { dir: number } | null;
+  } | null;
   saves: string[];
   screenText(): string;
   rowText(y: number): string;

@@ -42,13 +42,24 @@ import {
   type Rect,
   type View,
 } from '@rogue-archive/term-view';
-import { KEY, NETHACK_COMMANDS, PALETTE, PAD, controlsFor, findCommand, keyToNetHack } from './input.ts';
+import {
+  KEY,
+  NETHACK_COMMANDS,
+  PALETTE,
+  PAD,
+  controlsFor,
+  dynamicKeys,
+  findCommand,
+  keyToNetHack,
+} from './input.ts';
 import type { FrameMessage, FromWorker, SavedGame, ToWorker } from './protocol.ts';
-import { heroCell, parseState, type NetHackState } from './state.ts';
+import { DIR_KEYS, directionTo, heroCell, parseState, type NetHackState } from './state.ts';
 import { COLS, INVERSE, MAP_ROWS, MAP_TOP, ROWS, STATUS_TOP, type NhContext } from './windowport.ts';
 
 export const GAME_ID = 'nethack';
 const FLUSH_TIMEOUT_MS = 8000;
+/** How long after a touch command its item prompt still opens the list by itself. */
+const AUTO_LIST_MS = 3000;
 const DEFAULT_MAP_CELL_CSS = 20;
 const TILE = 16;
 const TILES_PER_ROW = 40;
@@ -133,6 +144,18 @@ class NetHackAdapter implements GameAdapter {
       default: 'text',
       appliesOn: 'immediately',
     },
+    {
+      key: 'more',
+      label: '--More-- prompts',
+      description:
+        'NetHack sometimes stops with --More-- and waits for a key before going on. Continue automatically skips the wait; every message stays in the status band and the message log.',
+      options: [
+        { value: 'auto', label: 'Continue automatically' },
+        { value: 'wait', label: 'Wait for a key (original)' },
+      ],
+      default: 'auto',
+      appliesOn: 'immediately',
+    },
   ];
   readonly resumeHint =
     'NetHack saves when you press S (it then ends the session, as on a desktop). Start again as the same character to continue.';
@@ -169,6 +192,20 @@ class NetHackAdapter implements GameAdapter {
   #pending = new Map<number, (message: FromWorker) => void>();
   #logId = 0;
   #cleanup: (() => void)[] = [];
+  /** --More--: continue automatically, or wait as the original. */
+  #autoMore = true;
+  /** A touch command was just given on the map: if it asks for an item, its list opens at once (`?`). */
+  #autoList = 0;
+  /** "You feel more confident in your … skills": Enhance leads until it is used. */
+  #enhance = false;
+  /**
+   * A short script answering a command's follow-up questions (Elbereth):
+   * each step answers one kind of prompt; done once the map is back.
+   */
+  #script: {
+    steps: { context: NhContext; prompt?: RegExp; keys?: number[]; click?: { x: number; y: number } }[];
+    started: number;
+  } | null = null;
   readonly debug: NetHackDebugState;
 
   constructor() {
@@ -201,6 +238,7 @@ class NetHackAdapter implements GameAdapter {
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
     this.#defaultName = String(options.settings.lastName ?? '');
     this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.#autoMore = options.settings.more !== 'wait';
     this.#runtimeFiles = runtime.files;
     this.#runtimeBaseUrl = runtimeBaseUrl;
 
@@ -364,8 +402,62 @@ class NetHackAdapter implements GameAdapter {
       this.#send([Number(input.commandId.slice(KEY.length))]);
       return;
     }
+    const onMap = this.#context === 'map';
+    const dynamic = dynamicKeys(input.commandId);
+    if (dynamic) {
+      this.#send(dynamic);
+      return;
+    }
+    if (input.commandId === 'elbereth') {
+      this.#elbereth();
+      return;
+    }
     const command = findCommand(input.commandId);
-    if (command) this.#send(command.keys);
+    if (!command) return;
+    if (command.id === 'enhance') this.#enhance = false;
+    // A command from the dock or the command list that asks for an item shows the list at once.
+    this.#autoList = onMap && command.category !== 'Keys' ? Date.now() : 0;
+    this.#send(command.keys);
+  }
+
+  /**
+   * Engrave Elbereth in the dust: `E`, then the game's own questions answered
+   * as a player would: write with fingers (`-`), don't add to an engraving
+   * already there, then the text. The game decides whether it works.
+   */
+  #elbereth(): void {
+    if (this.#context !== 'map') return;
+    this.#script = {
+      started: Date.now(),
+      steps: [
+        { context: 'item', prompt: /write with/i, keys: [45] },
+        { context: 'yn', prompt: /add to the (current|writing)/i, keys: [110] },
+        { context: 'yn', prompt: /Do you want to/i, keys: [110] },
+        {
+          context: 'getlin',
+          prompt: /write|engrave|scribble/i,
+          keys: [...'Elbereth'].map((c) => c.charCodeAt(0)).concat(13),
+        },
+      ],
+    };
+    this.#send([69]);
+  }
+
+  /** The script's answer to the prompt now on screen, if it has one (and whether it is over). */
+  #runScript(context: NhContext): boolean {
+    const script = this.#script;
+    if (!script) return false;
+    if (Date.now() - script.started > 15_000 || context === 'map' || context === 'over') {
+      this.#script = null;
+      return false;
+    }
+    const prompt = this.#frame?.prompt ?? '';
+    const step = script.steps.findIndex((s) => s.context === context && (!s.prompt || s.prompt.test(prompt)));
+    if (step < 0) return false;
+    const { keys, click } = script.steps.splice(step, 1)[0]!;
+    if (keys) this.#send(keys);
+    if (click) this.#post({ type: 'input', click: { ...click, button: 1 } });
+    return true;
   }
 
   #send(keys: number[]): void {
@@ -424,6 +516,11 @@ class NetHackAdapter implements GameAdapter {
   }
 
   applySetting(key: string, value: unknown): void {
+    if (key === 'more') {
+      this.#autoMore = value !== 'wait';
+      if (this.#autoMore && this.#context === 'more') this.#send([32]);
+      return;
+    }
     if (key !== 'display') return;
     this.#display = value === 'tiles' ? 'tiles' : 'text';
     if (this.#display === 'tiles') void this.#loadTiles();
@@ -525,6 +622,7 @@ class NetHackAdapter implements GameAdapter {
         break;
       }
       case 'message': {
+        if (/You feel more confident in your /.test(message.text)) this.#enhance = true;
         const entry: LogEntry = { id: ++this.#logId, runs: [{ text: message.text }] };
         host?.emit({ type: 'message-log', reset: false, entries: [entry] });
         break;
@@ -595,11 +693,31 @@ class NetHackAdapter implements GameAdapter {
     this.#context = context;
     this.debug.context = context;
     const frame = this.#frame;
+    if (context !== 'start') {
+      // A script (Elbereth) answers its prompts.
+      if (this.#runScript(context)) return;
+      // --More-- continues by itself unless the player wants to wait.
+      if (context === 'more' && this.#autoMore) {
+        this.#send([32]);
+        return;
+      }
+      // An item prompt from a touch command: its list at once.
+      // (The map may be redrawn before the question appears, so the wish lasts a moment.)
+      if (this.#autoList && Date.now() - this.#autoList > AUTO_LIST_MS) this.#autoList = 0;
+      if (this.#autoList && context !== 'map') {
+        this.#autoList = 0;
+        if (context === 'item' && /\?\*?\]/.test(frame?.prompt ?? '')) {
+          this.#send([63]);
+          return;
+        }
+      }
+    }
     const layout = controlsFor(context, {
-      hp: this.#state?.hp ?? 0,
-      hpMax: this.#state?.hpMax ?? 0,
+      state: this.#state,
       prompt: frame?.prompt ?? '',
       menu: frame?.menu ?? null,
+      enhance: this.#enhance,
+      messages: frame?.messages ?? [],
     });
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature) return;
@@ -732,7 +850,9 @@ class NetHackAdapter implements GameAdapter {
       ? '10px'
       : `${(this.#presentation?.topRightReserve ?? 0) + 10}px`;
     const grid = this.#grid;
-    const message = grid ? rowText(grid, 0).trim() : '';
+    // This turn's messages (the latest three lines' worth), or the message line.
+    const turn = this.#frame?.messages ?? [];
+    const message = turn.length > 0 ? turn.slice(-3).join('  ') : grid ? rowText(grid, 0).trim() : '';
     const status = grid
       ? [rowText(grid, STATUS_TOP), rowText(grid, STATUS_TOP + 1)].map((line) =>
           line.replace(/\s+/g, ' ').trim(),
@@ -758,7 +878,7 @@ class NetHackAdapter implements GameAdapter {
       second.textContent = status[0]!;
       const line = document.createElement('div');
       line.style.cssText =
-        'font:12px/16px ui-monospace,Menlo,Consolas,monospace;color:#d3d7cf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px';
+        'font:12px/16px ui-monospace,Menlo,Consolas,monospace;color:#d3d7cf;min-height:16px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden';
       line.textContent = message;
       this.#band.append(top, second, line);
       this.#band.setAttribute('aria-label', `${status.join('. ')}. ${message}. Open the message log`);
@@ -767,16 +887,20 @@ class NetHackAdapter implements GameAdapter {
   }
 
   /**
-   * Taps: a line of a menu chooses it (its key, as tty shows "a - item"); a
-   * text window or --More-- continues; a cell of the map travels there (a
-   * click, as NetHack's mouse support).
+   * Taps:
+   * - a menu line chooses it (its key, as tty shows "a - item"); a text
+   *   window, a menu only to read or --More-- continues;
+   * - on the map: the hero shows what can be done here (#herecmdmenu); any
+   *   other cell is NetHack's click (mouse1 bound to mouseaction): travel
+   *   there, or move, attack, open a door next to the hero;
+   * - choosing a position: the tapped cell is chosen (a click);
+   * - a direction question: the direction towards the tapped cell.
    */
   #tap(clientX: number, clientY: number): void {
     const renderer = this.#renderer;
     const grid = this.#grid;
     if (!renderer || !grid) return;
     const context = this.#context;
-    // A text window, a menu only to read, or --More--: a tap anywhere continues.
     if (context === 'text' || context === 'more' || (context === 'menu' && this.#frame?.menu?.how === 0)) {
       this.#send([32]);
       return;
@@ -794,20 +918,51 @@ class NetHackAdapter implements GameAdapter {
       if (match) this.#send([match[1]!.charCodeAt(0)]);
       return;
     }
-    if (context === 'map' && hit.kind === 'cell' && (hit.view === 'map' || hit.view === 'screen')) {
-      if (hit.y < MAP_TOP || hit.y >= MAP_TOP + MAP_ROWS) return;
-      this.#post({ type: 'input', click: { x: hit.x, y: hit.y, button: 1 } });
+    const cell = this.#mapCell(hit);
+    if (!cell) return;
+    const state = this.#state;
+    if (context === 'map' && state) {
+      const hero = heroCell(state);
+      if (hero && hero.x === cell.x && hero.y === cell.y) this.#send(findCommand('here-menu')!.keys);
+      else this.#post({ type: 'input', click: { ...cell, button: 1 } });
+    } else if (context === 'position') {
+      this.#post({ type: 'input', click: { ...cell, button: 1 } });
+    } else if (context === 'direction' && state) {
+      const dir = directionTo(state, cell);
+      this.#send(dir === null ? [46] : [DIR_KEYS.charCodeAt(dir)]);
     }
   }
 
-  /** Long press on the map: what is there (`;` and the cell). */
+  /** A hit on a map cell (map rows only), as screen coordinates. */
+  #mapCell(hit: ReturnType<TermRenderer['hitTest']>): { x: number; y: number } | null {
+    if (hit?.kind !== 'cell' || (hit.view !== 'map' && hit.view !== 'screen')) return null;
+    if (hit.y < MAP_TOP || hit.y >= MAP_TOP + MAP_ROWS) return null;
+    return { x: hit.x, y: hit.y };
+  }
+
+  /**
+   * Long press on the map. Next to the hero: what can be done there,
+   * NetHack's own #therecmdmenu (mouse2): open, unlock or kick a door, search
+   * a wall, talk to, swap with or name a pet, attack... (With nothing to
+   * offer, the game walks there.) Farther away, where that menu has nothing
+   * but travel (which a tap already does): what is there, NetHack's farlook
+   * (`;` and the place). While choosing a place: that place.
+   */
   #longPress(clientX: number, clientY: number): void {
-    const hit = this.#renderer?.hitTest(clientX, clientY);
-    if (hit?.kind !== 'cell' || (hit.view !== 'map' && hit.view !== 'screen') || this.#context !== 'map')
+    const cell = this.#mapCell(this.#renderer?.hitTest(clientX, clientY) ?? null);
+    if (!cell) return;
+    if (this.#context === 'position') {
+      this.#post({ type: 'input', click: { ...cell, button: 1 } });
       return;
-    if (hit.y < MAP_TOP || hit.y >= MAP_TOP + MAP_ROWS) return;
-    this.#send([';'.charCodeAt(0)]);
-    this.#post({ type: 'input', click: { x: hit.x, y: hit.y, button: 1 } });
+    }
+    const hero = this.#state ? heroCell(this.#state) : null;
+    if (this.#context !== 'map' || !hero) return;
+    if (Math.max(Math.abs(cell.x - hero.x), Math.abs(cell.y - hero.y)) <= 1) {
+      this.#post({ type: 'input', click: { ...cell, button: 2 } });
+      return;
+    }
+    this.#script = { started: Date.now(), steps: [{ context: 'position', click: cell }] };
+    this.#send([59]);
   }
 
   #panBy(dx: number, dy: number): void {

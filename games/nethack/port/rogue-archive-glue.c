@@ -191,7 +191,10 @@ ra_set_plname(const char *name)
 }
 
 /* ------------------------------------------------------------------------ */
-/* Read-only state for the shell (adapter/state.ts mirrors this order). */
+/* Read-only state for the shell (adapter/state.ts mirrors this order).
+   Only what the player can see or knows: the displayed map, the status
+   line, the inventory; never unseen monsters or traps, prayer timeout or
+   Luck. */
 
 enum {
     RA_IN_GAME,     /* the game is running (the move loop) */
@@ -204,22 +207,89 @@ enum {
     RA_Y,
     RA_MOVES,
     RA_HUNGER,      /* u.uhs: 0 satiated, 1 not hungry, 2 hungry .. 6 starved */
+    RA_UNDERFOOT,   /* RA_FEAT_*: what the hero stands on */
+    RA_OBJECTS,     /* objects seen here */
+    RA_HERE_FLAGS,  /* RA_HERE_*: a container, a corpse here */
+    RA_ADJACENT,    /* bit i: a displayed hostile monster in direction i (xdir/ydir order: h y k u l n j b) */
+    RA_ADJ_CHAR,    /* the displayed symbol of the first of them */
+    RA_TARGET_DIR,  /* the nearest displayed hostile in a straight line within 8 squares: its direction, or -1 */
+    RA_TARGET_CHAR,
+    RA_TARGET_DIST,
+    RA_TROUBLE,     /* RA_TROUBLE_*: shown on the status line or by the hit points */
+    RA_ENCUMBRANCE, /* near_capacity(): 0 unencumbered .. 5 overloaded */
+    RA_QUIVER,      /* the quiver holds something that can be fired or thrown as it is */
+    RA_SPELLS,      /* a spell is known */
+    RA_UNPAID,      /* in a shop with unpaid items */
+    RA_CARRY_CORPSE,/* carrying a corpse (for #offer) */
+    RA_GETPOS,      /* choosing a position (getpos) */
     RA_FIELDS
 };
 
+enum {
+    RA_FEAT_NONE, RA_FEAT_DOWN, RA_FEAT_UP, RA_FEAT_LADDER_DOWN, RA_FEAT_LADDER_UP,
+    RA_FEAT_ALTAR, RA_FEAT_FOUNTAIN, RA_FEAT_SINK, RA_FEAT_THRONE, RA_FEAT_TRAP
+};
+#define RA_HERE_CONTAINER 1
+#define RA_HERE_CORPSE 2
+#define RA_TROUBLE_STONED 1
+#define RA_TROUBLE_SLIMED 2
+#define RA_TROUBLE_STRANGLED 4
+#define RA_TROUBLE_SICK 8
+#define RA_TROUBLE_HUNGER 16   /* weak or worse */
+#define RA_TROUBLE_HP 32       /* hit points below 1/7 of the maximum, or 5 or less */
+#define RA_TROUBLE_ENGULFED 64
+#define RA_TROUBLE_TRAPPED 128
+#define RA_TROUBLE_LEVITATING 256
+#define RA_TROUBLE_BLIND 512
+
 static int ra_state_buf[RA_FIELDS];
+
+/* A displayed hostile monster at x,y: shown on the map as a monster (not a
+   pet), and one the hero can see that is not peaceful (farlook says which). */
+static int
+ra_hostile_at(coordxy x, coordxy y)
+{
+    struct monst *mtmp;
+    int glyph;
+
+    if (!isok(x, y))
+        return 0;
+    glyph = glyph_at(x, y);
+    if (!glyph_is_monster(glyph) || glyph_is_pet(glyph))
+        return 0;
+    mtmp = m_at(x, y);
+    return mtmp && canspotmon(mtmp) && !mtmp->mtame && !mtmp->mpeaceful;
+}
+
+static int
+ra_displayed_char(coordxy x, coordxy y)
+{
+    glyph_info info;
+
+    map_glyphinfo(x, y, glyph_at(x, y), 0, &info);
+    return info.ttychar;
+}
 
 EMSCRIPTEN_KEEPALIVE int *
 ra_state(void)
 {
     int *s = ra_state_buf;
+    int i, hp, hpmax;
+    struct obj *otmp;
+    struct trap *trap;
+    stairway *stway;
+    schar typ;
 
     memset(s, 0, sizeof ra_state_buf);
+    s[RA_TARGET_DIR] = -1;
+    s[RA_GETPOS] = gg.getposx != 0;
     s[RA_IN_GAME] = program_state.in_moveloop ? 1 : 0;
     if (!program_state.in_moveloop)
         return s;
-    s[RA_HP] = Upolyd ? u.mh : u.uhp;
-    s[RA_HPMAX] = Upolyd ? u.mhmax : u.uhpmax;
+    hp = Upolyd ? u.mh : u.uhp;
+    hpmax = Upolyd ? u.mhmax : u.uhpmax;
+    s[RA_HP] = hp;
+    s[RA_HPMAX] = hpmax;
     s[RA_EN] = u.uen;
     s[RA_ENMAX] = u.uenmax;
     s[RA_DEPTH] = depth(&u.uz);
@@ -227,6 +297,88 @@ ra_state(void)
     s[RA_Y] = u.uy;
     s[RA_MOVES] = (int) svm.moves;
     s[RA_HUNGER] = u.uhs;
+
+    /* Underfoot: the hero knows what they stand on. */
+    typ = levl[u.ux][u.uy].typ;
+    if ((stway = stairway_at(u.ux, u.uy)) != 0)
+        s[RA_UNDERFOOT] = stway->isladder ? (stway->up ? RA_FEAT_LADDER_UP : RA_FEAT_LADDER_DOWN)
+                                          : (stway->up ? RA_FEAT_UP : RA_FEAT_DOWN);
+    else if (IS_ALTAR(typ))
+        s[RA_UNDERFOOT] = RA_FEAT_ALTAR;
+    else if (IS_FOUNTAIN(typ))
+        s[RA_UNDERFOOT] = RA_FEAT_FOUNTAIN;
+    else if (IS_SINK(typ))
+        s[RA_UNDERFOOT] = RA_FEAT_SINK;
+    else if (IS_THRONE(typ))
+        s[RA_UNDERFOOT] = RA_FEAT_THRONE;
+    else if ((trap = t_at(u.ux, u.uy)) != 0 && trap->tseen)
+        s[RA_UNDERFOOT] = RA_FEAT_TRAP;
+
+    /* Objects here (those the hero can see or has felt). */
+    if (!u.uswallow)
+        for (otmp = vobj_at(u.ux, u.uy); otmp; otmp = otmp->nexthere) {
+            s[RA_OBJECTS]++;
+            if (Is_container(otmp))
+                s[RA_HERE_FLAGS] |= RA_HERE_CONTAINER;
+            if (otmp->otyp == CORPSE)
+                s[RA_HERE_FLAGS] |= RA_HERE_CORPSE;
+        }
+
+    /* Adjacent hostiles, and the nearest one lined up within 8 squares. */
+    for (i = 0; i < N_DIRS; i++) {
+        int dist;
+
+        if (ra_hostile_at(u.ux + xdir[i], u.uy + ydir[i])) {
+            if (!s[RA_ADJACENT])
+                s[RA_ADJ_CHAR] = ra_displayed_char(u.ux + xdir[i], u.uy + ydir[i]);
+            s[RA_ADJACENT] |= 1 << i;
+        }
+        for (dist = 1; dist <= 8; dist++) {
+            coordxy x = u.ux + dist * xdir[i], y = u.uy + dist * ydir[i];
+
+            if (!isok(x, y) || !couldsee(x, y) || IS_OBSTRUCTED(levl[x][y].typ))
+                break;
+            if (ra_hostile_at(x, y)) {
+                if (s[RA_TARGET_DIR] < 0 || dist < s[RA_TARGET_DIST]) {
+                    s[RA_TARGET_DIR] = i;
+                    s[RA_TARGET_DIST] = dist;
+                    s[RA_TARGET_CHAR] = ra_displayed_char(x, y);
+                }
+                break;
+            }
+        }
+    }
+
+    /* Trouble the player can see: status conditions and hit points. */
+    if (Stoned)
+        s[RA_TROUBLE] |= RA_TROUBLE_STONED;
+    if (Slimed)
+        s[RA_TROUBLE] |= RA_TROUBLE_SLIMED;
+    if (Strangled)
+        s[RA_TROUBLE] |= RA_TROUBLE_STRANGLED;
+    if (Sick)
+        s[RA_TROUBLE] |= RA_TROUBLE_SICK;
+    if (u.uhs >= WEAK)
+        s[RA_TROUBLE] |= RA_TROUBLE_HUNGER;
+    if (hp < 6 || (hpmax > 0 && hp * 7 < hpmax))
+        s[RA_TROUBLE] |= RA_TROUBLE_HP;
+    if (u.uswallow)
+        s[RA_TROUBLE] |= RA_TROUBLE_ENGULFED;
+    if (u.utrap)
+        s[RA_TROUBLE] |= RA_TROUBLE_TRAPPED;
+    if (Levitation)
+        s[RA_TROUBLE] |= RA_TROUBLE_LEVITATING;
+    if (Blind)
+        s[RA_TROUBLE] |= RA_TROUBLE_BLIND;
+    s[RA_ENCUMBRANCE] = near_capacity();
+
+    /* Ranged attacks and magic. */
+    s[RA_QUIVER] = uquiver && !(is_ammo(uquiver) && !ammo_and_launcher(uquiver, uwep));
+    s[RA_SPELLS] = spellid(0) != NO_SPELL;
+    s[RA_UNPAID] = *u.ushops && count_unpaid(gi.invent) > 0;
+    for (otmp = gi.invent; otmp; otmp = otmp->nobj)
+        if (otmp->otyp == CORPSE)
+            s[RA_CARRY_CORPSE] = 1;
     return s;
 }
 

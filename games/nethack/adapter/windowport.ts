@@ -99,6 +99,9 @@ const STATUS_ORDER: readonly (readonly number[])[] = [
   [20, 10, 18, 19, 11, 12, 14, 13, 21, 15, 16, 17, 9, 22, 23, 24, 25, 26],
 ];
 
+/** The state field that says getpos is running (port/rogue-archive-glue.c RA_GETPOS). */
+const GETPOS_FIELD = 24;
+
 /** menu_item flags (include/wintype.h). */
 const MENU_ITEMFLAGS_SELECTED = 0x1;
 /** select_menu "how". */
@@ -112,7 +115,19 @@ const DEL = 127;
 const SPACE = 32;
 
 export type NhContext =
-  'loading' | 'map' | 'more' | 'yn' | 'item' | 'direction' | 'menu' | 'text' | 'getlin' | 'extcmd' | 'over';
+  | 'loading'
+  | 'map'
+  | 'more'
+  | 'yn'
+  | 'item'
+  | 'direction'
+  | 'menu'
+  | 'text'
+  | 'getlin'
+  | 'extcmd'
+  /** Choosing a map position (getpos: travel, farlook, jump...). */
+  | 'position'
+  | 'over';
 
 export type NhInput = { key: number } | { click: { x: number; y: number; button: number } };
 
@@ -141,6 +156,8 @@ export interface NhFrame {
   menu: { how: number; items: MenuItemView[]; page: number; pages: number; title: string } | null;
   /** Read-only game state (port/rogue-archive-glue.c ra_state). */
   state: Int32Array;
+  /** The messages of this turn (since the player last gave a key on the map). */
+  messages: string[];
   /** Where the menu or text window is drawn on the screen, if one is. */
   overlay: { x: number; y: number; width: number; height: number } | null;
 }
@@ -901,15 +918,18 @@ export class WindowPort {
     const ptr = mod._ra_state();
     const state = new Int32Array(this.#stateFields);
     for (let i = 0; i < this.#stateFields; i++) state[i] = mod.getValue(ptr + i * 4, 'i32');
+    // Waiting for a key on the map while getpos runs: choosing a position.
+    const context = this.#context === 'map' && state[GETPOS_FIELD] === 1 ? 'position' : this.#context;
     this.#host.frame({
       cells: this.cells,
       under: this.under,
       tiles: this.tiles,
       cursor: { ...this.#cursor, visible: this.#context === 'map' && !this.#overlay },
-      context: this.#context,
+      context,
       prompt: this.#prompt,
       menu: this.#menuView,
       state,
+      messages: [...this.#turnMessages],
       overlay: this.#overlayRect,
     });
   }

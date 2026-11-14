@@ -11,6 +11,7 @@ import {
   type TouchAction,
   type TouchControlLayout,
 } from '@rogue-archive/game-api';
+import { DIR_ARROWS, DIR_KEYS, MAJOR_TROUBLE, type NetHackState } from './state.ts';
 import type { NhContext } from './windowport.ts';
 
 const k = (key: string): number[] => [...key].map((c) => c.charCodeAt(0));
@@ -341,6 +342,305 @@ export const NETHACK_COMMANDS: NetHackCommand[] = [
   { id: 'self', label: 'At yourself', shortLabel: 'Self', shortcut: '.', keys: k('.'), category: 'Keys' },
   { id: 'dir-down', label: 'Downwards', shortLabel: 'Down ▾', shortcut: '>', keys: k('>'), category: 'Keys' },
   { id: 'dir-up', label: 'Upwards', shortLabel: 'Up ▴', shortcut: '<', keys: k('<'), category: 'Keys' },
+  {
+    id: 'search-10',
+    label: 'Search 10 times',
+    shortLabel: 'Search ×10',
+    shortcut: '10s',
+    keys: k('10s'),
+    category: 'Movement',
+  },
+  {
+    id: 'rest-20',
+    label: 'Rest 20 moves',
+    shortLabel: 'Rest ×20',
+    shortcut: '20.',
+    keys: k('20.'),
+    category: 'Movement',
+  },
+  {
+    id: 'travel-down',
+    label: 'Travel to the stairs down',
+    shortLabel: 'To stairs ▾',
+    shortcut: '_ >',
+    keys: k('_>.'),
+    category: 'Movement',
+  },
+  {
+    id: 'travel-up',
+    label: 'Travel to the stairs up',
+    shortLabel: 'To stairs ▴',
+    shortcut: '_ <',
+    keys: k('_<.'),
+    category: 'Movement',
+  },
+  {
+    id: 'run',
+    label: 'Run (Shift + direction, G)',
+    shortLabel: 'Run',
+    shortcut: 'G',
+    keys: k('G'),
+    category: 'Movement',
+  },
+  {
+    id: 'quiver',
+    label: 'Fill the quiver',
+    shortLabel: 'Quiver',
+    shortcut: 'Q',
+    keys: k('Q'),
+    category: 'Combat',
+  },
+  {
+    id: 'elbereth',
+    label: 'Engrave Elbereth in the dust',
+    shortLabel: 'Elbereth',
+    shortcut: 'E - Elbereth',
+    keys: [],
+    category: 'Combat',
+  },
+  {
+    id: 'pay',
+    label: 'Pay the shopkeeper',
+    shortLabel: 'Pay',
+    shortcut: 'p',
+    keys: k('p'),
+    category: 'Actions',
+  },
+  {
+    id: 'offer',
+    label: 'Offer a sacrifice',
+    shortLabel: 'Offer',
+    shortcut: '#offer',
+    keys: ext('offer'),
+    category: 'Actions',
+  },
+  {
+    id: 'sit',
+    label: 'Sit down',
+    shortLabel: 'Sit',
+    shortcut: '#sit',
+    keys: ext('sit'),
+    category: 'Actions',
+  },
+  {
+    id: 'dip',
+    label: 'Dip an object into something',
+    shortLabel: 'Dip',
+    shortcut: '#dip',
+    keys: ext('dip'),
+    category: 'Actions',
+  },
+  {
+    id: 'force',
+    label: 'Force a lock',
+    shortLabel: 'Force',
+    shortcut: '#force',
+    keys: ext('force'),
+    category: 'Actions',
+  },
+  {
+    id: 'untrap',
+    label: 'Untrap something',
+    shortLabel: 'Untrap',
+    shortcut: '#untrap',
+    keys: ext('untrap'),
+    category: 'Actions',
+  },
+  {
+    id: 'tip',
+    label: 'Empty a container',
+    shortLabel: 'Tip',
+    shortcut: '#tip',
+    keys: ext('tip'),
+    category: 'Actions',
+  },
+  {
+    id: 'rub',
+    label: 'Rub a lamp or a stone',
+    shortLabel: 'Rub',
+    shortcut: '#rub',
+    keys: ext('rub'),
+    category: 'Actions',
+  },
+  {
+    id: 'invoke',
+    label: "Invoke an object's special powers",
+    shortLabel: 'Invoke',
+    shortcut: '#invoke',
+    keys: ext('invoke'),
+    category: 'Actions',
+  },
+  {
+    id: 'jump',
+    label: 'Jump to another location',
+    shortLabel: 'Jump',
+    shortcut: '#jump',
+    keys: ext('jump'),
+    category: 'Actions',
+  },
+  {
+    id: 'ride',
+    label: 'Mount or dismount a steed',
+    shortLabel: 'Ride',
+    shortcut: '#ride',
+    keys: ext('ride'),
+    category: 'Actions',
+  },
+  {
+    id: 'turn',
+    label: 'Turn undead away',
+    shortLabel: 'Turn',
+    shortcut: '#turn',
+    keys: ext('turn'),
+    category: 'Actions',
+  },
+  {
+    id: 'monster',
+    label: "Use your monster form's ability",
+    shortLabel: 'Monster',
+    shortcut: '#monster',
+    keys: ext('monster'),
+    category: 'Actions',
+  },
+  {
+    id: 'wipe',
+    label: 'Wipe off your face',
+    shortLabel: 'Wipe',
+    shortcut: '#wipe',
+    keys: ext('wipe'),
+    category: 'Actions',
+  },
+  {
+    id: 'name',
+    label: 'Name a monster, object or object type',
+    shortLabel: 'Name',
+    shortcut: '#name',
+    keys: ext('name'),
+    category: 'Actions',
+  },
+  {
+    id: 'adjust',
+    label: 'Adjust inventory letters',
+    shortLabel: 'Adjust',
+    shortcut: '#adjust',
+    keys: ext('adjust'),
+    category: 'Actions',
+  },
+  {
+    id: 'here-menu',
+    label: 'What you can do here',
+    shortLabel: 'Here…',
+    shortcut: '#herecmdmenu',
+    keys: ext('herecmdmenu'),
+    category: 'Actions',
+  },
+  {
+    id: 'terrain',
+    label: 'View the map without monsters or objects',
+    shortLabel: 'Terrain',
+    shortcut: '#terrain',
+    keys: ext('terrain'),
+    category: 'Information',
+  },
+  {
+    id: 'annotate',
+    label: 'Name the current level',
+    shortLabel: 'Annotate',
+    shortcut: '#annotate',
+    keys: ext('annotate'),
+    category: 'Information',
+  },
+  {
+    id: 'conduct',
+    label: 'Voluntary challenges kept',
+    shortLabel: 'Conduct',
+    shortcut: '#conduct',
+    keys: ext('conduct'),
+    category: 'Information',
+  },
+  {
+    id: 'chronicle',
+    label: 'Journal of major events',
+    shortLabel: 'Chronicle',
+    shortcut: '#chronicle',
+    keys: ext('chronicle'),
+    category: 'Information',
+  },
+  {
+    id: 'vanquished',
+    label: 'Vanquished monsters',
+    shortLabel: 'Vanquished',
+    shortcut: '#vanquished',
+    keys: ext('vanquished'),
+    category: 'Information',
+  },
+  {
+    id: 'pos-select',
+    label: 'Choose this place',
+    shortLabel: 'Select',
+    shortcut: '.',
+    keys: k('.'),
+    category: 'Keys',
+  },
+  {
+    id: 'pos-monster',
+    label: 'Next monster',
+    shortLabel: 'Monster ▸',
+    shortcut: 'm',
+    keys: k('m'),
+    category: 'Keys',
+  },
+  {
+    id: 'pos-monster-prev',
+    label: 'Previous monster',
+    shortLabel: '◂ Monster',
+    shortcut: 'M',
+    keys: k('M'),
+    category: 'Keys',
+  },
+  {
+    id: 'pos-object',
+    label: 'Next object',
+    shortLabel: 'Object ▸',
+    shortcut: 'o',
+    keys: k('o'),
+    category: 'Keys',
+  },
+  { id: 'pos-door', label: 'Next door', shortLabel: 'Door ▸', shortcut: 'd', keys: k('d'), category: 'Keys' },
+  {
+    id: 'pos-unexplored',
+    label: 'Next unexplored place',
+    shortLabel: 'Unexplored ▸',
+    shortcut: 'x',
+    keys: k('x'),
+    category: 'Keys',
+  },
+  {
+    id: 'pos-stairs-down',
+    label: 'Stairs down',
+    shortLabel: 'Stairs ▾',
+    shortcut: '>',
+    keys: k('>'),
+    category: 'Keys',
+  },
+  {
+    id: 'pos-stairs-up',
+    label: 'Stairs up',
+    shortLabel: 'Stairs ▴',
+    shortcut: '<',
+    keys: k('<'),
+    category: 'Keys',
+  },
+  { id: 'pos-altar', label: 'Altar', shortLabel: 'Altar', shortcut: '_', keys: k('_'), category: 'Keys' },
+  { id: 'pos-self', label: 'Yourself', shortLabel: 'You', shortcut: '@', keys: k('@'), category: 'Keys' },
+  {
+    id: 'hands',
+    label: 'Your bare hands',
+    shortLabel: 'Hands',
+    shortcut: '-',
+    keys: k('-'),
+    category: 'Keys',
+  },
 ];
 
 const BY_ID = new Map(NETHACK_COMMANDS.map((command) => [command.id, command]));
@@ -433,23 +733,161 @@ export function promptChoices(prompt: string): string[] {
 }
 
 export interface DockState {
-  hp: number;
-  hpMax: number;
+  /** The game's state snapshot (null before a game). */
+  state: NetHackState | null;
   prompt: string;
-  /** The open menu's items (key and text), for its dock. */
+  /** The open menu (how: 0 read only, 1 one, 2 several). */
   menu: { how: number; items: { key: number; text: string }[]; page: number; pages: number } | null;
+  /** The game said "You feel more confident in your … skills" and #enhance hasn't been used since. */
+  enhance?: boolean;
+  /** This turn's messages ("d - an uncursed food ration." names an item prompt's letters). */
+  messages?: readonly string[];
 }
 
-const MAP_FANS = {
-  search: ['rest', 'search-20', 'travel', 'downstairs', 'upstairs', 'kick'],
-  pickup: ['look-here', 'loot', 'drop', 'drop-many'],
-  inventory: ['eat', 'quaff', 'read', 'wield', 'wear', 'take-off', 'put-on', 'remove', 'apply'],
-  fight: ['throw', 'fire', 'zap', 'cast', 'kick', 'pray'],
-  farlook: ['look-here', 'discoveries', 'equipment', 'attributes', 'overview', 'messages', 'help'],
+/** Item letters named by this turn's messages ("d - an uncursed food ration."). */
+function itemNames(messages: readonly string[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const message of messages) {
+    const match = /^([a-zA-Z$]) - (.+?)\.?$/.exec(message.trim());
+    if (match)
+      names.set(
+        match[1]!,
+        match[2]!.replace(/^(an? |the )/, '').replace(/^(\d+ )?(?:uncursed|blessed|cursed) /, '$1'),
+      );
+  }
+  return names;
+}
+
+/** An item prompt offering only a few items: each is a button. */
+export const FEW_ITEMS = 3;
+
+/** One-tap commands built from the situation: `fight:<dir>`, `fire:<dir>`, `dir:<dir>`, `text:<answer>`. */
+export const FIGHT = 'fight:';
+export const FIRE = 'fire:';
+export const DIR = 'dir:';
+export const TEXT = 'text:';
+
+/** The keys a situational command sends (null for an unknown id). */
+export function dynamicKeys(id: string): number[] | null {
+  const dir = (prefix: string) => DIR_KEYS[Number(id.slice(prefix.length))];
+  if (id.startsWith(FIGHT)) return dir(FIGHT) ? k(`F${dir(FIGHT)}`) : null;
+  if (id.startsWith(FIRE)) return dir(FIRE) ? k(`f${dir(FIRE)}`) : null;
+  if (id.startsWith(DIR)) return dir(DIR) ? k(dir(DIR)!) : null;
+  if (id.startsWith(TEXT)) return [...k(id.slice(TEXT.length)), 13];
+  return null;
+}
+
+const FANS = {
+  search: ['rest', 'search-10', 'search-20', 'rest-20', 'here-menu'],
+  travel: ['travel-down', 'travel-up', 'downstairs', 'upstairs', 'run', 'jump'],
+  pack: ['eat', 'quaff', 'read', 'wear', 'wield', 'put-on', 'apply', 'drop-many', 'adjust'],
+  look: ['look-here', 'discoveries', 'equipment', 'overview', 'attributes', 'terrain', 'messages', 'help'],
+  fight: ['fight', 'kick', 'throw', 'fire', 'quiver', 'zap'],
+  magic: ['zap', 'cast', 'apply', 'read', 'invoke', 'turn', 'monster'],
+  survive: ['pray', 'elbereth', 'quaff', 'read', 'travel-up', 'eat'],
 };
 
-export function controlsFor(context: NhContext | 'start', state: DockState): TouchControlLayout {
+/** The first slot on the map: what this place or this moment calls for. */
+export function mapLead(state: NetHackState, enhance = false): TouchAction | null {
+  const primary = { emphasis: 'primary' as const };
+  if (enhance) return a('enhance', primary);
+  if (state.unpaid) return a('pay', primary);
+  switch (state.underfoot) {
+    case 'down':
+    case 'ladder-down':
+      return a('downstairs', { label: 'Down >', ...primary, alternates: FANS.travel });
+    case 'up':
+    case 'ladder-up':
+      return a('upstairs', { label: 'Up <', alternates: FANS.travel });
+    default:
+      break;
+  }
+  if (state.objects > 0)
+    return state.containerHere
+      ? a('loot', { ...primary, alternates: ['pickup', 'tip', 'force', 'look-here'] })
+      : a('pickup', { ...primary, alternates: ['look-here', 'loot'] });
+  if (state.underfoot === 'altar' && (state.corpseHere || state.carryingCorpse))
+    return a('offer', { alternates: ['look-here', 'drop'] });
+  if (state.underfoot === 'fountain' || state.underfoot === 'sink')
+    return a('quaff', { label: 'Drink', alternates: ['dip'] });
+  if (state.underfoot === 'throne') return a('sit');
+  if (state.hunger >= 2) return a('eat', state.hunger >= 3 ? primary : {});
+  if (state.encumbrance >= 2) return a('drop-many');
+  return null;
+}
+
+function mapControls(dock: DockState): TouchControlLayout {
+  const state = dock.state;
   const more = a(SHELL_COMMAND.palette, { label: 'More' });
+  if (!state) return { directionPad: PAD, actions: [more], palette: PALETTE };
+  const adjacent = state.adjacent;
+  const fightAt = (dir: number, char: string) =>
+    a(`${FIGHT}${dir}`, {
+      label: `Fight ${DIR_ARROWS[dir]}${char}`,
+      emphasis: 'primary',
+      alternates: FANS.fight,
+    });
+  const fireAt = (dir: number, char: string) =>
+    a(`${FIRE}${dir}`, { label: `Fire ${DIR_ARROWS[dir]}${char}`, alternates: ['fire', 'throw', 'quiver'] });
+  const magic = state.spellsKnown
+    ? a('cast', { alternates: FANS.magic })
+    : a('zap', { alternates: FANS.magic });
+  const elbereth = a('elbereth', { alternates: FANS.survive });
+
+  // In trouble the player can see (and prayer can fix): pray, heal, hold them off, flee.
+  if (state.trouble & MAJOR_TROUBLE) {
+    const near =
+      adjacent.length > 0 ? fightAt(adjacent[0]!, state.adjacentChar) : a('travel-up', { label: 'Flee ▴' });
+    return {
+      directionPad: PAD,
+      actions: [
+        a('pray', { emphasis: 'primary', alternates: FANS.survive }),
+        a('quaff', { alternates: ['read', 'eat', 'apply', 'zap'] }),
+        elbereth,
+        { ...near, emphasis: undefined },
+        a('inventory', { alternates: FANS.pack }),
+        more,
+      ],
+      palette: PALETTE,
+    };
+  }
+
+  // A hostile monster next to the hero or lined up: fight.
+  if (adjacent.length > 0 || state.target) {
+    const target = state.target;
+    const ranged =
+      state.quiverReady && target
+        ? fireAt(target.dir, target.char)
+        : a('throw', { alternates: ['fire', 'quiver', 'zap'] });
+    const first =
+      adjacent.length > 0
+        ? fightAt(adjacent[0]!, state.adjacentChar)
+        : { ...ranged, emphasis: 'primary' as const };
+    const second = adjacent.length > 0 ? ranged : a('fight', { alternates: FANS.fight });
+    return {
+      directionPad: PAD,
+      actions: [first, second, magic, a('quaff', { alternates: ['read', 'eat', 'apply'] }), elbereth, more],
+      palette: PALETTE,
+    };
+  }
+
+  // Exploring.
+  const lead = mapLead(state, dock.enhance);
+  return {
+    directionPad: PAD,
+    actions: [
+      ...(lead ? [lead] : []),
+      a('search', { alternates: FANS.search }),
+      a('travel', { alternates: FANS.travel }),
+      a('inventory', { alternates: FANS.pack }),
+      a('farlook', { alternates: FANS.look }),
+      more,
+    ],
+    palette: PALETTE,
+  };
+}
+
+export function controlsFor(context: NhContext | 'start', dock: DockState): TouchControlLayout {
   switch (context) {
     case 'start':
     case 'loading':
@@ -467,7 +905,7 @@ export function controlsFor(context: NhContext | 'start', state: DockState): Tou
         palette: PALETTE,
       };
     case 'menu': {
-      const menu = state.menu;
+      const menu = dock.menu;
       const paging = menu && menu.pages > 1;
       if (menu?.how === 0)
         return {
@@ -490,7 +928,7 @@ export function controlsFor(context: NhContext | 'start', state: DockState): Tou
       };
     }
     case 'yn': {
-      const letters = promptChoices(state.prompt).slice(0, 6);
+      const letters = promptChoices(dock.prompt).slice(0, 6);
       return {
         actions: [
           ...letters.map((letter, i) =>
@@ -505,48 +943,85 @@ export function controlsFor(context: NhContext | 'start', state: DockState): Tou
       };
     }
     case 'item': {
-      // "What do you want to eat? [fg or ?*]": the list of candidates first.
+      // The suitable items open at once (the adapter sends `?`); these are the rest.
+      const choices = promptChoices(dock.prompt);
+      const hands = choices.includes('-');
+      const letters = choices.filter((c) => c !== '-');
+      const names = itemNames(dock.messages ?? []);
+      // A few items (one food ration, two wands): one button each, named when the game has said.
+      const items =
+        letters.length > 0 && letters.length <= FEW_ITEMS
+          ? letters.map((letter, i) => {
+              const name = names.get(letter);
+              return a(`${KEY}${letter.charCodeAt(0)}`, {
+                label: name ? `${letter} ${name.length > 20 ? `${name.slice(0, 19)}…` : name}` : letter,
+                ...(i === 0 ? { emphasis: 'primary' as const } : {}),
+              });
+            })
+          : [];
       return {
         actions: [
-          a('list', { label: 'Choose', emphasis: 'primary' }),
+          ...items,
+          a('list', { label: 'Choose', ...(items.length ? {} : { emphasis: 'primary' as const }) }),
           a('list-all'),
+          ...(hands ? [a('hands')] : []),
           a('cancel'),
-          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ...(items.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
         palette: PALETTE,
       };
     }
-    case 'direction':
+    case 'direction': {
+      const target = dock.state?.target ?? null;
+      const adjacent = dock.state?.adjacent ?? [];
+      const toward = adjacent.length > 0 ? { dir: adjacent[0]!, char: dock.state!.adjacentChar } : target;
       return {
         directionPad: { ...PAD, center: 'self' },
-        actions: [a('dir-down'), a('dir-up'), a('cancel')],
+        actions: [
+          ...(toward
+            ? [
+                a(`${DIR}${toward.dir}`, {
+                  label: `At ${DIR_ARROWS[toward.dir]}${toward.char}`,
+                  emphasis: 'primary' as const,
+                }),
+              ]
+            : []),
+          a('dir-down'),
+          a('dir-up'),
+          a('cancel'),
+        ],
+        palette: PALETTE,
+      };
+    }
+    case 'position':
+      // Tapping the map chooses a place; the pad moves the cursor.
+      return {
+        directionPad: { ...PAD, center: 'pos-select' },
+        actions: [
+          a('pos-select', { emphasis: 'primary' }),
+          a('pos-monster', { alternates: ['pos-monster-prev', 'pos-object', 'pos-door', 'pos-unexplored'] }),
+          a('pos-stairs-down', { alternates: ['pos-stairs-up', 'pos-altar'] }),
+          a('pos-self'),
+          a('cancel'),
+        ],
         palette: PALETTE,
       };
     case 'getlin':
-    case 'extcmd':
+    case 'extcmd': {
+      // Engraving: Elbereth is the usual answer.
+      const engraving = /write|engrave|burn|melt|scribble/i.test(dock.prompt);
       return {
         actions: [
+          ...(engraving ? [a(`${TEXT}Elbereth`, { label: 'Elbereth' })] : []),
           a(SHELL_COMMAND.keyboard, { label: 'Type', emphasis: 'primary' }),
           a('confirm'),
           a('cancel'),
         ],
         palette: PALETTE,
       };
-    case 'map':
-    default: {
-      const wounded = state.hpMax > 0 && state.hp < state.hpMax / 3;
-      return {
-        directionPad: PAD,
-        actions: [
-          a('search', { alternates: MAP_FANS.search, ...(wounded ? {} : {}) }),
-          a('pickup', { alternates: MAP_FANS.pickup }),
-          a('inventory', { alternates: MAP_FANS.inventory }),
-          a('fight', { alternates: MAP_FANS.fight }),
-          a('farlook', { alternates: MAP_FANS.farlook }),
-          more,
-        ],
-        palette: PALETTE,
-      };
     }
+    case 'map':
+    default:
+      return mapControls(dock);
   }
 }

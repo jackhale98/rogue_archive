@@ -140,13 +140,15 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] WASM build: upstream's own web build (`make CROSS_TO_WASM=1`, the shim window port) from the pinned release; one patch so its web main file links at 5.0.0; `TILES_IN_GLYPHMAP` and upstream's generated `tile.c`, as its tile ports
 - [x] Window port in the worker, answering the shim's calls as tty draws them: map, message line, two status lines, menus and text windows (paged, tty's keys), prompts, typed lines and extended commands, map clicks
 - [x] Text or NetHack's own tiles (upstream's `tile2bmp` sheet)
-- [x] Phone layout: status band, map following the hero (pinch, drag), menus and text windows as large tappable sheets, tap the map to travel, long-press to look
-- [x] First touch dock: prompt answers as buttons, item prompts (Choose), directions (pad, up, down, self), menus (Accept, All, pages), map (Search, Pick up, Pack, Fight, Look, More with fans)
+- [x] Phone layout: status band (this turn's messages, up to three lines), map following the hero (pinch, drag), menus and text windows as large tappable sheets
+- [x] Controls audit and design (docs/design/nethack-controls.md): the game's own context menus first
+- [x] Map gestures: tap a cell (NetHack's `mouseaction`: travel, move, attack, open), tap the hero (`#herecmdmenu`), long-press next to the hero (`#therecmdmenu`), long-press farther away (farlook); the mouse buttons bound in `~/.nethackrc`
+- [x] Context-aware dock from read-only glue (what the player sees and knows): exploring (a lead for stairs, objects, altars, fountains, thrones, hunger, shops, burden, Enhance), fighting (one-tap Fight and Fire at the monster, Cast or Zap, Quaff, Elbereth), trouble (Pray, Quaff, Elbereth, Flee)
+- [x] Prompt docks: yes/no answers; item prompts (the suitable items at once, or a button each for up to three); directions (At the monster, self, up, down); positions (Select, Monster, Stairs, Yourself, tap to choose); the Elbereth engraving answered; --More-- continues by itself unless set to wait
 - [x] Saves and scores in IndexedDB; save and continue as the same character; export/import; the leave dialog's Save and leave
 - [x] Engine checks: upstream drift (shim calls, formats, structures); a game played under Node with the port's window port (creation, map, status, inventory, save, continue)
-- [x] e2e: desktop (creation, map and status, inventory, tiles, save and continue after reload) and phone (creation by taps, band, sheets, dock, travel by tap, tiles)
+- [x] e2e: desktop (creation, map and status, inventory, tiles, save and continue after reload) and phone (creation by taps, band, sheets, dock, travel by tap, tiles; tap the hero, long-press, item buttons, travel by position, Elbereth)
 - [x] CI build, deploy, weekly canary (latest release and the NetHack-5.0 branch)
-- [ ] Controls audit (as for the other games): context-aware dock for a full run
 - [ ] Native vs WebAssembly comparison of seeded games; key coverage against `cmd.c`
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { KEY, controlsFor, keyToNetHack, promptChoices } from '../adapter/input.ts';
-import { heroCell, parseState } from '../adapter/state.ts';
+import {
+  DIR,
+  FIGHT,
+  FIRE,
+  KEY,
+  NETHACK_COMMANDS,
+  TEXT,
+  controlsFor,
+  dynamicKeys,
+  keyToNetHack,
+  mapLead,
+  promptChoices,
+} from '../adapter/input.ts';
+import { TROUBLE, directionTo, heroCell, parseState, type NetHackState } from '../adapter/state.ts';
 import {
   WindowPort,
   promptContext,
@@ -237,19 +249,36 @@ describe('NetHack prompts, keys and docks', () => {
   });
 
   it('offers each prompt’s answers and a dock per context', () => {
-    const state = { hp: 10, hpMax: 10, prompt: 'Really save? [yn] (n)', menu: null };
-    const yn = controlsFor('yn', state).actions.map((a) =>
+    const dock = { state: null, prompt: 'Really save? [yn] (n)', menu: null };
+    const yn = controlsFor('yn', dock).actions.map((a) =>
       typeof a === 'string' ? a : (a.label ?? a.command),
     );
     expect(yn).toEqual(['Yes', 'No', 'cancel']);
-    expect(controlsFor('yn', state).actions[0]).toMatchObject({ command: `${KEY}121` });
-    expect(controlsFor('direction', state).directionPad?.center).toBe('self');
-    expect(controlsFor('map', state).directionPad).toBeDefined();
-    expect(controlsFor('start', state).actions).toEqual([]);
+    expect(controlsFor('yn', dock).actions[0]).toMatchObject({ command: `${KEY}121` });
+    expect(controlsFor('direction', dock).directionPad?.center).toBe('self');
+    expect(controlsFor('start', dock).actions).toEqual([]);
   });
 
   it('reads the state snapshot', () => {
-    const state = parseState([1, 12, 16, 3, 5, 2, 40, 10, 77, 2]);
+    const state = parseState([
+      1, 12, 16, 3, 5, 2, 40, 10, 77, 2, 1, 2, 3, 0b10010, 100, 4, 70, 3, 32, 1, 1, 1, 0, 1, 0,
+    ]);
+    expect(state).toMatchObject({
+      underfoot: 'down',
+      objects: 2,
+      containerHere: true,
+      corpseHere: true,
+      adjacent: [1, 4],
+      adjacentChar: 'd',
+      target: { dir: 4, char: 'F', distance: 3 },
+      trouble: TROUBLE.hp,
+      encumbrance: 1,
+      quiverReady: true,
+      spellsKnown: true,
+      unpaid: false,
+      carryingCorpse: true,
+      choosingPosition: false,
+    });
     expect(state).toMatchObject({
       inGame: true,
       hp: 12,
@@ -261,5 +290,127 @@ describe('NetHack prompts, keys and docks', () => {
       hunger: 2,
     });
     expect(heroCell(state)).toEqual({ x: 39, y: 11 });
+  });
+});
+
+describe('NetHack touch controls (docs/design/nethack-controls.md)', () => {
+  const base: NetHackState = parseState([1, 20, 20, 5, 5, 1, 40, 10, 100, 1]);
+  const at = (extra: Partial<NetHackState>): NetHackState => ({ ...base, ...extra });
+  const dock = (state: NetHackState, extra: object = {}) => ({ state, prompt: '', menu: null, ...extra });
+  const commands = (state: NetHackState, extra: object = {}) =>
+    controlsFor('map', dock(state, extra)).actions.map((a) => (typeof a === 'string' ? a : a.command));
+  const labels = (state: NetHackState) =>
+    controlsFor('map', dock(state)).actions.map((a) => (typeof a === 'string' ? a : (a.label ?? a.command)));
+
+  it('explores with Search, Travel, Pack, Look and More, and a lead for the place', () => {
+    expect(commands(base)).toEqual(['search', 'travel', 'inventory', 'farlook', 'shell:palette']);
+    expect(labels(at({ underfoot: 'down' }))[0]).toBe('Down >');
+    expect(commands(at({ objects: 2 }))[0]).toBe('pickup');
+    expect(commands(at({ objects: 1, containerHere: true }))[0]).toBe('loot');
+    expect(commands(at({ underfoot: 'altar', carryingCorpse: true }))[0]).toBe('offer');
+    expect(labels(at({ underfoot: 'fountain' }))[0]).toBe('Drink');
+    expect(commands(at({ underfoot: 'throne' }))[0]).toBe('sit');
+    expect(commands(at({ hunger: 2 }))[0]).toBe('eat');
+    expect(commands(at({ encumbrance: 2 }))[0]).toBe('drop-many');
+    // Priority: a skill to enhance, then paying, then the stairs.
+    expect(mapLead(at({ unpaid: true, underfoot: 'down' }), true)?.command).toBe('enhance');
+    expect(mapLead(at({ unpaid: true, underfoot: 'down' }))?.command).toBe('pay');
+    expect(mapLead(at({ underfoot: 'down', objects: 3 }))?.command).toBe('downstairs');
+  });
+
+  it('fights an adjacent monster in one tap, and fires at one lined up with a loaded quiver', () => {
+    const adjacent = controlsFor('map', dock(at({ adjacent: [1], adjacentChar: 'd' }))).actions;
+    expect(adjacent[0]).toMatchObject({ command: `${FIGHT}1`, label: 'Fight ↖d', emphasis: 'primary' });
+    expect(dynamicKeys(`${FIGHT}1`)).toEqual([70, 121]);
+    const lined = controlsFor(
+      'map',
+      dock(at({ target: { dir: 4, char: 'j', distance: 4 }, quiverReady: true })),
+    ).actions;
+    expect(lined[0]).toMatchObject({ command: `${FIRE}4`, label: 'Fire →j', emphasis: 'primary' });
+    expect(dynamicKeys(`${FIRE}4`)).toEqual([102, 108]);
+    // No quiver: Throw instead; spells known: Cast, else Zap; Elbereth always there.
+    const noQuiver = commands(at({ target: { dir: 4, char: 'j', distance: 4 } }));
+    expect(noQuiver[0]).toBe('throw');
+    expect(noQuiver).toContain('zap');
+    expect(noQuiver).toContain('elbereth');
+    expect(commands(at({ adjacent: [0], spellsKnown: true }))).toContain('cast');
+  });
+
+  it('prays, heals and holds them off when in trouble the player can see', () => {
+    expect(commands(at({ trouble: TROUBLE.hp }))).toEqual([
+      'pray',
+      'quaff',
+      'elbereth',
+      'travel-up',
+      'inventory',
+      'shell:palette',
+    ]);
+    expect(commands(at({ trouble: TROUBLE.hunger, adjacent: [2], adjacentChar: 'k' }))[3]).toBe(`${FIGHT}2`);
+    // Blindness or levitation alone are not a reason to pray.
+    expect(commands(at({ trouble: TROUBLE.blind | TROUBLE.levitating }))[0]).toBe('search');
+  });
+
+  it('answers directions, positions, item prompts and engravings', () => {
+    const direction = controlsFor('direction', dock(at({ adjacent: [6], adjacentChar: 'r' }))).actions;
+    expect(direction[0]).toMatchObject({ command: `${DIR}6`, label: 'At ↓r' });
+    expect(dynamicKeys(`${DIR}6`)).toEqual([106]);
+    expect(
+      controlsFor('position', dock(base)).actions.map((a) => (typeof a === 'string' ? a : a.command)),
+    ).toEqual(['pos-select', 'pos-monster', 'pos-stairs-down', 'pos-self', 'cancel']);
+    const item = controlsFor(
+      'item',
+      dock(base, { prompt: 'What do you want to write with? [- abc or ?*]' }),
+    ).actions;
+    expect(item.map((a) => (typeof a === 'string' ? a : a.command))).toContain('hands');
+    // A few items: a button each, named from the game's answer to `?`.
+    const food = controlsFor(
+      'item',
+      dock(base, {
+        prompt: 'What do you want to eat? [d or ?*]',
+        messages: ['What do you want to eat? [d or ?*] ?', 'd - an uncursed food ration.'],
+      }),
+    ).actions;
+    expect(food[0]).toMatchObject({ command: `${KEY}100`, label: 'd food ration', emphasis: 'primary' });
+    const two = controlsFor(
+      'item',
+      dock(base, {
+        prompt: 'What do you want to eat? [d or ?*]',
+        messages: ['d - 2 uncursed food rations.'],
+      }),
+    ).actions;
+    expect(two[0]).toMatchObject({ label: 'd 2 food rations' });
+    const engrave = controlsFor(
+      'getlin',
+      dock(base, { prompt: 'What do you want to write in the dust here?' }),
+    );
+    expect(engrave.actions[0]).toMatchObject({ command: `${TEXT}Elbereth` });
+    expect(dynamicKeys(`${TEXT}Elbereth`)).toEqual([...[...'Elbereth'].map((c) => c.charCodeAt(0)), 13]);
+  });
+
+  it('turns a tap into the direction NetHack reads from a sloppy click', () => {
+    const hero = at({ x: 40, y: 10 }); // screen cell (39, 11)
+    expect(directionTo(hero, { x: 45, y: 11 })).toBe(4);
+    expect(directionTo(hero, { x: 38, y: 10 })).toBe(1);
+    expect(directionTo(hero, { x: 39, y: 11 })).toBeNull();
+  });
+
+  it('gives every command a key, and every dock command is known', () => {
+    for (const command of NETHACK_COMMANDS)
+      if (command.id !== 'elbereth') expect(command.keys.length, command.id).toBeGreaterThan(0);
+    const ids = new Set(NETHACK_COMMANDS.map((command) => command.id));
+    const situations = [
+      base,
+      at({ underfoot: 'down', objects: 1 }),
+      at({ adjacent: [3], adjacentChar: 'x', target: { dir: 3, char: 'x', distance: 1 }, quiverReady: true }),
+      at({ trouble: TROUBLE.hp, adjacent: [0] }),
+    ];
+    for (const state of situations)
+      for (const action of controlsFor('map', dock(state, { enhance: true })).actions) {
+        const id = typeof action === 'string' ? action : action.command;
+        if (id.startsWith('shell:') || dynamicKeys(id)) continue;
+        expect(ids.has(id), id).toBe(true);
+        for (const alternate of (typeof action === 'string' ? [] : action.alternates) ?? [])
+          expect(ids.has(alternate), alternate).toBe(true);
+      }
   });
 });

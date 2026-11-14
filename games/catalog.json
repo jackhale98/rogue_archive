@@ -719,12 +719,11 @@
         },
         {
           "keys": "Phone",
-          "action": "Thumb pad, a dock that follows the game (prompts, menus, directions), menus as large tappable sheets, tap the map to travel, long-press to look"
+          "action": "Thumb pad and a dock that follows the game (exploring, fighting, trouble, and every prompt); tap the map to travel or move, tap yourself for what you can do here, long-press next to you for what you can do there (farther away: what is there); menus as large tappable sheets"
         }
       ],
       "knownLimitations": [
         "Not yet tested on physical phones; touch controls are verified in Chromium's mobile emulation only.",
-        "The touch dock is a first version; a full controls audit (as for the other games) is still to come.",
         "Bones files (ghosts of earlier characters) are not kept between sessions.",
         "Whether desktop NetHack 5.0.0 can open save files made here (32-bit WebAssembly) is untested."
       ],
@@ -737,7 +736,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Character creation by taps, the status band, menus as sheets, the dock, travel by tapping the map and tiles exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Character creation by taps, the status band, menus as sheets, the dock, travel by tapping the map, tapping the hero, long-presses, item buttons, travel by position, the Elbereth button and tiles exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

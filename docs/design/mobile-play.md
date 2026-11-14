@@ -208,18 +208,29 @@ A small hint above the dock says which mode is on, and shows the Orb of Safety's
 NetHack's interface is its window port (`games/nethack/adapter/windowport.ts`), drawn as tty draws it on an 80×24 screen (see [games/nethack/PORTING.md](../../games/nethack/PORTING.md)).
 
 - **Layout on phones:** a band with NetHack's two status lines (hit points as a bar) and the message line (tap for the message log); the map at a readable size following the hero (pinch to zoom, drag to look around), in text or NetHack's own tiles; menus and text windows (the inventory, character creation, help, "Things that are here") lifted into a large sheet over the map, drawn without them, whose "a - item" lines can be tapped.
-- **Taps:** a menu line chooses it (its key, as tty); a text window, a menu only to read or `--More--` continues on a tap anywhere; a map cell travels there (a click, as NetHack's mouse support); a long press looks at a cell (`;`).
-- **Dock (first version; a controls audit is still to come):**
+- **Taps and presses** (the design: [nethack-controls.md](nethack-controls.md)):
+  - a menu line chooses it (its key, as tty); a text window, a menu only to read or `--More--` continues on a tap anywhere;
+  - a map cell: NetHack's own click action (`mouseaction`): far away travels there, next to the hero moves, attacks or opens;
+  - the hero: NetHack's menu of what can be done here (`#herecmdmenu`: stairs, pick up, loot, fountain, altar…);
+  - a long press next to the hero: its menu of what can be done there (`#therecmdmenu`: doors, walls, pets, monsters, traps); farther away: what is there (farlook, `;`);
+  - while choosing a position: the cell; while asked for a direction: the direction towards the cell.
+- **--More--** continues by itself (Settings → *--More-- prompts* → wait, to read each one); the band shows this turn's messages, up to three lines.
+- **Dock:** from a read-only snapshot of what the player sees and knows (never hidden state):
 
 | Context | Dock |
 |---|---|
-| Map | Search (fan: rest, search ×20, travel, stairs down and up, kick) · Pick up (fan: look here, loot, drop, drop several) · Pack (fan: eat, quaff, read, wield, wear, take off, put on, remove, apply) · Fight (fan: throw, fire, zap, cast, kick, pray) · Look (fan: look here, discoveries, equipment, attributes, overview, messages, help) · More; the pad with Search in the centre |
+| Exploring | A lead when the place or moment calls for it (Up/Down on stairs, Pick up or Loot, Offer on an altar with a corpse, Drink at a fountain or sink, Sit on a throne, Eat when hungry, Pay in a shop, Drop several when burdened, Enhance after "You feel more confident") · Search (fan: rest, ×10, ×20, here menu) · Travel (fan: to the stairs, stairs, run, jump) · Pack (fan: eat, quaff, read, wear, wield…) · Look (fan: look here, discoveries, equipment, overview…) · More |
+| Fighting (a hostile monster next to the hero or lined up) | Fight ↖x (one tap, at the monster) · Fire →x (quiver loaded, monster lined up) or Throw · Cast or Zap · Quaff · Elbereth · More |
+| In trouble (stoned, slimed, strangled, ill, weak from hunger, low hit points) | Pray · Quaff · Elbereth · Fight ↖x or Flee ▴ (travel to the up stairs) · Pack · More |
 | Question ("[ynq]") | Its answers as buttons (Yes, No, Quit, All; other letters as themselves), Cancel |
-| Item prompt ("What do you want to eat? [fg or ?*]") | Choose (`?`, NetHack's own list of candidates), All items (`*`), Cancel, Type |
-| Direction | The pad (Self in the centre), Down `>`, Up `<`, Cancel |
+| Item prompt ("What do you want to eat? [fg or ?*]") | For a touch command, the suitable items open at once (`?`); up to three items are buttons of their own (letter and name); Choose, All items (`*`), Hands (`-`) when offered, Cancel |
+| Direction | The pad (Self in the centre), At ↖x (the monster), Down `>`, Up `<`, Cancel; or tap towards a cell |
+| Position (travel, farlook, jump…) | Select (also the pad's centre; the pad moves the cursor), Monster (fan: objects, doors, altars, anything, unexplored), Stairs (fan: up, traps), Yourself, Cancel; or tap the cell |
 | Menu | Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |
 | Text window, `--More--` | Next or Continue, Close |
-| Typed line, extended command | Type (the keyboard), OK, Cancel |
+| Typed line, extended command | Elbereth when engraving, Type (the keyboard), OK, Cancel |
+
+The Elbereth button (fighting, trouble, the command list) engraves it in the dust: `E`, fingers, no to adding to an engraving, the text; every question is still the game's, and the game decides whether it works.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 

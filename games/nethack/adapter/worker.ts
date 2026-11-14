@@ -26,7 +26,10 @@ const SAVE_PREFIX = '0';
 /** Options for every game (NETHACKOPTIONS, read after sysconf): no permanent
     inventory window (sysconf turns it on; the shell shows the inventory as a
     menu), and colour. */
+/** The player's home directory, where NetHack looks for its .nethackrc. */
+const HOME = '/home/nethack';
 const OPTIONS = '!perm_invent,color';
+const CONFIG = ['BIND=mouse1:mouseaction', 'BIND=mouse2:therecmdmenu', ''].join('\n');
 
 interface EmscriptenFS {
   mkdir(path: string): void;
@@ -182,6 +185,14 @@ async function instantiate(): Promise<void> {
       return {};
     },
     noInitialRun: true,
+    // The C library reads the environment as the module starts: HOME (for
+    // ~/.nethackrc) and NETHACKOPTIONS are set before that.
+    preRun: [
+      (m: { ENV: Record<string, string> }) => {
+        m.ENV.HOME = HOME;
+        m.ENV.NETHACKOPTIONS = OPTIONS;
+      },
+    ],
     locateFile: (path: string) => path,
     print: (text: string) => post({ type: 'log', level: 'info', text }),
     printErr: (text: string) => post({ type: 'log', level: 'warn', text }),
@@ -272,7 +283,12 @@ async function start(name: string): Promise<void> {
   });
   port.attach(game);
   scope.nhWindowCall = (name: string, ...args: unknown[]) => port.call(name, ...args);
-  game.ENV.NETHACKOPTIONS = OPTIONS;
+  // NetHack's configuration file (~/.nethackrc, read before NETHACKOPTIONS):
+  // the touch layer's mouse buttons. A tap is mouse1, NetHack's click action
+  // (travel, or move, attack, open next to the hero); a long press is
+  // mouse2, its menu of what can be done at a place.
+  if (!game.FS.analyzePath(HOME).exists) game.FS.mkdir(HOME);
+  game.FS.writeFile(`${HOME}/.nethackrc`, new TextEncoder().encode(CONFIG));
   game.ccall('shim_graphics_set_callback', null, ['string'], ['nhWindowCall']);
   // main(argc, argv): "nethack -u <name>".
   const args = ['nethack', '-u', name];
