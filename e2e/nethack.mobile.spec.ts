@@ -373,9 +373,10 @@ test('NetHack phone: a new game and its end by touch alone: questions, "Goodbye"
     await dock.getByRole('button', { name: 'No', exact: true }).tap();
     await page.waitForTimeout(300);
   }
-  // "Goodbye …": the game's summary, then the scores on the start screen.
+  // "Goodbye …" (worded by role: "Sayonara" for a Samurai, "Farvel" for a
+  // Valkyrie...): the game's summary, then the scores on the start screen.
   await waitForContext(page, 'text');
-  await expect.poll(async () => (await nethack(page))?.text ?? '').toMatch(/Goodbye \w+ the/);
+  await expect.poll(async () => (await nethack(page))?.text ?? '').toMatch(/You quit in /);
   await dock.getByRole('button', { name: /^Continue/ }).tap();
   await expect(start).toBeVisible();
   await expect(start.getByRole('status')).toContainText('game is over');
