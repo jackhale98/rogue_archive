@@ -42,7 +42,7 @@ const toGame: Record<string, (page: Page) => Promise<void>> = {
   nethack: async (page) => {
     await startNetHack(page, 'Thumbs');
     await netHackWait(page, 'yn');
-    await page.getByRole('group', { name: 'Actions' }).getByRole('button', { name: 'No' }).tap();
+    await page.getByRole('group', { name: 'Actions' }).getByRole('button', { name: 'Let me choose' }).tap();
     await netHackWait(page, 'menu');
     const tapLine = async (pattern: RegExp) => {
       await expect.poll(() => lineAt(page, pattern).then((at) => at !== null)).toBe(true);
