@@ -50,7 +50,7 @@ Done (November 2026): the list below, except a dedicated dock for `use_item` men
 
 ## Sil-Q
 
-Done (November 2026): the list below. The keysets are followed by sending map commands after Sil's keymap bypass (`\\`); flasks of oil still go through plain Throw `t`.
+Done (November 2026): the list below. The keysets are followed by sending map commands after Sil's keymap bypass (`\`); flasks of oil still go through plain Throw `t`.
 
 - **Bugs:** the song prompt ("Songs: … Sing which song:") shows the typing dock — parse its letters into buttons (plus stop `s`, swap `x`); "Nearest" (`t`/`*`) is offered at plain direction prompts (open, close, bash, tunnel, disarm), where the game rejects it — only aim prompts ("'f' for") take it; the `*` button means "choose a target", not "list"; long-press on the map runs plain `l` rather than looking at that cell; the hardcoded original keyset breaks if a player enables `hjkl_movement` or `angband_keyset` (expose and follow them, or lock them).
 - **Phones hide the status line:** show stealth mode, current song, hunger and conditions in the band (new fields from `p_ptr`: `stealth_mode`, `song1/2`, `food`, `blind`, `confused`, `afraid`, `poisoned`, `cut`, `stun`, `entranced`, light timeout).
