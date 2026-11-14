@@ -668,6 +668,22 @@ export const DCSS_COMMANDS: readonly DcssCommand[] = [
     category: 'Keys',
   },
   {
+    id: 'describe-selected',
+    label: 'Describe the selected item',
+    shortLabel: 'Describe',
+    shortcut: '?',
+    keys: key('?'),
+    category: 'Keys',
+  },
+  {
+    id: 'equip-toggle',
+    label: 'Switch between equipping and unequipping',
+    shortLabel: 'Equip ⇄',
+    shortcut: 'Tab',
+    keys: key('Tab'),
+    category: 'Keys',
+  },
+  {
     id: 'travel-repeat',
     label: 'Travel to the last destination',
     shortLabel: 'Repeat',
@@ -849,27 +865,38 @@ function mapControls(state: ControlState): TouchControlLayout {
   const look = a('look', { alternates: LOOK_FAN });
   const more = a(SHELL_COMMAND.palette, { label: 'More' });
 
+  const wounded = state.hpMax > 0 && state.hp < state.hpMax * 0.5;
   if (map.hostiles > 0) {
     // Auto-explore and resting are refused with monsters in view.
     const label = quiverLabel(state.quiver);
-    const actions: TouchAction[] = [
-      a('autofight', {
-        emphasis: 'primary',
-        alternates: ['primary-attack', 'attack', 'weapon-swap', 'wait', 'shout'],
-      }),
-      a('autofire', {
-        label: label ?? 'Fire',
-        alternates: ['fire', 'quiver', 'quiver-next', 'quiver-previous', 'fire-item'],
-      }),
-      magic,
-      a('quaff', { alternates: ['read', 'inventory', 'equip', 'unequip', 'pickup'] }),
-      look,
-      more,
-    ];
+    // A nasty monster (upstream's monster list colours it red), or a tough one
+    // while badly hurt: a potion, or the stairs underfoot, lead; Fight stays.
+    const perilous = map.maxThreat >= 3 || (map.maxThreat >= 2 && wounded);
+    const fight = a('autofight', {
+      ...(perilous ? {} : { emphasis: 'primary' as const }),
+      alternates: ['primary-attack', 'attack', 'weapon-swap', 'wait', 'shout'],
+    });
+    const fire = a('autofire', {
+      label: label ?? 'Fire',
+      alternates: ['fire', 'quiver', 'quiver-next', 'quiver-previous', 'fire-item'],
+    });
+    const quaff = a('quaff', {
+      ...(perilous ? { emphasis: 'primary' as const } : {}),
+      alternates: ['read', 'evoke', 'inventory', 'equip', 'unequip', 'pickup'],
+    });
+    const stairsHere =
+      map.underfoot === 'down' ||
+      map.underfoot === 'up' ||
+      map.underfoot === 'branch' ||
+      map.underfoot === 'exit';
+    const actions: TouchAction[] = !perilous
+      ? [fight, fire, magic, quaff, look, more]
+      : stairsHere
+        ? [{ ...stairsAction(map.underfoot, true), emphasis: 'primary' }, quaff, fight, fire, magic, more]
+        : [quaff, fight, fire, magic, look, more];
     return { directionPad: PAD, actions: latch ? [latch, ...actions] : actions, palette: PALETTE };
   }
 
-  const wounded = state.hpMax > 0 && state.hp < state.hpMax * 0.5;
   const fan = ['wait', 'run', 'autofight', 'attack', 'quiver', 'weapon-swap'];
   const lead =
     latch ??
@@ -919,6 +946,18 @@ function menuControls(menu: MenuInfo | null | undefined): TouchControlLayout {
       ],
       palette: PALETTE,
     };
+  }
+  // Item menus (quaff, read, equip...): describe the selected item, and the
+  // modes their key help offers, labelled with the mode each switches to.
+  if (menu?.tag === 'use_item') {
+    const keys = menu.keys;
+    const capitalise = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+    const actions: TouchAction[] = [a('confirm', { label: 'Select', emphasis: 'primary' })];
+    if (keys?.describe) actions.push(a('describe-selected'));
+    if (keys?.nextMode) actions.push(a('menu-mode', { label: `→ ${capitalise(keys.nextMode)}` }));
+    if (keys?.nextEquip) actions.push(a('equip-toggle', { label: `→ ${capitalise(keys.nextEquip)}` }));
+    actions.push(a('page-down', { alternates: ['page-up', 'line-down', 'line-up'] }), close, type);
+    return { actions, palette: PALETTE };
   }
   // Spells and abilities: "!" switches between using and describing.
   if (menu?.tag === 'spell' || menu?.tag === 'ability') {

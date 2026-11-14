@@ -552,6 +552,12 @@ const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchActi
 
 /** A lettered choice on screen, as a dock button (its key is sent). */
 export const CHOOSE = 'choose:';
+/**
+ * Throw a flask of oil: `t` and the flask's letter (`oil:<letter>`); the aim
+ * prompt follows. ("Throw at nearest" only takes items made for throwing,
+ * which flasks are not.)
+ */
+export const OIL = 'oil:';
 /** A saved character, as a dock button (its name is typed). */
 export const LOAD = 'load:';
 
@@ -578,6 +584,8 @@ export interface DockState {
   bow?: boolean;
   quiver1?: number;
   doorsAdjacent?: number;
+  /** The throw prompt's letter for a flask of oil in the pack ('' or absent: none). */
+  flask?: string;
   /** The prompt line (aim, look/target and song prompts word their options there). */
   prompt?: string;
 }
@@ -666,6 +674,9 @@ function mapControls(state: DockState): TouchControlLayout {
   const look = a('look', { alternates: LOOK_ALTERNATES });
   const more = a(SHELL_COMMAND.palette, { label: 'More' });
   const run = state.run ? a('run', { label: 'Run ⇧', active: true }) : null;
+  const oil = state.flask
+    ? a(`${OIL}${state.flask}`, { label: 'Oil', alternates: ['throw', 'throw-nearest'] })
+    : null;
   let actions: TouchAction[];
   if (wounded && inView > 0) {
     // Low health with enemies about: heal, or leave by the stairs underfoot.
@@ -685,13 +696,16 @@ function mapControls(state: DockState): TouchControlLayout {
       ...leading,
       a('hold', { alternates: ['rest'] }),
       sing,
-      throwing,
+      oil ?? throwing,
       a('exchange', { alternates: DOOR_ALTERNATES }),
       pack,
       more,
     ];
   } else if (inView > 0) {
-    actions = [...leading, shoot, sing, stealth, look, pack, more];
+    // A flask of oil takes Look's place (Look stays on a long press of the map).
+    actions = oil
+      ? [...leading, shoot, oil, sing, stealth, pack, more]
+      : [...leading, shoot, sing, stealth, look, pack, more];
   } else {
     // Exploring: a door next to the player turns Rest into the door's alternate action.
     const rest =

@@ -28,7 +28,9 @@ function clientFrame(page: Page): Frame {
   return page.frames().find((frame) => frame.url().includes('/client/'))!;
 }
 
-test('DCSS phone: descriptions fit the width and Page down scrolls a screen at a time', async ({ page }) => {
+test('DCSS phone: descriptions fit the width, Page down scrolls a screen, item menus offer their modes', async ({
+  page,
+}) => {
   await startCharacter(page, 'Reader');
   const frame = page.frameLocator('iframe.dcss-client');
   // A Berserker, who starts with a god (Trog) and so has a god screen.
@@ -74,4 +76,22 @@ test('DCSS phone: descriptions fit the width and Page down scrolls a screen at a
   const item = await popupBoxes(client);
   expect(item.outer!.scrollWidth).toBeLessThanOrEqual(item.outer!.width + 20);
   expect(item.outer!.overflowX).toBe('hidden');
+
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await waitForContext(page, 'map');
+
+  // The equip menu (an item menu) gets Describe and its modes, labelled with
+  // the mode each switches to; switching follows the game's key help.
+  await page.keyboard.press('e');
+  await waitForContext(page, 'menu');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await expect(dock.getByRole('button', { name: /^Describe/ })).toBeVisible();
+  await expect(dock.getByRole('button', { name: /^→ Wield/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^→ Unequip/ }).tap();
+  await expect(frame.locator('.ui-popup').last()).toContainText('Unequip which item');
+  await expect(dock.getByRole('button', { name: /^→ Equip/ })).toBeVisible();
+  await expect(dock.getByRole('button', { name: /^→ Take off/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^Close/ }).tap();
+  await waitForContext(page, 'map');
 });

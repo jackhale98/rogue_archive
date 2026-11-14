@@ -5,6 +5,7 @@ import {
   GameTracker,
   InputMode,
   NO_MAP_CONTEXT,
+  menuKeyHelp,
   parseLines,
   underfootHere,
   type MapContext,
@@ -56,6 +57,34 @@ describe('DCSS map docks', () => {
       expect.arrayContaining(['fire', 'quiver', 'quiver-next', 'quiver-previous']),
     );
     expect(JSON.stringify(layout.actions)).not.toContain('"explore"');
+  });
+
+  it('leads with a potion (or the stairs underfoot) against a nasty monster, or a tough one when hurt', () => {
+    const fight = (extra: Partial<ControlState>, threat: number, underfoot: MapContext['underfoot'] = null) =>
+      actions(
+        controlsFor('map', { ...base, ...extra, map: map({ hostiles: 1, maxThreat: threat, underfoot }) }),
+      );
+    // Trivial to tough at full health: Fight leads.
+    expect(fight({}, 2)[0]).toMatchObject({ command: 'autofight', emphasis: 'primary' });
+    // Nasty: Quaff leads, Fight stays without the emphasis.
+    const nasty = fight({}, 3);
+    expect(nasty.map((action) => action.command)).toEqual([
+      'quaff',
+      'autofight',
+      'autofire',
+      'cast',
+      'look',
+      'shell:palette',
+    ]);
+    expect(nasty[0]!.emphasis).toBe('primary');
+    expect(nasty[1]!.emphasis).toBeUndefined();
+    // Tough while badly hurt: the same.
+    expect(fight({ hp: 5 }, 2)[0]!.command).toBe('quaff');
+    expect(fight({ hp: 5 }, 1)[0]!.command).toBe('autofight');
+    // On stairs: taking them leads.
+    expect(fight({}, 3, 'down')[0]).toMatchObject({ command: 'downstairs', emphasis: 'primary' });
+    expect(fight({}, 3, 'up')[0]).toMatchObject({ command: 'upstairs', label: 'Up <', emphasis: 'primary' });
+    expect(fight({}, 3, 'altar')[0]!.command).toBe('quaff');
   });
 
   it('labels the stairs button from what is underfoot', () => {
@@ -119,6 +148,35 @@ describe('DCSS prompt and menu docks', () => {
     expect(menu('spell')).toContain('menu-mode');
     expect(menu('ability')).toContain('menu-mode');
     expect(menu('inventory')).toEqual(['cancel', 'page-up', 'page-down', 'confirm', 'shell:keyboard']);
+    // Item menus: describe, and the modes their key help offers.
+    const keys = { describe: true, nextMode: 'wield', nextEquip: 'unequip' };
+    const item = actions(
+      controlsFor('menu', { ...base, menu: { tag: 'use_item', flags: 0, always: false, keys } }),
+    );
+    expect(item.map((action) => action.command)).toEqual([
+      'confirm',
+      'describe-selected',
+      'menu-mode',
+      'equip-toggle',
+      'page-down',
+      'cancel',
+      'shell:keyboard',
+    ]);
+    expect(item.find((action) => action.command === 'menu-mode')?.label).toBe('→ Wield');
+    expect(item.find((action) => action.command === 'equip-toggle')?.label).toBe('→ Unequip');
+    const quaff = commands(
+      controlsFor('menu', {
+        ...base,
+        menu: {
+          tag: 'use_item',
+          flags: 0,
+          always: false,
+          keys: { describe: true, nextMode: null, nextEquip: null },
+        },
+      }),
+    );
+    expect(quaff).not.toContain('menu-mode');
+    expect(quaff).not.toContain('equip-toggle');
   });
 
   it('offers Always when the question has it', () => {
@@ -160,6 +218,29 @@ describe('DCSS control helpers', () => {
     expect(underfootHere(portal, 'Zig')).toBe('exit');
     expect(underfootHere(portal, 'The Abyss')).toBe('portal');
     expect(underfootHere(map({ underfoot: 'down' }), 'a Sewer')).toBe('down');
+  });
+});
+
+describe('DCSS item menu key help', () => {
+  it('reads describe and the next modes from the key help, and follows mode switches', () => {
+    const more =
+      '<lightgrey>          [<white>?<lightgrey>] describe selected\n[<white>!<lightgrey>] <white>equip<lightgrey>|wield|wear          [<white>tab<lightgrey>] <white>equip<lightgrey>|unequip  ';
+    expect(menuKeyHelp(more)).toEqual({ describe: true, nextMode: 'wield', nextEquip: 'unequip' });
+    const unequip =
+      '<lightgrey>          [<white>?<lightgrey>] describe selected\n[<white>!<lightgrey>] <white>unequip<lightgrey>|take off          [<white>tab<lightgrey>] equip|<white>unequip<lightgrey>  ';
+    expect(menuKeyHelp(unequip)).toEqual({ describe: true, nextMode: 'take off', nextEquip: 'equip' });
+    expect(menuKeyHelp('<lightgrey>[<white>?<lightgrey>] describe selected')).toEqual({
+      describe: true,
+      nextMode: null,
+      nextEquip: null,
+    });
+    expect(menuKeyHelp(undefined)).toEqual({ describe: false, nextMode: null, nextEquip: null });
+
+    const tracker = new GameTracker();
+    apply(tracker, [{ msg: 'menu', tag: 'use_item', flags: 0, more, items: [] }]);
+    expect(tracker.menu?.keys?.nextEquip).toBe('unequip');
+    apply(tracker, [{ msg: 'update_menu', more: unequip }]);
+    expect(tracker.menu?.keys).toMatchObject({ nextMode: 'take off', nextEquip: 'equip' });
   });
 });
 

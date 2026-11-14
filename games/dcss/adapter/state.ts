@@ -61,6 +61,43 @@ export interface MenuInfo {
   flags: number;
   /** A yes/no menu that offers "Always" (prompt.cc yesno() with ask_always). */
   always: boolean;
+  /** The keys the menu's key help lists (item menus: describe, modes). */
+  keys?: MenuKeyHelp;
+}
+
+/**
+ * What an item menu's key help (its "more" line, item-use.cc
+ * UseItemMenu::get_keyhelp) offers: "[?] describe selected", "[!] equip|wield|wear"
+ * (the current mode in white) and "[tab] equip|unequip".
+ */
+export interface MenuKeyHelp {
+  describe: boolean;
+  /** The mode `!` switches to, or null. */
+  nextMode: string | null;
+  /** The mode Tab switches to (equip or unequip), or null. */
+  nextEquip: string | null;
+}
+
+/** The modes listed after a key in the key help, and the one after the current (white) one. */
+function nextListed(more: string, key: string): string | null {
+  const tag = '(?:<[a-z]+>)*';
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`\\[${tag}${escaped}${tag}\\]\\s*(.*?)(?=\\s{2,}|\\n|$)`, 'i').exec(more);
+  if (!match) return null;
+  const modes = match[1]!.split('|');
+  if (modes.length < 2) return null;
+  const current = modes.findIndex((mode) => /<white>/i.test(mode));
+  const next = modes[(current + 1) % modes.length]!;
+  return plainText(next).trim() || null;
+}
+
+export function menuKeyHelp(more: unknown): MenuKeyHelp {
+  const text = typeof more === 'string' ? more : '';
+  return {
+    describe: /\[(?:<[a-z]+>)*\?(?:<[a-z]+>)*\]\s*describe/i.test(text),
+    nextMode: nextListed(text, '!'),
+    nextEquip: nextListed(text, 'tab'),
+  };
 }
 
 /** What the player stands on, when it is something to use with `<` or `>`. */
@@ -229,6 +266,13 @@ export class GameTracker {
         if (menu.tag === 'spell') this.caster = true;
         return true;
       }
+      case 'update_menu': {
+        // A mode switch in an item menu rewrites its key help.
+        const top = this.menuStack[this.menuStack.length - 1];
+        if (!top || typeof message.more !== 'string') return false;
+        this.menuStack[this.menuStack.length - 1] = { ...top, keys: menuKeyHelp(message.more) };
+        return true;
+      }
       case 'close_menu':
         this.menuStack.pop();
         return true;
@@ -307,5 +351,6 @@ function menuInfo(message: WebTilesMessage): MenuInfo {
     flags: Number(message.flags ?? 0),
     // Its first hotkey is the item's key (menu.cc webtiles_write_item).
     always: items.some((item) => Array.isArray(item?.hotkeys) && item.hotkeys[0] === 'A'.charCodeAt(0)),
+    keys: menuKeyHelp(message.more),
   };
 }

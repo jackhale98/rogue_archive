@@ -41,6 +41,7 @@ import {
 } from '@rogue-archive/term-view';
 import {
   CHOOSE,
+  USE,
   ROGUE_COMMANDS,
   ROGUE_TOUCH_LAYOUT,
   controlsFor,
@@ -73,6 +74,8 @@ import {
 export const GAME_ID = 'rogue';
 const FLUSH_TIMEOUT_MS = 8000;
 const BUSY_DELAY_MS = 350;
+/** How long after its last key an item action still answers the item prompt. */
+const USE_ANSWER_MS = 5000;
 const DEFAULT_MAP_CELL_CSS = 20;
 /** Rogue is monochrome: normal text, and standout (reverse video). */
 const PALETTE = ['#e6e1d3', '#e6e1d3'];
@@ -90,6 +93,8 @@ export interface RogueDebugState {
   leads: MapLeads | null;
   /** The latched run toggle ('run' or 'run-ctrl'), if any. */
   run: RunMode | false;
+  /** The inventory line picked for its actions. */
+  picked: { letter: string; text: string } | null;
   saves: string[];
   screenText(): string;
   rowText(y: number): string;
@@ -192,6 +197,15 @@ class RogueAdapter implements GameAdapter {
   #autoMore = true;
   /** The list on screen was opened from an item prompt, so its items answer it. */
   #listFromPrompt = false;
+  /** The inventory line tapped in a plain list: the dock offers its actions. */
+  #picked: { letter: string; text: string } | null = null;
+  /**
+   * An item action from the inventory: the letter that answers the command's
+   * "which object?" prompt when it comes (Throw asks for the direction
+   * first). Kept until then, for a few seconds after the last key, or until
+   * the player does anything but answer a direction.
+   */
+  #useLetter: { code: number; at: number } | null = null;
   #cleanup: (() => void)[] = [];
   readonly debug: RogueDebugState;
 
@@ -205,6 +219,7 @@ class RogueAdapter implements GameAdapter {
       state: null,
       leads: null,
       run: false,
+      picked: null,
       saves: [],
       rowText: row,
       screenText: () =>
@@ -356,6 +371,11 @@ class RogueAdapter implements GameAdapter {
 
   sendInput(input: GameInput): void {
     if (!this.#playing) return;
+    // A pending item answer survives only the direction question's answer.
+    if (this.#useLetter) {
+      if (this.#context === 'direction') this.#useLetter.at = Date.now();
+      else this.#useLetter = null;
+    }
     if (input.type === 'key') {
       const keys = keyToRogue(input);
       if (!keys) return;
@@ -373,6 +393,18 @@ class RogueAdapter implements GameAdapter {
     if (input.type !== 'command') return;
     if (input.commandId.startsWith(CHOOSE)) {
       this.#choose(input.commandId.charCodeAt(CHOOSE.length));
+      return;
+    }
+    // An item's action from the inventory: close the list (Rogue's lists take
+    // only Space), give the command, and answer its item prompt with the letter.
+    if (input.commandId.startsWith(USE)) {
+      const [id, letter] = input.commandId.slice(USE.length).split(':');
+      const command = findCommand(id ?? '');
+      if (!command || !letter) return;
+      this.#unlatchRun();
+      this.#picked = null;
+      this.#useLetter = { code: letter.charCodeAt(0), at: Date.now() };
+      this.#send([32, ...command.keys]);
       return;
     }
     if (input.commandId === 'run' || input.commandId === 'run-ctrl') {
@@ -631,6 +663,18 @@ class RogueAdapter implements GameAdapter {
     // (the inventory, Discoveries) is only read.
     if (context === 'menu') this.#listFromPrompt ||= this.#context === 'item';
     else if (context !== 'busy') this.#listFromPrompt = false;
+    if (context !== 'menu') this.#picked = this.debug.picked = null;
+    // An item action from the inventory answers its "which object?" prompt.
+    const use = this.#useLetter;
+    if (use && context === 'item') {
+      this.#useLetter = null;
+      if (Date.now() - use.at < USE_ANSWER_MS) {
+        this.#context = context;
+        this.debug.context = context;
+        this.#send([use.code]);
+        return;
+      }
+    }
     this.#context = context;
     this.debug.context = context;
     // A touch command that asks for an item ("Eat", "Throw ↖E") shows the
@@ -663,6 +707,7 @@ class RogueAdapter implements GameAdapter {
         armor: state?.armor,
         adjacent: leads?.adjacent,
         aquator: leads?.aquator,
+        picked: context === 'menu' && !this.#listFromPrompt ? this.#picked : null,
       },
       choices,
     );
@@ -835,8 +880,8 @@ class RogueAdapter implements GameAdapter {
     const line = rowText(grid, hit.y);
     let start = hit.x;
     while (start > 0 && !(line[start - 1] === ' ' && line[start - 2] === ' ')) start--;
-    const letter = /^\s*([a-z])\)\s/.exec(line.slice(start))?.[1];
-    if (letter) this.#choose(letter.charCodeAt(0));
+    const match = /^\s*([a-z])\)\s+(.*?)(?:\s{2,}|$)/.exec(line.slice(start));
+    if (match) this.#choose(match[1]!.charCodeAt(0), match[2]!);
   }
 
   /**
@@ -844,7 +889,14 @@ class RogueAdapter implements GameAdapter {
    * shown from an item prompt ("Quaff what? (* for list)") is closed first
    * and the letter then answers the prompt.
    */
-  #choose(letter: number): void {
+  #choose(letter: number, text = ''): void {
+    // In a plain list (the inventory), a line is picked: the dock offers its actions.
+    if (this.#context === 'menu' && !this.#listFromPrompt) {
+      this.#picked = { letter: String.fromCharCode(letter), text };
+      this.debug.picked = this.#picked;
+      this.#publishContext(true);
+      return;
+    }
     this.#send(this.#context === 'menu' && this.#listFromPrompt ? [32, letter] : [letter]);
   }
 

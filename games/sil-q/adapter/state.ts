@@ -55,6 +55,8 @@ export interface SilState {
   quiver1: number;
   quiver2: number;
   doorsAdjacent: number;
+  /** The throw prompt's letter for the first flask of oil in the pack ('' for none). */
+  flask: string;
 }
 
 /** SNG_NOTHING: no song. */
@@ -107,6 +109,7 @@ export function parseState(raw: Int32Array): SilState {
     quiver1: raw[34] ?? 0,
     quiver2: raw[35] ?? 0,
     doorsAdjacent: raw[36] ?? 0,
+    flask: (raw[37] ?? 0) > 0 ? String.fromCharCode(96 + raw[37]!) : '',
   };
 }
 

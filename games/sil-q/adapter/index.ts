@@ -36,6 +36,7 @@ import {
   SIL_TOUCH_LAYOUT,
   controlsFor,
   CHOOSE,
+  OIL,
   KEYMAP_BYPASS,
   LOAD,
   SONG_NAMES,
@@ -244,6 +245,13 @@ class SilAdapter implements GameAdapter {
     }
     if (input.commandId.startsWith(CHOOSE)) {
       this.#send([input.commandId.charCodeAt(CHOOSE.length)]);
+      return;
+    }
+    // A flask of oil: throw (`t`) and answer "Throw which item?" with its letter.
+    if (input.commandId.startsWith(OIL)) {
+      const letter = input.commandId.charCodeAt(OIL.length);
+      if (this.#context === 'map' && letter >= 97)
+        this.#send([...this.#commandKeys(['t'.charCodeAt(0)]), letter]);
       return;
     }
     if (input.commandId === 'run') {

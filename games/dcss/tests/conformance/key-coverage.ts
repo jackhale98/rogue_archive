@@ -113,6 +113,13 @@ const PROMPT_KEYS: Record<string, [file: string, code: RegExp]> = {
   'travel-repeat': ['travel.cc', /case '\\t':\s*if \(has_default_target\(\)\)/],
   'travel-altars': ['travel.cc', /case '_':\s*if \(!mode_allowed\(Mode::altars\)\)/],
   always: ['prompt.cc', /new MenuEntry\("Always", MEL_ITEM, 1, 'A'\)/],
+  // Item menus (item-use.cc UseItemMenu): ? describes the hovered item, Tab
+  // switches between equipping and unequipping.
+  'describe-selected': [
+    'item-use.cc',
+    /if \(keyin == '\?' && item_type_filter != OSEL_UNIDENT\)\s*return CMD_MENU_EXAMINE/,
+  ],
+  'equip-toggle': ['item-use.cc', /else if \(key == CK_TAB && _equip_oper\(oper\)\)/],
   'stat-str': [
     'player-stats.cc',
     /case 'S':\s*for \(int i = 0; i < statgain; i\+\+\)\s*modify_stat\(STAT_STR/,
@@ -212,11 +219,11 @@ const states: ControlState[] = [
   { hp: 1, hpMax: 10, run: true },
   { hp: 10, hpMax: 10, run: false, attack: true, map: { ...map, hostiles: 2, adjacent: 1 }, caster: false },
   { hp: 10, hpMax: 10, run: false, statPrompt: true, escape: true, map: { ...map, underfoot: 'altar' } },
-  ...['travel', 'pickup', 'spell', 'ability', 'inventory', 'prompt'].map((tag) => ({
+  ...['travel', 'pickup', 'spell', 'ability', 'inventory', 'prompt', 'use_item'].map((tag) => ({
     hp: 10,
     hpMax: 10,
     run: false,
-    menu: { tag, flags: 0, always: true },
+    menu: { tag, flags: 0, always: true, keys: { describe: true, nextMode: 'wield', nextEquip: 'unequip' } },
   })),
 ];
 for (const context of contexts) {

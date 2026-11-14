@@ -89,9 +89,11 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
    | **Fight** `Tab` | Strike `v`, Attack (next direction), Swap weapons `'`, Wait `s`, Shout `t` |
    | **Fire: *quiver*** `p`, labelled from the game's quiver ("Throw: 3 darts", "Cast: Magic Dart") | Aim `f`, Quiver `Q`, next `)` / previous `(` quivered action, Throw `F` |
    | **Cast** `z` (or **Ability** `a`) | as above |
-   | **Quaff** `q` | Read `r`, Pack `i`, Equip `e`, Unequip `c`, Pick up `g` |
+   | **Quaff** `q` | Read `r`, Evoke `V`, Pack `i`, Equip `e`, Unequip `c`, Pick up `g` |
    | **Look** `x` | as above |
    | **More** | The palette |
+
+   Against a nasty monster (the highest threat, red in upstream's monster list), or a tough one while below half health, **Quaff** leads and is highlighted, Fight follows without the highlight; standing on stairs, taking them (Down `>` / Up `<`) leads instead, and Look gives way.
 
    A latched Run or Attack stays visible (pressed) in the first slot in both docks, also when wounded.
 
@@ -108,6 +110,7 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
    | Menu or popup (inventory, descriptions, character sheet) | Close, Page ▲ (Up), Page ▼ (Down), Select, Type |
    | Travel menu (`G`, tag `travel`) | Down `>`, Up `<`, Repeat `Tab` (last destination), Altars `_`, Close, Type; the branches are the menu's own items |
    | Pick up and other multi-select menus (tag `pickup`, or the multi-select flag) | Accept, All `,`, Page ▼ (▲, lines), Close, Type |
+   | Item menus (quaff, read, equip, unequip…; tag `use_item`) | Select, Describe `?` (the selected item), **→ *mode*** `!` and **→ Equip / → Unequip** `Tab`, each labelled with the mode it switches to, read from the menu's key help (only those it offers), Page ▼ (▲, lines), Close, Type |
    | Spells and abilities (tags `spell`, `ability`) | Close, Page ▲, Page ▼, Describe `!` (switches between using and describing), Select, Type |
    | `--more--` | Continue, Skip |
    | Yes/no question | Yes, No, **Always** `A` when the question offers it, Cancel |
@@ -139,8 +142,8 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 | Title menu and character creation | The screen's lettered choices as buttons; on the title menu, **Continue *name*** for each saved character; OK, Back, Type; the pad for Sil's arrow keys (up/down move, left/right lower or raise stats and skills), Enter in its centre |
 | "Open saved character" name prompt | The saved characters by name; Type a name, OK, Back |
 | Map, exploring | The context lead (below) · Stealth (toggle, lit while on; fan: sing, run) · Rest (fan: hold, run, exchange places, open, close, bash, disarm, tunnel, alternate action, stairs, pick up), or **Door** (`/`) when a closed door is next to the player · Pack (fan: equipment, wear, take off, eat, drink, use, drop, staffs, instruments, examine, fire, throw) · Look (fan: monsters and objects in view, map, character, abilities, smithing, knowledge, messages) · More (every command); the pad with Hold in the centre. Rest leads when wounded and nothing else does |
-| Map, monsters in view | Lead · **Fire** with a bow and arrows in the first quiver (fan: second quiver, throw, throw at nearest), else **Throw** · **Sing** showing the current song · Stealth · Look · Pack · More |
-| Map, monster adjacent | Lead · Hold (fan: rest) · Sing · Throw · Exchange places (fan: doors) · Pack · More (attack by moving into the monster with the pad) |
+| Map, monsters in view | Lead · **Fire** with a bow and arrows in the first quiver (fan: second quiver, throw, throw at nearest), else **Throw** · **Oil** with a flask of oil in the pack (`t` and the flask's letter; the aim prompt follows. Look gives way to it) · **Sing** showing the current song · Stealth · Look · Pack · More |
+| Map, monster adjacent | Lead · Hold (fan: rest) · Sing · Throw (or **Oil** with a flask) · Exchange places (fan: doors) · Pack · More (attack by moving into the monster with the pad) |
 | Map, below half health with monsters in view | Stairs if standing on them · **Quaff** (fan: use) · Eat herb · Sing · Pack · Look · More |
 | Context lead | The Iron Crown underfoot → **Prise** (`k`); fleeing with a Silmaril (`on_the_run`) → **Up** `<`; stairs underfoot → **Down** / **Up**; an object underfoot → **Pick up**; a forge → **Smith** (`0`); enough unspent experience for an ability → **Abilities** (Tab) |
 | Item prompt ("Drop which item?") | The item letters; **Show items** (`*`) names them; Worn/Pack (`/`), Floor (`-`) when offered; Cancel |
@@ -169,7 +172,7 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 |---|---|
 | Map | Search (fan: rest, search ×10, rest ×10, run, careful run, pick up, step over, identify trap) · Fight (fan: fight in a chosen direction, fight to the death, throw, zap, again) · Pack (fan: eat, quaff, read, wield, wear, take off, ring on/off, drop, call, one item, again) · Stairs (fan: up) · Look (fan: discoveries, last message, weapon, armor, rings, help) · More, plus the pad with Search in the centre. Leads from the snapshot and the map: an object underfoot → Pick up; a monster next to the hero → "Fight ↖B" (`f` and the direction, one tap; only the direction while hallucinating); only a floating eye next to the hero → "Throw →E"; an aquator in sight with armour worn → Take off; Hungry → Eat; on the stairs → Down >; with the Amulet → Up <. A latched Run (⇧) or careful run (⌃, Ctrl+direction) turns the next pad direction into a run; any other action lets go |
 | `--More--` | By default not shown: Menu → `--More--` prompts → Continue automatically (the default) sends Space as soon as Rogue shows it; the message stays in the band and the log. With Wait for a key (original): Continue, plus the pad: a move or search continues first, then acts (Rogue ignores every key but Space at `--More--`, which in a fight comes after almost every blow) |
-| "Press space to continue", or `--More--` over another window (lists, help, Discoveries, detection overlays; `ST_OVERLAY`) | Close; never continued automatically. A list opened from an item prompt (`*`) offers its items: a tap sends Space (closing the list) and the letter (answering the prompt). The plain inventory offers none, since Rogue's lists take no letters |
+| "Press space to continue", or `--More--` over another window (lists, help, Discoveries, detection overlays; `ST_OVERLAY`) | Close; never continued automatically. A list opened from an item prompt (`*`) offers its items: a tap sends Space (closing the list) and the letter (answering the prompt). In the plain inventory, a tapped line offers that item's actions (Eat, Quaff, Read, Zap, Wield, Wear or Take off, Put on or Remove, Throw, Drop, Call; the likely one first and highlighted): Rogue's lists take only Space, so an action sends Space, the command, and answers the command's item prompt with the letter when it comes (after the direction, for Throw) |
 | Tombstone and scores ("Press return") | Continue (Enter) |
 | "which direction?" | The pad; Cancel |
 | Item prompt ("(* for list)") | Show items, Cancel, Type; with the list shown, its items. A command from the dock or the command list shows the list at once (`*`) |

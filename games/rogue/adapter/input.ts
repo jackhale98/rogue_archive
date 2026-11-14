@@ -471,6 +471,31 @@ export interface DockState {
   adjacent?: readonly { key: string; arrow: string; letter: string }[];
   /** An aquator (A) is in sight (never while hallucinating). */
   aquator?: boolean;
+  /** The inventory line tapped in a plain list (not one answering a prompt): its actions. */
+  picked?: { letter: string; text: string } | null;
+}
+
+/** An item action on a picked inventory line: `use:<command>:<letter>`. */
+export const USE = 'use:';
+
+/**
+ * What can be done with an inventory item, from its line in Rogue's list
+ * ("Some food", "A blue potion", "A +1 ring mail [protection 4] being worn",
+ * "A wand made of oak", "An onyx ring on left hand", "A +1,+1 mace in hand").
+ * Command ids, the likely one first.
+ */
+export function itemActions(text: string): string[] {
+  const line = text.toLowerCase();
+  if (/\bamulet\b/.test(line)) return ['drop'];
+  if (/\bfood\b|\bmango/.test(line)) return ['eat', 'throw', 'drop'];
+  if (/\bpotions?\b/.test(line)) return ['quaff', 'throw', 'drop', 'call'];
+  if (/\bscrolls?\b/.test(line)) return ['read', 'drop', 'call'];
+  if (/\b(wand|staff)\b/.test(line)) return ['zap', 'drop', 'call'];
+  if (/\bring\b/.test(line) && !/ring mail/.test(line))
+    return [/on (left|right) hand/.test(line) ? 'remove-ring' : 'put-on', 'drop', 'call'];
+  if (/\b(armor|mail)\b|leather/.test(line)) return [/being worn/.test(line) ? 'take-off' : 'wear', 'drop'];
+  // Weapons (and anything else): wield, throw (arrows, darts, daggers...), drop.
+  return /in hand/.test(line) ? ['throw', 'drop'] : ['wield', 'throw', 'drop'];
 }
 
 const SEARCH_FAN = [
@@ -552,11 +577,23 @@ export function controlsFor(
         ],
         palette: PALETTE,
       };
-    case 'menu':
+    case 'menu': {
+      // A line tapped in the inventory: what can be done with that item.
+      const picked = state.picked;
+      if (picked && choices.length === 0) {
+        const uses = itemActions(picked.text).map((id, index) =>
+          a(`${USE}${id}:${picked.letter}`, {
+            label: `${findCommand(id)?.shortLabel ?? id} ${picked.letter})`,
+            ...(index === 0 ? { emphasis: 'primary' as const } : {}),
+          }),
+        );
+        return { actions: [...uses, a('continue', { label: 'Close' })], palette: PALETTE };
+      }
       return {
         actions: [...choiceButtons, a('continue', { label: 'Close', emphasis: 'primary' }), a('cancel')],
         palette: PALETTE,
       };
+    }
     case 'text':
       return {
         actions: [

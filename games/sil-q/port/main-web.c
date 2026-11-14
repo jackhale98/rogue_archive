@@ -95,6 +95,9 @@ enum
     ST_QUIVER2,
     /* Known closed doors next to the player. */
     ST_DOORS_ADJACENT,
+    /* The first flask of oil in the pack: its slot + 1 (the throw prompt's
+     * letter is 'a' + slot), 0 if none. */
+    ST_FLASK,
     ST_FIELDS
 };
 static int state[ST_FIELDS];
@@ -274,6 +277,15 @@ static void read_context(void)
     state[ST_BOW] = (inventory && inventory[INVEN_BOW].k_idx) ? 1 : 0;
     state[ST_QUIVER1] = (inventory && inventory[INVEN_QUIVER1].k_idx) ? inventory[INVEN_QUIVER1].number : 0;
     state[ST_QUIVER2] = (inventory && inventory[INVEN_QUIVER2].k_idx) ? inventory[INVEN_QUIVER2].number : 0;
+    state[ST_FLASK] = 0;
+    for (int i = 0; inventory && i < INVEN_PACK; i++)
+    {
+        if (inventory[i].k_idx && inventory[i].tval == TV_FLASK)
+        {
+            state[ST_FLASK] = i + 1;
+            break;
+        }
+    }
 
     state[ST_UNDER_FEATURE] = 0;
     state[ST_UNDER_OBJECT] = 0;

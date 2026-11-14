@@ -23,7 +23,7 @@ Done in the follow-up (new read-only fields `ST_ON_STAIRS`, `ST_AMULET`, `ST_HUN
 - **Again** (`a`) moved to the Fight and Pack fans; the busy dock is empty (Rogue reads no keys while it runs or rests).
 - **Item prompts** opened from the dock or the command list show the list at once (`*`); typed commands keep the original prompt.
 
-Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a verb would mean Space, the command, then the letter, with a prompt the player never saw).
+Done later: per-item actions in the inventory. A tapped line offers the item's actions; one sends Space (Rogue's lists take only Space), the command, and answers the item prompt with the letter when it comes.
 
 ## Brogue CE
 
@@ -39,7 +39,7 @@ Done (November 2026): all of the list below. Read-only `ST_*` fields for danger,
 
 ## Dungeon Crawl Stone Soup
 
-Done (November 2026): the list below, except a dedicated dock for `use_item` menus and changing the combat dock's emphasis by threat (`maxThreat` is read but not used yet). Also: phone popups scroll a screen per Page up/down, and descriptions wrap to the width.
+Done (November 2026): the list below, plus item menus (`use_item`: Describe, and the mode switches labelled from the menu's key help) and the combat dock's emphasis by threat (a nasty monster, or a tough one when badly hurt: Quaff, or the stairs underfoot, lead). Also: phone popups scroll a screen per Page up/down, and descriptions wrap to the width.
 
 - **Bugs:** Rest leads below 50% HP even with monsters near (the game refuses); a latched Run disappears when wounded; aim (`TARGET_PATH`), look (`TARGET`) and direction (`TARGET_DIR`) share one dock — split them (Fire/Next/Quiver for aiming; Select/Next/Info for looking; pad + Cancel for directions).
 - **Monsters in view:** the client already receives map cells with monster attitude and threat; the client host can read them (as upstream's monster list does) and send `{hostiles, maxThreat}`. Hostiles → Fight Tab · "Fire: *quiver*" `p` (quiver from `player.quiver_desc`) · Cast `z` · Quaff · Look; no Explore (refused with monsters near).
@@ -50,7 +50,7 @@ Done (November 2026): the list below, except a dedicated dock for `use_item` men
 
 ## Sil-Q
 
-Done (November 2026): the list below. The keysets are followed by sending map commands after Sil's keymap bypass (`\`); flasks of oil still go through plain Throw `t`.
+Done (November 2026): the list below. The keysets are followed by sending map commands after Sil's keymap bypass (`\`); flasks of oil have an Oil button (`t` and the flask's letter, read from the pack: new `ST_FLASK`).
 
 - **Bugs:** the song prompt ("Songs: … Sing which song:") shows the typing dock — parse its letters into buttons (plus stop `s`, swap `x`); "Nearest" (`t`/`*`) is offered at plain direction prompts (open, close, bash, tunnel, disarm), where the game rejects it — only aim prompts ("'f' for") take it; the `*` button means "choose a target", not "list"; long-press on the map runs plain `l` rather than looking at that cell; the hardcoded original keyset breaks if a player enables `hjkl_movement` or `angband_keyset` (expose and follow them, or lock them).
 - **Phones hide the status line:** show stealth mode, current song, hunger and conditions in the band (new fields from `p_ptr`: `stealth_mode`, `song1/2`, `food`, `blind`, `confused`, `afraid`, `poisoned`, `cut`, `stun`, `entranced`, light timeout).

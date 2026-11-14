@@ -3,6 +3,7 @@ import type { Grid } from '@rogue-archive/term-view';
 import type { TouchAction } from '@rogue-archive/game-api';
 import {
   CHOOSE,
+  OIL,
   controlsFor,
   isMapCommand,
   keyToSil,
@@ -42,7 +43,7 @@ function grid(lines: string[], cursor?: Grid['cursor']): Grid {
 
 const state = (fields: Partial<Record<number, number>>) => {
   // Defaults as the port sends them for an ordinary character: no song, fed, light that does not burn out.
-  const raw = new Int32Array(37);
+  const raw = new Int32Array(38);
   raw[14] = raw[15] = 100;
   raw[16] = 3000;
   raw[24] = 2;
@@ -241,6 +242,7 @@ describe('Sil-Q keys and docks', () => {
           ids.has(action.command) ||
           action.command.startsWith(CHOOSE) ||
           action.command.startsWith(LOAD) ||
+          action.command.startsWith(OIL) ||
           action.command.startsWith('shell:');
         expect(known, `${context}: ${action.command}`).toBe(true);
         for (const alternate of action.alternates ?? []) expect(ids.has(alternate), alternate).toBe(true);
@@ -380,6 +382,15 @@ describe('Sil-Q situational docks', () => {
       command: 'rest',
       emphasis: 'primary',
     });
+    // A flask of oil: Oil throws it (Look gives way in view; it replaces Throw in melee).
+    const oily = controlsFor('map', { ...base, monstersInView: 1, flask: 'c' });
+    expect(commands(oily)).toEqual(['throw', `${OIL}c`, 'sing', 'stealth', 'inventory', 'shell:palette']);
+    expect(actions(oily)[1]).toMatchObject({ label: 'Oil', alternates: ['throw', 'throw-nearest'] });
+    expect(
+      commands(controlsFor('map', { ...base, monstersInView: 1, monstersAdjacent: 1, flask: 'a' }))[2],
+    ).toBe(`${OIL}a`);
+    expect(state({ 37: 3 }).flask).toBe('c');
+    expect(state({}).flask).toBe('');
     // A latched Run is shown in every situation.
     expect(commands(controlsFor('map', { ...base, run: true, monstersInView: 1 }))).toContain('run');
   });

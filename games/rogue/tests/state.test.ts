@@ -7,9 +7,11 @@ import {
   controlsFor,
   directedKeys,
   isDirectionKey,
+  itemActions,
   keyToRogue,
   ROGUE_COMMANDS,
   runKeys,
+  USE,
 } from '../adapter/input.ts';
 import {
   detectContext,
@@ -168,6 +170,46 @@ describe('Rogue keys and docks', () => {
         for (const alternate of action.alternates ?? []) expect(ids.has(alternate), alternate).toBe(true);
       }
     }
+  });
+
+  it("offers a picked inventory item's actions, the likely one first", () => {
+    expect(itemActions('Some food')).toEqual(['eat', 'throw', 'drop']);
+    expect(itemActions('2 rations of food')[0]).toBe('eat');
+    expect(itemActions('A blue potion')).toEqual(['quaff', 'throw', 'drop', 'call']);
+    expect(itemActions("2 scrolls titled 'zok bar'")[0]).toBe('read');
+    expect(itemActions('A wand made of oak')[0]).toBe('zap');
+    expect(itemActions('A staff made of redwood')[0]).toBe('zap');
+    expect(itemActions('An onyx ring')[0]).toBe('put-on');
+    expect(itemActions('An onyx ring on left hand')[0]).toBe('remove-ring');
+    expect(itemActions('A +1 ring mail [protection 4] being worn')).toEqual(['take-off', 'drop']);
+    expect(itemActions('Ring mail')[0]).toBe('wear');
+    expect(itemActions('Studded leather armor')[0]).toBe('wear');
+    expect(itemActions('A +1,+1 mace in hand')).toEqual(['throw', 'drop']);
+    expect(itemActions('31 +0,+0 arrows')).toEqual(['wield', 'throw', 'drop']);
+    expect(itemActions('The Amulet of Yendor')).toEqual(['drop']);
+    const ids = new Set(ROGUE_COMMANDS.map((command) => command.id));
+    for (const text of ['Some food', 'A blue potion', 'A wand made of oak', 'An onyx ring', 'Ring mail'])
+      for (const id of itemActions(text)) expect(ids.has(id), id).toBe(true);
+
+    const layout = actions(
+      controlsFor('menu', { hp: 10, maxHp: 10, run: false, picked: { letter: 'g', text: 'A blue potion' } }),
+    );
+    expect(layout.map((action) => action.command)).toEqual([
+      `${USE}quaff:g`,
+      `${USE}throw:g`,
+      `${USE}drop:g`,
+      `${USE}call:g`,
+      'continue',
+    ]);
+    expect(layout[0]).toMatchObject({ label: 'Quaff g)', emphasis: 'primary' });
+    // A list answering an item prompt keeps its lettered choices.
+    expect(
+      actions(
+        controlsFor('menu', { hp: 10, maxHp: 10, run: false, picked: { letter: 'g', text: 'x' } }, [
+          { key: 'a', label: 'Some food' },
+        ]),
+      )[0]?.command,
+    ).toBe(`${CHOOSE}a`);
   });
 
   it('leads the map dock with what the situation calls for', () => {

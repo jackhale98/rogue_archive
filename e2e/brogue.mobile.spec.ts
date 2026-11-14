@@ -328,7 +328,8 @@ test('search: progress towards the fifth search, and the five-turn search (Ctrl+
   // The long search finishes the five searches with Brogue's stronger one.
   await chooseFromFan(page, 'Search 2/5 (s)', /Search five turns/);
   await waitForScreenText(page, 'finish your detailed search of the area.');
-  await expect(dock.getByRole('button', { name: 'Search (s)' })).toBeVisible();
+  // The count starts again (a monster may have come into view meanwhile, bringing the danger dock).
+  await expect(dock.getByRole('button', { name: /^Search \d\/5/ })).toHaveCount(0);
 });
 
 test('Eat (from the Pack fan) applies the food by its letter', async ({ page }) => {
