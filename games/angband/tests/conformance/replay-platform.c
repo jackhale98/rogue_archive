@@ -14,7 +14,8 @@
  * - The clock and process id are fixed, so the game's random seed
  *   (z-rand.c Rand_init: time(NULL) mutated by getpid()) is the same in both
  *   builds.
- * - Natively, the account is hidden as the browser has none (getpwuid).
+ * - Natively, the account is hidden as the browser has none (getpwuid), and
+ *   the user id is 0, as the browser's is (getuid).
  * - RA_REPLAY_GRAPHICS: a graphics mode to switch to at the first wait after
  *   the first map is shown, as the page's Display setting does.
  *
@@ -74,6 +75,19 @@ struct passwd *getpwuid(uid_t uid)
 {
 	(void)uid;
 	return NULL;
+}
+
+/* The browser's (Emscripten's) user id is 0, which savefiles and the save
+ * screen record ("User 0"); natively the run must not depend on who runs it
+ * (CI runs as uid 1001, a container often as root). */
+uid_t getuid(void)
+{
+	return 0;
+}
+
+uid_t geteuid(void)
+{
+	return 0;
 }
 #endif
 
