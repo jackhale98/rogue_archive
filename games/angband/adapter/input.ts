@@ -348,6 +348,8 @@ export interface DockState {
   prompt?: string;
   /** The bottom line (where pages such as the scores say how to leave them). */
   bottom?: string;
+  /** The line with the cursor (where pages such as the character sheet list their keys). */
+  cursorLine?: string;
 }
 
 /** Below this share of health the danger dock leads with healing. */
@@ -425,7 +427,12 @@ function mapControls(state: DockState): TouchControlLayout {
       more,
     ];
   } else if (inView > 0) {
-    actions = [...leading, { ...shoot, emphasis: 'primary' as const }, ...cast, look, pack, more];
+    // A monster in view: Fire leads when there is something to fire (one lead
+    // at a time: the stairs or shop underfoot first). Throw doesn't lead: the
+    // pack may hold nothing worth throwing, and in town the onlookers are
+    // mostly harmless.
+    const lead = state.canFire && leading.length === 0 ? { ...shoot, emphasis: 'primary' as const } : shoot;
+    actions = [...leading, lead, ...cast, look, pack, more];
   } else {
     // Exploring: a door next to the player puts Open first.
     const rest =
@@ -449,6 +456,20 @@ export interface ItemSwitches {
   quiver: boolean;
   floor: boolean;
 }
+
+/** Keys a prompt names ("'c' to change name, 'f' to file"): each as a button label, capitalised. */
+export function promptKeys(prompt: string): { key: string; label: string }[] {
+  const keys: { key: string; label: string }[] = [];
+  for (const match of prompt.matchAll(/'(\S)' to ([a-z][a-z ]*?)(?=,|\]|\.| or |$)/g)) {
+    const label = match[2]!.trim();
+    if (!keys.some((k) => k.key === match[1]) && keys.length < 4)
+      keys.push({ key: match[1]!, label: label[0]!.toUpperCase() + label.slice(1) });
+  }
+  return keys;
+}
+
+/** An item prompt with this many items or fewer: a button each (more are tapped in the list). */
+export const FEW_ITEMS = 3;
 
 /** The dock for each context. `choices` are lettered options shown on screen. */
 export function controlsFor(
@@ -547,10 +568,11 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'item':
-      // "Drop which item?": the items as buttons, the other lists, cancel.
+      // "Drop which item?": a few items (up to three) as buttons; a longer list is
+      // tapped in its sheet. Then the other lists, cancel.
       return {
         actions: [
-          ...choiceButtons(),
+          ...(choices.length <= FEW_ITEMS ? choiceButtons(FEW_ITEMS) : []),
           ...(item?.equip ? [a('show-equip')] : []),
           ...(item?.inven ? [a('show-inven')] : []),
           ...(item?.quiver ? [a('show-quiver')] : []),
@@ -573,18 +595,24 @@ export function controlsFor(
         ],
         palette: PALETTE,
       };
-    case 'menu':
+    case 'menu': {
+      // Keys the page names itself ("['c' to change name, 'f' to file, 'h' to change mode, or ESC]").
+      const hints = promptKeys(`${prompt} ${state.cursorLine ?? ''}`).map((hint) =>
+        a(`${CHOOSE}${hint.key}`, { label: hint.label }),
+      );
       return {
         directionPad: MENU_PAD,
         actions: [
           ...choiceButtons(),
+          ...hints,
           a('cancel', { label: 'Close' }),
           a('confirm', { label: 'Select', emphasis: 'primary' }),
           a('page', { label: 'Page' }),
-          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ...(hints.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
         palette: PALETTE,
       };
+    }
     case 'map':
       return mapControls(state);
   }

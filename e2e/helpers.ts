@@ -52,6 +52,19 @@ export async function player(page: Page): Promise<{ inGame: boolean; x: number; 
  * pressed during the level's opening fade-in only skip the fade (as in the
  * desktop game), so tests must not type before this.
  */
+/** Brogue is waiting for input again (a key during an animation only skips the animation). */
+export async function waitForInput(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          !!(window as unknown as { __rogueArchive?: { adapter: { debug: { waiting?: boolean } } } })
+            .__rogueArchive?.adapter.debug.waiting,
+      ),
+    )
+    .toBe(true);
+}
+
 export async function waitInGame(page: Page): Promise<void> {
   await expect
     .poll(

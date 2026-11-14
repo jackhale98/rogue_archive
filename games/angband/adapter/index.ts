@@ -164,6 +164,16 @@ class AngbandAdapter implements GameAdapter {
   #band: HTMLDivElement | null = null;
   #mapCellCss = DEFAULT_MAP_CELL_CSS;
   #pan = { x: 0, y: 0 };
+  /**
+   * Phones: full-screen text pages (character creation, the character sheet,
+   * stores, help) are fitted whole; a pinch zooms them (1 = fitted) and a drag
+   * moves around the zoomed page.
+   */
+  #pageZoom = 1;
+  #pagePan = { x: 0, y: 0 };
+  #showingPage = false;
+  /** The screen region lifted into a sheet over the map (phones), if any. */
+  #sheetSource: Rect | null = null;
   #lastPlayer: { x: number; y: number } | null = null;
   #run = false;
   #started = false;
@@ -343,6 +353,17 @@ class AngbandAdapter implements GameAdapter {
 
   /** A tile cell: the terrain, then what stands on it (as upstream's SDL2 front end draws them). */
   #tileAt(code: number, x: number, y: number, view: string): readonly CanvasImageSource[] | null {
+    // Phones: under a list lifted into a sheet, the map shows nothing of the list itself.
+    const under = this.#sheetSource;
+    if (
+      view === 'map' &&
+      under &&
+      x >= under.x &&
+      x < under.x + under.width &&
+      y >= under.y &&
+      y < under.y + under.height
+    )
+      return [];
     if (code !== TILE_CELL || view === 'sheet' || !this.#grid || !this.#tiles) return null;
     const at = (y * this.#grid.cols + x) * 2;
     const fg = this.#tiles[at] ?? 0;
@@ -643,6 +664,11 @@ class AngbandAdapter implements GameAdapter {
   }
 
   #emitContext(context: AngbandContext): void {
+    // A new page (or the map) starts fitted, not at the last page's zoom.
+    if (context !== this.#context) {
+      this.#pageZoom = 1;
+      this.#pagePan = { x: 0, y: 0 };
+    }
     this.#context = context;
     this.debug.context = context;
     const state = this.#state;
@@ -662,6 +688,7 @@ class AngbandAdapter implements GameAdapter {
         run: this.#run,
         prompt: top,
         bottom: grid ? rowText(grid, grid.rows - 1) : '',
+        cursorLine: grid?.cursor?.visible ? rowText(grid, grid.cursor.y) : '',
       },
       choices,
       context === 'item' ? itemPrompt(top) : null,
@@ -689,6 +716,8 @@ class AngbandAdapter implements GameAdapter {
     const grid = this.#grid;
     const state = this.#state;
     if (!renderer || !grid) return;
+    this.#sheetSource = null;
+    this.#showingPage = false;
     this.#tiledNow = this.#tiled();
     this.debug.tiled = this.#tiledNow;
     const { width, height } = renderer.size;
@@ -745,9 +774,14 @@ class AngbandAdapter implements GameAdapter {
       height: Math.max(1, height - Math.round((band + insets.bottom) * dpr)),
     };
     // Full-screen text (the savefile menu, character creation, stores): the
-    // whole screen fitted; its choices are also large buttons in the dock.
-    if (!inMap || !state) {
-      renderer.setViews([fittedView('screen', whole, area)]);
+    // whole screen fitted (pinch to zoom); its choices are also large buttons in the dock.
+    const overlay = inMap && state && this.#context !== 'map' ? mapOverlay(grid, state) : null;
+    // A page drawn over the whole map (the character sheet, knowledge menus) is shown as
+    // a page too: cropped to the map it would lose its left columns.
+    const page = !inMap || !state || (!!overlay && overlay.width >= 0.8 * (grid.cols - state.colMap));
+    this.#showingPage = page;
+    if (page) {
+      renderer.setViews([this.#pageView(whole, area)]);
       return;
     }
     const map = followView(
@@ -760,16 +794,25 @@ class AngbandAdapter implements GameAdapter {
       this.#tiledNow ? 1 : undefined,
     );
     const views: View[] = [map];
-    const overlay = mapOverlay(grid, state);
-    if (overlay && this.#context !== 'map') {
+    if (overlay) {
       const margin = Math.round(8 * dpr);
-      map.dim = 0.62;
+      // Dim enough that the list's own text, drawn on the map underneath, stays out of the way.
+      map.dim = 0.85;
+      // To the end of the list's weight column ("2.4 lb"), which sits well right of the names.
+      const end = overlay.x + overlay.width;
+      let right = end;
+      for (let y = overlay.y; y < overlay.y + overlay.height; y++)
+        for (const match of rowText(grid, y)
+          .slice(end)
+          .matchAll(/\d+\.\d lb/g))
+          right = Math.max(right, end + match.index! + match[0].length);
       const src = {
         x: Math.max(0, overlay.x - 1),
         y: overlay.y,
-        width: Math.min(grid.cols, overlay.width + 2),
+        width: Math.min(grid.cols, right + 1) - Math.max(0, overlay.x - 1),
         height: overlay.height,
       };
+      this.#sheetSource = src;
       views.push(
         fittedView(
           'sheet',
@@ -885,14 +928,38 @@ class AngbandAdapter implements GameAdapter {
     this.#send([clickEvent(hit.x, hit.y, 1, MOD.ALT)]);
   }
 
+  /** A full-screen page: fitted, or zoomed around the cursor (the choice being made) and moved by drags. */
+  #pageView(whole: Rect, area: Rect): View {
+    if (this.#pageZoom <= 1.01) return fittedView('screen', whole, area);
+    const fit = fitCell(whole, area.width, area.height);
+    const cursor = this.#grid?.cursor;
+    return followView(
+      'screen',
+      whole,
+      area,
+      fit.cellHeight * this.#pageZoom,
+      cursor?.visible ? { x: cursor.x, y: cursor.y } : null,
+      this.#pagePan,
+    );
+  }
+
   #panBy(dx: number, dy: number): void {
     if (!this.#presentation?.compact) return;
-    this.#pan = { x: this.#pan.x + dx, y: this.#pan.y + dy };
+    if (this.#showingPage) {
+      if (this.#pageZoom <= 1.01) return;
+      this.#pagePan = { x: this.#pagePan.x + dx, y: this.#pagePan.y + dy };
+    } else this.#pan = { x: this.#pan.x + dx, y: this.#pan.y + dy };
     this.#layout();
   }
 
   #zoomBy(scale: number): void {
     if (!this.#presentation?.compact) return;
+    if (this.#showingPage) {
+      this.#pageZoom = Math.max(1, Math.min(3, this.#pageZoom * scale));
+      if (this.#pageZoom <= 1.01) this.#pagePan = { x: 0, y: 0 };
+      this.#layout();
+      return;
+    }
     this.#mapCellCss = Math.max(12, Math.min(48, this.#mapCellCss * scale));
     this.#host?.emit({ type: 'setting-changed', key: 'mapCellCss', value: Math.round(this.#mapCellCss) });
     this.#layout();

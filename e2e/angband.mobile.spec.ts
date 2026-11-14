@@ -27,10 +27,10 @@ test('Angband phone: creation by taps, status band, dock, item prompt, travel an
   // Standing on the down staircase: the stairs lead.
   await expect(dock.getByRole('button', { name: /^Down >/ })).toBeVisible();
 
-  // An item prompt: the items by name, as buttons; the list as a sheet over the map.
+  // An item prompt: the list as a sheet over the map (its lines tapped; a button per item only for a few).
   await sendCommand(page, 'drop');
   await waitForContext(page, 'item');
-  await expect(dock.getByRole('button', { name: /Rations? of Food/ })).toBeVisible();
+  await expect.poll(() => screenText(page)).toMatch(/Rations? of Food/);
   expect((await angband(page))?.views).toEqual(['map', 'sheet']);
   await dock.getByRole('button', { name: /^Cancel/ }).tap();
   await waitForContext(page, 'map');
@@ -93,7 +93,7 @@ test('Angband phone: one tap attacks an adjacent monster', async ({ page }) => {
   // Walk towards the nearest townsperson by tapping it (travel stops when disturbed)
   // until the dock offers Attack, then attack with one tap.
   let attacked = false;
-  for (let i = 0; i < 80 && !attacked; i++) {
+  for (let i = 0; i < 120 && !attacked; i++) {
     const info = await angband(page);
     if (!info?.state) break;
     if (info.context !== 'map') {
@@ -119,21 +119,34 @@ test('Angband phone: one tap attacks an adjacent monster', async ({ page }) => {
           if (!best || d < Math.max(Math.abs(best.x - me.x), Math.abs(best.y - me.y))) best = { x, y };
         }
     if (!best) {
-      // Nobody in sight: rest until someone comes along (resting stops when a monster appears).
+      // Nobody in sight: wait a little (resting stops when a monster appears), then look
+      // elsewhere: travel to a random lit floor square. (Long rests alone can last into the
+      // night, when the town goes dark and its people can't be seen.)
       await page.keyboard.press('R');
       await waitForContext(page, 'text');
       await page.keyboard.press('Backspace');
-      await page.keyboard.type('500');
+      await page.keyboard.type('50');
       await page.keyboard.press('Enter');
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(800);
+      const floor: { x: number; y: number }[] = [];
+      for (let y = 2; y < rows.length - 2; y++)
+        for (let x = 14; x < (rows[y] ?? '').length; x++) if (rows[y]![x] === '.') floor.push({ x, y });
+      const spot = floor[(i * 7919) % Math.max(1, floor.length)];
+      if (spot && (await angbandContext(page)) === 'map') {
+        const point = await cellToClient(page, spot.x, spot.y);
+        await page.touchscreen.tap(point.x, point.y);
+      }
     } else {
-      // Travel to the cell next to it (a path cannot end on a monster), or step into it.
-      const near = Math.max(Math.abs(best.x - me.x), Math.abs(best.y - me.y)) <= 2;
-      const cell = near
-        ? { x: me.x + Math.sign(best.x - me.x), y: me.y + Math.sign(best.y - me.y) }
-        : { x: best.x - Math.sign(best.x - me.x), y: best.y - Math.sign(best.y - me.y) };
-      const point = await cellToClient(page, cell.x, cell.y);
-      await page.touchscreen.tap(point.x, point.y);
+      const dx = Math.sign(best.x - me.x);
+      const dy = Math.sign(best.y - me.y);
+      if (Math.max(Math.abs(best.x - me.x), Math.abs(best.y - me.y)) <= 4) {
+        // Close: one step at a time (travel stops whenever a monster moves into view).
+        await page.keyboard.press(String(5 + dx - 3 * dy));
+      } else {
+        // Farther: travel to the cell next to it (a path cannot end on a monster).
+        const point = await cellToClient(page, best.x - dx, best.y - dy);
+        await page.touchscreen.tap(point.x, point.y);
+      }
     }
     await page.waitForTimeout(500);
   }
@@ -142,4 +155,42 @@ test('Angband phone: one tap attacks an adjacent monster', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: 'Messages' })).toContainText(
     /You (hit|miss|have slain)|dies|flees/,
   );
+});
+
+test('Angband phone: full-screen pages fitted with their keys as buttons; item lists as sheets', async ({
+  page,
+}) => {
+  const dock = await createByTaps(page, 'Pages');
+  const views = () =>
+    page.evaluate(() =>
+      (
+        window as unknown as { __rogueArchive: { adapter: { debug: { views(): string[] } } } }
+      ).__rogueArchive.adapter.debug.views(),
+    );
+  // The character sheet covers the map: shown whole (not cropped to the map), its keys as buttons.
+  await page.keyboard.press('C');
+  await waitForContext(page, 'menu');
+  await expect.poll(views).toEqual(['screen']);
+  for (const name of ['Change name', 'File', 'Change mode'])
+    await expect(dock.getByRole('button', { name })).toBeVisible();
+  await dock.getByRole('button', { name: /^Close/ }).tap();
+  await waitForContext(page, 'map');
+  // The inventory: a sheet over the map; a button per item only for a few items.
+  await page.keyboard.press('i');
+  await waitForContext(page, 'item');
+  await expect.poll(views).toEqual(['map', 'sheet']);
+  // (Counted from the dock's own list: Angband's starting kit varies a little.)
+  const items = await page.evaluate(() => {
+    const d = (
+      window as unknown as {
+        __rogueArchive: { adapter: { debug: { rowText(y: number): string } } };
+      }
+    ).__rogueArchive.adapter.debug;
+    let n = 0;
+    for (let y = 1; y < 24; y++) if (/^\s*[a-w]\) \S/.test(d.rowText(y).slice(13))) n++;
+    return n;
+  });
+  await expect(dock.getByRole('button', { name: /^a\) / })).toHaveCount(items <= 3 ? 1 : 0);
+  await dock.getByRole('button', { name: /^Cancel/ }).tap();
+  await waitForContext(page, 'map');
 });

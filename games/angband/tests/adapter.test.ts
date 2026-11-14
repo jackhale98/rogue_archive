@@ -16,6 +16,7 @@ import {
   keyEvent,
   keyToAngband,
   mapLead,
+  promptKeys,
   textToAngband,
   type DockState,
 } from '../adapter/input.ts';
@@ -291,7 +292,10 @@ describe('docks', () => {
     expect(ids(controlsFor('map', { ...base, doorsAdjacent: 1 }))[0]).toBe('open');
     const archer = controlsFor('map', { ...base, monstersInView: 1, canFire: true });
     expect(actions(archer)[0]).toMatchObject({ command: 'fire-nearest', emphasis: 'primary' });
-    expect(ids(controlsFor('map', { ...base, monstersInView: 1 }))[0]).toBe('throw');
+    // Throw is offered, but doesn't lead: there may be nothing worth throwing (and in town, nobody to throw at).
+    const onlookers = actions(controlsFor('map', { ...base, monstersInView: 1 }));
+    expect(onlookers[0]).toMatchObject({ command: 'throw' });
+    expect(onlookers[0]!.emphasis).toBeUndefined();
     const melee = controlsFor('map', { ...base, monstersInView: 1, monstersAdjacent: 1, attackDir: 6 });
     expect(actions(melee)[0]).toMatchObject({ command: `${ATTACK}6`, label: 'Attack', emphasis: 'primary' });
     const caster = controlsFor('map', { ...base, caster: true });
@@ -318,6 +322,24 @@ describe('docks', () => {
       floor: true,
     });
     expect(ids(item)).toEqual([`${CHOOSE}a`, 'show-equip', 'floor-item', 'cancel']);
+    // A longer list is tapped in its sheet: no button per item.
+    const four = ['a', 'b', 'c', 'd'].map((key) => ({ key, label: `item ${key}` }));
+    expect(ids(controlsFor('item', base, four, null))).toEqual(['cancel']);
+    // A page's own keys, from its prompt.
+    expect(promptKeys("['c' to change name, 'f' to file, 'h' to change mode, or ESC]")).toEqual([
+      { key: 'c', label: 'Change name' },
+      { key: 'f', label: 'File' },
+      { key: 'h', label: 'Change mode' },
+    ]);
+    const sheet = controlsFor('menu', {
+      ...base,
+      prompt: "['c' to change name, 'f' to file, 'h' to change mode, or ESC]",
+    });
+    expect(
+      actions(sheet)
+        .slice(0, 3)
+        .map((action) => action.label),
+    ).toEqual(['Change name', 'File', 'Change mode']);
     expect(ids(controlsFor('aim', { ...base, prompt: "Direction ('*' or <click> to target" }))).toEqual([
       'aim-closest',
       'choose-target',

@@ -9,6 +9,7 @@ import {
   player,
   waitForScreenText,
   waitInGame,
+  waitForInput,
 } from './helpers.ts';
 
 /** Screen position of the dungeon map (upstream STAT_BAR_WIDTH + 1, MESSAGE_LINES). */
@@ -323,8 +324,11 @@ test('search: progress towards the fifth search, and the five-turn search (Ctrl+
   test.skip(!quiet, 'A monster is in view at the start, so the dock is the danger dock.');
   await search.tap();
   await expect(dock.getByRole('button', { name: 'Search 1/5 (s)' })).toBeVisible();
+  // Each search plays a short animation: the next tap waits until Brogue takes input again.
+  await waitForInput(page);
   await dock.getByRole('button', { name: 'Search 1/5 (s)' }).tap();
   await expect(dock.getByRole('button', { name: 'Search 2/5 (s)' })).toBeVisible();
+  await waitForInput(page);
   // The long search finishes the five searches with Brogue's stronger one.
   await chooseFromFan(page, 'Search 2/5 (s)', /Search five turns/);
   await waitForScreenText(page, 'finish your detailed search of the area.');

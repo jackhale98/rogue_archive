@@ -865,7 +865,7 @@
         "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
         "One tileset: Adam Bolt's 16x16 tiles. David Gervais' tiles are not shipped yet (see LICENSES.md); Shockbolt's may not be used by other projects without permission; Nomad's and the original 8x8 tiles have no licence statement upstream.",
         "No sound (Angband's sounds are not shipped).",
-        "The 80×24 screen is shown whole on desktop (with tiles, the map in square cells at the size that fits); on phones the map is zoomed around the player and the sidebar is replaced by a status band. Stores and full-screen pages are shown whole on phones, small, with their choices as buttons.",
+        "The 80×24 screen is shown whole on desktop (with tiles, the map in square cells at the size that fits); on phones the map is zoomed around the player and the sidebar is replaced by a status band. Stores and other full-screen pages open fitted whole on phones, which is small: pinch to zoom in; their choices are also buttons.",
         "The Borg (an automatic player some upstream builds include) is not compiled in."
       ],
       "compatibility": [
