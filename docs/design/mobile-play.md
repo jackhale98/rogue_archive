@@ -169,7 +169,7 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 | Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type; the pad (abilities and smithing screens use arrow keys) |
 | `-more-` · yes/no | Continue, Skip · Yes, No, Cancel |
 | "Please verify ABORTING by typing the '@' sign" (Kill character, `Q`) | **Kill character** (`@`), Cancel |
-| The tombstone and the menu after death (files.c `final_menu`) | **Back to title** (`h`), Scores, Inventory, Dungeon, Messages, Character, Add a note, Save character sheet |
+| The tombstone and the menu after death (files.c `final_menu`) | In reading order: Scores, Inventory, Dungeon, Messages, Character, Add a note, Save character sheet, then the lead **Back to title** (`h`) |
 | Aim ("'f' for closest") | The pad; **Nearest** (`f`; **Target** once one is set), **Choose target** (`*`; Re-target), Cancel |
 | Direction (open, close, bash, tunnel, disarm) | The pad and Cancel only: these prompts take no target |
 | Look / target | The pad; what the prompt offers: Target (`t`), Next (Space; **More** when the prompt says `-more-`), Recall (`r`) for a monster; Cancel |
@@ -290,7 +290,7 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 | Text field (name, quantities, rest count, inscriptions) | Type, OK, Back; the character's name: OK, **Random name** (`*`), Type, Back |
 | The last step of creation ("'ESC' to step back, 'S' to start over") | **Start playing**, Back, Start over |
 | "Please verify RETIRING THIS CHARACTER by typing the '@' sign" | **Retire character** (`@`), Cancel |
-| The death menu beside the tombstone (ui-death.c) | **New game** (then "Start a new game?"), Scores, Information, Messages, Examine items, History, File dump, Quit |
+| The death menu beside the tombstone (ui-death.c) | In reading order: Scores, Information, Messages, Examine items, History, File dump, Quit, then the lead **New game** (then "Start a new game?") |
 
 `games/angband/tests/conformance/key-coverage.ts` checks that each command sends, in both keysets, the key `ui-game.c`'s tables bind to that command and that no keymap takes first; the conformance replays send the same keys and clicks as the dock and the map gestures.
 

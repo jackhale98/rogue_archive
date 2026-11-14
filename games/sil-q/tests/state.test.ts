@@ -509,9 +509,12 @@ describe('the start and end of a game by touch', () => {
 
   it('leads the death menu with the way back to the title, the rest as plain buttons', () => {
     const layout = actions(controlsFor('death', { hp: 0, maxHp: 0, run: false }, screenChoices(DEATH)));
-    expect(layout[0]).toMatchObject({ command: `${CHOOSE}h`, label: 'Back to title', emphasis: 'primary' });
+    expect(layout.at(-1)).toMatchObject({
+      command: `${CHOOSE}h`,
+      label: 'Back to title',
+      emphasis: 'primary',
+    });
     expect(layout.map((action) => action.label)).toEqual([
-      'Back to title',
       'Scores',
       'Inventory',
       'Dungeon',
@@ -519,6 +522,7 @@ describe('the start and end of a game by touch', () => {
       'Character',
       'Add a note',
       'Save character sheet',
+      'Back to title',
     ]);
     expect(layout.filter((action) => action.emphasis === 'primary')).toHaveLength(1);
   });

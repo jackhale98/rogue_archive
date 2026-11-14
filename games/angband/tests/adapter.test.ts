@@ -380,9 +380,8 @@ describe('the start and end of a game by touch', () => {
     expect(isDeathMenu(DEATH)).toBe(true);
     expect(detectContext(DEATH, notInGame)).toBe('death');
     const layout = actions(controlsFor('death', base, screenChoices(DEATH)));
-    expect(layout[0]).toMatchObject({ command: `${CHOOSE}n`, label: 'New game', emphasis: 'primary' });
+    expect(layout.at(-1)).toMatchObject({ command: `${CHOOSE}n`, label: 'New game', emphasis: 'primary' });
     expect(layout.map((action) => action.label)).toEqual([
-      'New game',
       'Scores',
       'Information',
       'Messages',
@@ -390,6 +389,7 @@ describe('the start and end of a game by touch', () => {
       'History',
       'File dump',
       'Quit',
+      'New game',
     ]);
   });
 

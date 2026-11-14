@@ -219,10 +219,12 @@ test('Sil-Q phone: kill the character by touch, the tombstone and its menu, back
   await openSil(page);
   const dock = page.getByRole('group', { name: 'Actions' });
   await dock.getByRole('button', { name: /New character/ }).tap();
-  for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
+  // Each creation step's lead (OK, Accept…), then the intro's pages.
+  for (let i = 0; i < 14 && (await silContext(page)) !== 'map'; i++) {
     await page.waitForTimeout(400);
     if ((await silContext(page)) === 'map') break;
-    await dock.getByRole('button', { name: /^OK/ }).tap();
+    const lead = dock.locator('.dock-button--primary').first();
+    if (await lead.isVisible()) await lead.tap();
   }
   await waitForContext(page, 'map');
   await expect(dock.getByRole('button', { name: 'Pack (i)' })).toBeVisible();

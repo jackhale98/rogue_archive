@@ -849,7 +849,8 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'death': {
-      // After death: back to the title menu (h) leads; the rest look back at the game.
+      // After death: a look back at the game in the menu's order, then the
+      // way back to the title menu (h), which leads (last: nearest the thumb).
       const labels: Record<string, string> = {
         a: 'Scores',
         b: 'Inventory',
@@ -861,11 +862,12 @@ export function controlsFor(
       };
       return {
         actions: [
-          a(`${CHOOSE}h`, { label: 'Back to title', emphasis: 'primary', wide: true }),
           ...choices
             .filter((choice) => choice.key !== 'h')
             .map((choice) => a(`${CHOOSE}${choice.key}`, { label: labels[choice.key] ?? choice.label })),
+          a(`${CHOOSE}h`, { label: 'Back to title', emphasis: 'primary', wide: true }),
         ],
+        reading: true,
         palette: [],
       };
     }

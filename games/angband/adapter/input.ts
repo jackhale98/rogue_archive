@@ -551,8 +551,8 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'death': {
-      // The death menu: a new game leads (it asks "Start a new game?"), then
-      // a look back at the game; Quit leaves for the savefile menu.
+      // The death menu: a look back at the game, Quit (to the savefile menu),
+      // then a new game, which leads (last: nearest the thumb; it asks "Start a new game?").
       const labels: Record<string, string> = {
         i: 'Information',
         m: 'Messages',
@@ -565,11 +565,12 @@ export function controlsFor(
       };
       return {
         actions: [
-          a(`${CHOOSE}n`, { label: 'New game', emphasis: 'primary', wide: true }),
           ...['v', 'i', 'm', 'x', 'h', 'f', 'q']
             .filter((key) => choices.some((choice) => choice.key === key))
             .map((key) => a(`${CHOOSE}${key}`, { label: labels[key]! })),
+          a(`${CHOOSE}n`, { label: 'New game', emphasis: 'primary', wide: true }),
         ],
+        reading: true,
         palette: [],
       };
     }
