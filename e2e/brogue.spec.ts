@@ -91,9 +91,12 @@ test.describe('Brogue CE', () => {
     await openBrogue(page);
     await page.keyboard.press('n');
     await waitInGame(page);
+    // Leaving asks first; leaving without a named save keeps the game as LastGame.
     await page.getByRole('link', { name: 'Library' }).click();
+    const leave = page.getByRole('dialog', { name: 'Leave Brogue?' });
+    await expect(leave).toContainText('LastGame');
+    await leave.getByRole('button', { name: 'Leave (kept as LastGame)' }).click();
     await expect(page).toHaveURL(/#\/games\/brogue-ce$/);
-    await expect(page.getByText(/LastGame/)).toBeVisible();
 
     await page.getByRole('link', { name: 'Play Brogue' }).click();
     await waitForScreenText(page, 'New Game');

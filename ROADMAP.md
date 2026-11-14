@@ -49,7 +49,8 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Phone item details: the sheet shows only the chosen item's panel; the dock offers its actions (apply/equip/remove/throw/drop, relabel/call) and item stepping
 - [x] Phone title screen: large buttons for new game, loading saves (a list with dates), recordings, scores, variant and mode
 - [x] Touch controls audit (docs/design/controls-audit.md): palette no longer offers `y`/`n` (they move diagonally); five-turn search (Ctrl+S) and Look (Tab) by touch; "Go ↓/↑" once the stairs route is shown, Stairs after exploring; a danger dock (Fight, Throw again in one tap; never Rest/Search as the lead); Eat leads when Hungry; search progress; Rest until better vs Rest 100 named by what `Z` will do; Throw/Zap/Go on the targeting dock; a recording-playback dock; every touch command checked against upstream's key handlers
-- [ ] Try it on real phones; tune default map size, dock contents and fan timing from that feedback
+- [x] Played on a real iPhone (iOS Safari), November 2026: all five games playable
+- [ ] Tune default map size, dock contents and fan timing from real-phone feedback (continuing)
 - [ ] iPhone: one-time "Add to Home Screen" hint for full screen
 - [x] Update safety: build reads upstream's Makefile; drift check; weekly canary against latest release and development branch
 - [ ] Before the next minor Brogue release: decide whether to keep the previous build playable for unfinished saves

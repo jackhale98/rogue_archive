@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { loadAdapterModule } from '../app/adapters.ts';
 import { gamesById } from '../app/catalog.ts';
 import { repositoryFileUrl } from '../app/config.ts';
-import { consumeFlash } from '../app/flash.ts';
 import { href } from '../app/router.ts';
 import { gameSettingsScope } from '../app/settings.tsx';
 import { getStore } from '../app/store.ts';
@@ -148,7 +147,6 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
   const [runtime, setRuntime] = useState<LoadedRuntime | null>(null);
   const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const launchable = game ? isLaunchable(game) : false;
-  const [flash, setFlashMessage] = useState(consumeFlash);
 
   useEffect(() => {
     if (game) document.title = `${game.title} · Rogue Archive`;
@@ -167,18 +165,6 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
       <p className="breadcrumb">
         <a href={href('/')}>Library</a> <span aria-hidden="true">/</span> {game.title}
       </p>
-      {flash ? (
-        <div className="flash" role="status">
-          <p>{flash}</p>
-          <button
-            type="button"
-            className="button button--small button--quiet"
-            onClick={() => setFlashMessage(null)}
-          >
-            Dismiss
-          </button>
-        </div>
-      ) : null}
       <header className="detail__header">
         <div className="detail__intro">
           <StatusBadge status={game.status} />

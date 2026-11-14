@@ -11,7 +11,9 @@
 import {
   GAME_API_VERSION,
   SHELL_COMMAND,
+  waitUntil,
   type GameAdapter,
+  type GameExitPrompt,
   type GameHost,
   type GameInput,
   type GameModule,
@@ -281,6 +283,42 @@ class SilAdapter implements GameAdapter {
 
   #send(keys: number[]): void {
     if (keys.length) this.#post({ type: 'keys', keys });
+  }
+
+  exitPrompt(): GameExitPrompt | null {
+    if (this.#exited || !this.#state?.inDungeon || this.#context === 'title' || this.#context === 'load')
+      return null;
+    return {
+      message:
+        'Sil-Q saves when you take the stairs. Save and leave keeps everything up to now; leaving without saving goes back to your last save.',
+      options: [
+        { id: 'save', label: 'Save and leave', primary: true },
+        { id: 'leave', label: 'Leave without saving', destructive: true },
+      ],
+    };
+  }
+
+  /** Save and leave: Sil's own save (Ctrl+S), from the map, then wait for "Saving game... done.". */
+  async exitWith(optionId: string): Promise<void> {
+    if (optionId !== 'save') return;
+    for (let i = 0; i < 12 && this.#context !== 'map'; i++) {
+      if (this.#context !== 'busy') this.#send([this.#context === 'more' ? 32 : 27]);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (this.#context !== 'map') throw new Error('Sil-Q is not ready for a command.');
+    const top = () => this.debug.rowText(0);
+    this.#send(this.#commandKeys([19]));
+    await waitUntil(
+      () => {
+        const line = top();
+        if (/cannot save games during the tutorial/.test(line))
+          throw new Error('Sil-Q does not save during the tutorial.');
+        if (/Saving game\.\.\. failed/.test(line)) throw new Error('Sil-Q could not save.');
+        return /Saving game\.\.\. done/.test(line);
+      },
+      15_000,
+      'Saving',
+    );
   }
 
   async persist(): Promise<void> {

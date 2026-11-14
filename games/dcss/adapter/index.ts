@@ -13,6 +13,7 @@
 import {
   GAME_API_VERSION,
   type GameAdapter,
+  type GameExitPrompt,
   type GameHost,
   type GameInput,
   type GameModule,
@@ -21,6 +22,7 @@ import {
   type Presentation,
   type RuntimeFile,
   type SaveFile,
+  waitUntil,
 } from '@rogue-archive/game-api';
 import { DcssHud } from './hud.ts';
 import { DcssLauncher } from './launcher.ts';
@@ -343,6 +345,34 @@ class DcssAdapter implements GameAdapter {
       return;
     }
     this.#client.key(input);
+  }
+
+  exitPrompt(): GameExitPrompt | null {
+    if (!this.#playing || !this.#tracker.inGame) return null;
+    return {
+      message:
+        'DCSS saves your character when you change level. Save and leave keeps everything up to now; leaving without saving goes back to that save.',
+      options: [
+        { id: 'save', label: 'Save and leave', primary: true },
+        { id: 'leave', label: 'Leave without saving', destructive: true },
+      ],
+    };
+  }
+
+  /** Save and leave: DCSS's own save and exit (`S`, then yes), back at the start screen. */
+  async exitWith(optionId: string): Promise<void> {
+    if (optionId !== 'save') return;
+    const context = () => this.#tracker.context();
+    // Back to the map first: close --more--, menus, popups and prompts.
+    for (let i = 0; i < 12 && context() !== 'map'; i++) {
+      if (context() !== 'busy') this.sendInput({ type: 'command', commandId: 'cancel' });
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (context() !== 'map') throw new Error('DCSS is not ready for a command.');
+    this.sendInput({ type: 'command', commandId: 'save' });
+    await waitUntil(() => context() === 'yesno', 10_000, "DCSS's save question");
+    this.sendInput({ type: 'command', commandId: 'yes' });
+    await waitUntil(() => !this.#playing, 30_000, 'Saving');
   }
 
   async persist(): Promise<void> {

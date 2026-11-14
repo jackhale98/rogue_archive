@@ -1,12 +1,12 @@
 import { isLaunchable } from '@rogue-archive/catalog';
-import { SHELL_COMMAND } from '@rogue-archive/game-api';
+import { SHELL_COMMAND, type GameExitPrompt } from '@rogue-archive/game-api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gamesById } from '../app/catalog.ts';
 import { requestDurableStorage } from '../app/durable-storage.ts';
-import { setFlash } from '../app/flash.ts';
 import { href, navigate } from '../app/router.ts';
 import { useSettings } from '../app/settings.tsx';
 import { ErrorView } from '../features/game-shell/ErrorView.tsx';
+import { ExitDialog } from '../features/game-shell/ExitDialog.tsx';
 import { LoadingView } from '../features/game-shell/LoadingView.tsx';
 import { MessageLog } from '../features/game-shell/MessageLog.tsx';
 import { ShellMenu } from '../features/game-shell/ShellMenu.tsx';
@@ -64,6 +64,9 @@ function usePortrait(): boolean {
   return portrait;
 }
 
+/** How long a game's own save and quit may take before the shell gives up waiting. */
+const EXIT_TIMEOUT_MS = 30_000;
+
 /** Space (CSS px) the floating tools take in the top-right corner of the compact layout. */
 const COMPACT_TOOLS_WIDTH = 210;
 
@@ -80,6 +83,10 @@ function GameShell({ gameId }: { gameId: string }) {
   const [logOpen, setLogOpen] = useState(false);
   const [viewLabel, setViewLabel] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  /** Asked before leaving a game in progress. */
+  const [exitPrompt, setExitPrompt] = useState<GameExitPrompt | null>(null);
+  const [exitBusy, setExitBusy] = useState<string | null>(null);
+  const [exitError, setExitError] = useState<string | null>(null);
   const showTouch = settings.touchControls === 'always' || (settings.touchControls === 'auto' && coarse);
   const compact = useCompactViewport(showTouch);
   const portrait = usePortrait();
@@ -140,10 +147,47 @@ function GameShell({ gameId }: { gameId: string }) {
     } catch {
       // The session cleanup retries on shutdown; never trap the player here.
     }
-    if (adapter?.resumeHint && phase === 'running') setFlash(adapter.resumeHint);
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
     navigate(`/games/${game.id}`);
-  }, [adapter, game.id, leaving, phase]);
+  }, [adapter, game.id, leaving]);
+
+  /** Leaving: with a game in progress, first ask how (save and quit, or not). */
+  const requestLeave = useCallback(() => {
+    setMenuOpen(false);
+    const prompt = phase === 'running' ? (adapter?.exitPrompt?.() ?? null) : null;
+    if (!prompt || prompt.options.length === 0) {
+      void leave();
+      return;
+    }
+    setExitError(null);
+    setExitPrompt(prompt);
+  }, [adapter, phase, leave]);
+
+  const chooseExit = useCallback(
+    async (optionId: string) => {
+      if (!adapter || exitBusy) return;
+      setExitBusy(optionId);
+      setExitError(null);
+      try {
+        await Promise.race([
+          adapter.exitWith?.(optionId),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('The game did not finish in time.')), EXIT_TIMEOUT_MS),
+          ),
+        ]);
+      } catch (error) {
+        setExitBusy(null);
+        setExitError(
+          `${error instanceof Error ? error.message : String(error)} Your game is still running: try again, or keep playing.`,
+        );
+        return;
+      }
+      setExitPrompt(null);
+      setExitBusy(null);
+      await leave();
+    },
+    [adapter, exitBusy, leave],
+  );
 
   useEffect(() => {
     if (phase === 'exited') navigate(`/games/${game.id}`);
@@ -284,7 +328,7 @@ function GameShell({ gameId }: { gameId: string }) {
       aria-label="Back to library"
       onClick={(event) => {
         event.preventDefault();
-        void leave();
+        requestLeave();
       }}
     >
       <span aria-hidden="true">←</span> <span className="play__back-label">Library</span>
@@ -356,8 +400,21 @@ function GameShell({ gameId }: { gameId: string }) {
             onExit={() => navigate('/')}
           />
         ) : null}
+        {exitPrompt && !leaving ? (
+          <ExitDialog
+            title={game.title}
+            prompt={exitPrompt}
+            busy={exitBusy}
+            error={exitError}
+            onChoose={(id) => void chooseExit(id)}
+            onCancel={() => {
+              setExitPrompt(null);
+              focusGame();
+            }}
+          />
+        ) : null}
         {leaving ? (
-          <div className="shell-overlay" role="status">
+          <div className="shell-overlay shell-overlay--top" role="status">
             <div className="shell-panel">Saving your progress…</div>
           </div>
         ) : null}
@@ -381,7 +438,7 @@ function GameShell({ gameId }: { gameId: string }) {
             setMenuOpen(false);
             focusGame();
           }}
-          onExit={() => void leave()}
+          onExit={requestLeave}
           game={game}
           adapter={adapter}
           runtime={runtime}

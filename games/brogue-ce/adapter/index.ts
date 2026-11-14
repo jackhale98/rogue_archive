@@ -10,6 +10,7 @@ import {
   GAME_API_VERSION,
   SHELL_COMMAND,
   type GameAdapter,
+  type GameExitPrompt,
   type GameHost,
   type GameInput,
   type GameModule,
@@ -18,6 +19,7 @@ import {
   type Presentation,
   type RuntimeFile,
   type SaveFile,
+  waitUntil,
 } from '@rogue-archive/game-api';
 import { decodeSheet } from './atlas.ts';
 import {
@@ -334,6 +336,47 @@ class BrogueAdapter implements GameAdapter {
     if (!this.#stickyShift) return event;
     this.#setStickyShift(false);
     return [event[0], event[1], event[2], event[3], 1];
+  }
+
+  exitPrompt(): GameExitPrompt | null {
+    const context = this.#context;
+    if (this.#exited || !this.#inGame || !context || context === 'title' || context === 'playback')
+      return null;
+    return {
+      message:
+        'Brogue keeps the game in progress as “LastGame” (Load Saved Game on the title screen). Save and leave also keeps it as a named save.',
+      options: [
+        { id: 'save', label: 'Save and leave', primary: true },
+        { id: 'leave', label: 'Leave (kept as LastGame)' },
+      ],
+    };
+  }
+
+  /** Save and leave: Brogue's own save (`S`, confirm, keep the suggested name), back at the title. */
+  async exitWith(optionId: string): Promise<void> {
+    if (optionId !== 'save') return;
+    const command = (commandId: string) => this.sendInput({ type: 'command', commandId });
+    // (Dialogs drawn over the map leave map glyphs in their spaces.)
+    const shows = (text: string) => new RegExp(text.replace(/ /g, '.')).test(this.debug.screenText());
+    for (let i = 0; i < 12 && this.#context !== 'map'; i++) {
+      if (this.debug.waiting) command(this.#context === 'more' ? 'acknowledge' : 'cancel');
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (this.#context !== 'map') throw new Error('Brogue is not ready for a command.');
+    command('save');
+    await waitUntil(() => shows('Save this game'), 8000, "Brogue's save question");
+    command('confirm');
+    await waitUntil(() => shows('Save game as'), 8000, "Brogue's save name");
+    command('confirm');
+    await waitUntil(
+      () => {
+        if (this.#context === 'more' && this.debug.waiting) command('acknowledge');
+        return this.#context === 'title' || this.#exited;
+      },
+      20_000,
+      'Saving',
+      300,
+    );
   }
 
   async persist(): Promise<void> {

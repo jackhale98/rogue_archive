@@ -19,6 +19,7 @@
 import {
   GAME_API_VERSION,
   type GameAdapter,
+  type GameExitPrompt,
   type GameHost,
   type GameInput,
   type GameModule,
@@ -686,6 +687,25 @@ class HyperRogueAdapter implements GameAdapter {
       ),
     );
   }
+
+  exitPrompt(): GameExitPrompt | null {
+    const state = this.debug.state;
+    // Nothing to keep before the game runs, or once it is over (the score is recorded).
+    if (!this.#module || this.#stopped || !state || !state.canMove) return null;
+    if (state.safety > 0)
+      return {
+        message: `An Orb of Safety is powered (${state.safety}): leaving now keeps this game, to continue next time.`,
+        options: [{ id: 'leave', label: 'Leave and keep this game', primary: true }],
+      };
+    return {
+      message:
+        'As in HyperRogue, leaving ends this game and records its score. To keep a game for later, leave while an Orb of Safety is powered, or play in casual mode (special modes menu).',
+      options: [{ id: 'leave', label: 'End this game and leave', destructive: true }],
+    };
+  }
+
+  /** Leaving: HyperRogue's own save on leaving (persist) does it all. */
+  async exitWith(): Promise<void> {}
 
   async persist(): Promise<void> {
     const mod = this.#module;

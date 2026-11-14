@@ -539,6 +539,14 @@
   gap: var(--space-3);
   margin-top: var(--space-5);
 }
+.shell-panel__actions--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+/* Above the dock and the thumb pad (and an open fan). */
+.shell-overlay--top {
+  z-index: 5;
+}
 .stage-list {
   list-style: none;
   padding: 0;

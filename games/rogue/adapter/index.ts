@@ -16,7 +16,9 @@
 import {
   GAME_API_VERSION,
   SHELL_COMMAND,
+  waitUntil,
   type GameAdapter,
+  type GameExitPrompt,
   type GameHost,
   type GameInput,
   type GameModule,
@@ -453,6 +455,35 @@ class RogueAdapter implements GameAdapter {
 
   #send(keys: number[]): void {
     if (keys.length) this.#post({ type: 'keys', keys });
+  }
+
+  exitPrompt(): GameExitPrompt | null {
+    // Nothing to keep at the start screen or on the tombstone and scores.
+    if (!this.#playing || !this.#state?.inGame || this.#context === 'enter') return null;
+    return {
+      message:
+        'Rogue keeps no save while you play: leave without saving and this game is over, as in the original. Save and leave keeps it, to continue from the start screen.',
+      options: [
+        { id: 'save', label: 'Save and leave', primary: true },
+        { id: 'leave', label: 'Leave without saving', destructive: true },
+      ],
+    };
+  }
+
+  /** Save and leave: Rogue's own save (`S`, then `y`), which ends the game at the start screen. */
+  async exitWith(optionId: string): Promise<void> {
+    if (optionId !== 'save') return;
+    // Back to the map first: close --More--, lists and questions.
+    for (let i = 0; i < 12 && this.#context !== 'map'; i++) {
+      if (this.#context !== 'busy')
+        this.#send([this.#context === 'more' || this.#context === 'menu' ? 32 : 27]);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (this.#context !== 'map') throw new Error('Rogue is not ready for a command.');
+    this.#send(['S'.charCodeAt(0)]);
+    await waitUntil(() => this.#context === 'yesno', 5000, "Rogue's save question");
+    this.#send(['y'.charCodeAt(0)]);
+    await waitUntil(() => !this.#playing, 15_000, 'Saving');
   }
 
   async persist(): Promise<void> {

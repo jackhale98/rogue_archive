@@ -64,7 +64,7 @@ Implement `GameAdapter` (`packages/game-api`). Feature checklist, with Brogue ex
 | `setPresentation` → phone layout (§5) | `adapter/views.ts`, `hud.ts` |
 | `message-log` events | `adapter/messages.ts` |
 | `persist`, `exportSaves`/`importSaves`, `nativeSaveExtensions` (raw files usable by the desktop game) | `adapter/index.ts`, `worker.ts` |
-| `settings` descriptors, `resumeHint`, `cycleView` (desktop zoom) | `adapter/index.ts` |
+| `settings` descriptors, `resumeHint`, `exitPrompt`/`exitWith` (leaving: the game's own save and quit), `cycleView` (desktop zoom) | `adapter/index.ts` |
 | Debug hook (`?debug` / dev only): screen text, context, views, cell↔client mapping | `debug` in `adapter/index.ts` |
 
 Keep the shared platform game-agnostic: if you need something the contract lacks, extend `packages/game-api` (with docs in `docs/architecture/game-api.md`) rather than special-casing a game in `apps/web`.

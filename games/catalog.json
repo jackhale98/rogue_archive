@@ -96,7 +96,7 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "Phones use a rearranged layout (full-screen map, status bar, menus as large sheets); pinch to resize the map. Tablets and desktop show Brogue's original screen.",
         "iPhone Safari cannot hide its toolbars from a web page; add the site to the Home Screen for a full-screen view.",
         "The tile downscaler is a simplified version of Brogue's desktop renderer (no sub-pixel sharpening or wall-top shading), so very small sizes can look softer than on desktop.",
@@ -119,7 +119,8 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026: playable, with the touch controls. Desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",
@@ -221,7 +222,7 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "The download is about 19 MB on the first visit (cached afterwards for offline play).",
         "Map zoom on phones follows DCSS's own fit-to-view; pinch zoom is not yet available.",
         "DCSS only tells whether a character has spells inside its menus: the phone dock leads with Cast until the game has said there are none, then with Ability.",
@@ -244,7 +245,8 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026: playable, with the touch controls. Desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",
@@ -350,7 +352,7 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "Text only: Sil's optional tile graphics are not included.",
         "No sound (upstream's sounds have no clear licence and are not shipped).",
         "The 80×24 screen is shown whole on desktop; on phones the map is zoomed around the player and the sidebar is replaced by a status band."
@@ -372,7 +374,8 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026: playable, with the touch controls. Desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",
@@ -489,7 +492,7 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
+        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "As in the original, Rogue saves only when you press S, and a saved game is removed when you continue it: closing the page mid-game loses that game's progress.",
         "No shell escape (!): there is no shell in the browser."
       ],
@@ -510,7 +513,8 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026: playable, with the touch controls. Desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",
@@ -628,7 +632,8 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026: playable, with the touch controls. Desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",

@@ -31,7 +31,7 @@ Adapters may also implement `setPresentation({ compact, insets, topRightReserve 
 
 Touch layouts can change with the game's situation: the adapter emits `{ type: 'touch-layout', layout, context }` and the shell re-renders its pad and dock. Actions are command ids or `TouchAction` objects (`label`, `alternates` for long-press fans, `emphasis`, `wide`). `SHELL_COMMAND.palette` and `SHELL_COMMAND.keyboard` place shell features (command list, device keyboard) in a layout.
 
-Adapters also expose `commands`, `touchLayout`, `settings` (setting descriptors the shell can render without understanding them) and `resumeHint` (shown after leaving mid-game).
+Adapters also expose `commands`, `touchLayout`, `settings` (setting descriptors the shell can render without understanding them) and `resumeHint` (how saving works, shown in the game menu). Before leaving a game in progress the shell asks `exitPrompt()` for what to tell the player and how they can leave (e.g. "Save and leave", "Leave without saving"); it shows these with "Keep playing", and runs the chosen one with `exitWith(id)` (the game's own save and quit, which resolves once it is done), then `persist()` and leaves. No prompt (nothing in progress): it leaves at once.
 
 ## Events to the host
 

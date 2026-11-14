@@ -242,6 +242,23 @@ export interface Presentation {
 }
 
 /** Implemented by every game package. */
+/** A way to leave a game in progress (e.g. "Save and leave"), offered before leaving. */
+export interface GameExitOption {
+  id: string;
+  label: string;
+  /** The main choice. */
+  primary?: boolean;
+  /** Progress is lost: shown as a warning. */
+  destructive?: boolean;
+}
+
+/** What the shell asks before leaving a game in progress. */
+export interface GameExitPrompt {
+  /** How saving works for this game, now: a sentence or two. */
+  message: string;
+  options: readonly GameExitOption[];
+}
+
 export interface GameAdapter {
   readonly apiVersion: GameApiVersion;
   readonly gameId: string;
@@ -255,8 +272,20 @@ export interface GameAdapter {
    * so saves move to and from the native desktop game.
    */
   readonly nativeSaveExtensions?: readonly string[];
-  /** Shown after leaving mid-game: how to continue next time. */
+  /** How saving works and how to continue next time (shown in the game menu). */
   readonly resumeHint?: string;
+  /**
+   * Asked when the player leaves: what to tell them and how they can leave
+   * (save and quit, leave without saving...). Null, or no method: nothing is
+   * in progress, so the shell leaves at once.
+   */
+  exitPrompt?(): GameExitPrompt | null;
+  /**
+   * Carries out an exit option (e.g. the game's own save and quit); resolves
+   * once it is done, rejects if it could not be. The shell then persists and
+   * leaves.
+   */
+  exitWith?(optionId: string): Promise<void>;
 
   initialize(host: GameHost, options: InitializeOptions): Promise<void>;
   start(): Promise<void>;
@@ -286,3 +315,4 @@ export interface GameModule {
 
 export { LifecycleMachine, type LifecycleState, type LifecycleTransition } from './lifecycle.ts';
 export { domKeyToInput } from './keyboard.ts';
+export { waitUntil } from './wait.ts';
