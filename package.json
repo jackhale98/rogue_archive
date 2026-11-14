@@ -20,6 +20,7 @@
     "build:brogue": "games/brogue-ce/scripts/build.sh",
     "build:sil": "bash games/sil-q/scripts/build.sh",
     "build:rogue": "bash games/rogue/scripts/build.sh",
+    "build:nethack": "bash games/nethack/scripts/build.sh",
     "build:hyperrogue": "bash games/hyperrogue/scripts/build.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
     "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
