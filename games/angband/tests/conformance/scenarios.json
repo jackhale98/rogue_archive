@@ -1,0 +1,10 @@
+{
+  "$comment": "Event scripts replayed by replay.mjs in the native and WebAssembly builds from the same fixed seed. Keys: literal characters, plus {CR} {ESC} {TAB} {SPACE} {BS} {UP} {DOWN} {LEFT} {RIGHT}, {^X} for Ctrl+X and {M:x,y,button} for a mouse click on a screen cell (button 1, or 2 for the second button; +16 Ctrl, +32 Shift, +64 Alt: Angband's modifiers << 4). `graphics`: a graphics mode to switch to once the map shows, as the page's Display setting does. `expect`: text that must appear in the native output; `expectFiles`: files the game must write under the user directory.",
+  "scenarios": [
+    {
+      "name": "warrior-town",
+      "keys": ["{SPACE}{CR}", "{CR}{CR}{CR}{CR}", "Tester{CR}", "y", "{SPACE}", "i{ESC}e{ESC}C{ESC}", "4444466666"],
+      "expect": ["Tester", "Down staircase"]
+    }
+  ]
+}

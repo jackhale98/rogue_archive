@@ -23,6 +23,8 @@
     "build:nethack": "bash games/nethack/scripts/build.sh",
     "test:engine:nethack": "bash games/nethack/scripts/test-engine.sh",
     "build:hyperrogue": "bash games/hyperrogue/scripts/build.sh",
+    "build:angband": "bash games/angband/scripts/build.sh",
+    "test:engine:angband": "bash games/angband/scripts/test-engine.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
     "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
     "typecheck": "tsc -p tsconfig.json",
@@ -38,7 +40,8 @@
     "canary:sil": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/sil-q/scripts/build.sh && games/sil-q/scripts/test-engine.sh\"",
     "canary:rogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/rogue/scripts/build.sh && games/rogue/scripts/test-engine.sh\"",
     "canary:hyperrogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/hyperrogue/scripts/build.sh && bash games/hyperrogue/scripts/test-engine.sh\"",
-    "canary:nethack": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/nethack/scripts/build.sh && bash games/nethack/scripts/test-engine.sh\""
+    "canary:nethack": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/nethack/scripts/build.sh && bash games/nethack/scripts/test-engine.sh\"",
+    "canary:angband": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/angband/scripts/build.sh && bash games/angband/scripts/test-engine.sh\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -12,6 +12,7 @@ const ADAPTERS: Record<string, () => Promise<GameModule>> = {
   rogue: () => import('@rogue-archive/game-rogue').then((m) => m.default),
   hyperrogue: () => import('@rogue-archive/game-hyperrogue').then((m) => m.default),
   nethack: () => import('@rogue-archive/game-nethack').then((m) => m.default),
+  angband: () => import('@rogue-archive/game-angband').then((m) => m.default),
 };
 
 export function loadAdapterModule(adapterId: string): Promise<GameModule> {

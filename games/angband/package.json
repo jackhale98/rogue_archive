@@ -1,0 +1,15 @@
+{
+  "name": "@rogue-archive/game-angband",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rogue Archive adapter for Angband.",
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "exports": {
+    ".": "./adapter/index.ts"
+  },
+  "dependencies": {
+    "@rogue-archive/game-api": "workspace:*",
+    "@rogue-archive/term-view": "workspace:*"
+  }
+}
