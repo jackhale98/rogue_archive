@@ -648,7 +648,8 @@ class AngbandAdapter implements GameAdapter {
     const state = this.#state;
     const grid = this.#grid;
     const top = grid ? rowText(grid, 0) : '';
-    const overlay = grid && state && (context === 'menu' || context === 'item') ? mapOverlay(grid, state) : null;
+    const overlay =
+      grid && state && (context === 'menu' || context === 'item') ? mapOverlay(grid, state) : null;
     const lettered = context === 'birth' || context === 'menu' || context === 'item' || context === 'store';
     const choices = grid && lettered ? screenChoices(grid, overlay ?? undefined) : [];
     this.#saveMenu = grid && context === 'select' ? (saveMenu(grid) ?? []) : [];
@@ -719,7 +720,14 @@ class AngbandAdapter implements GameAdapter {
           { x: 0, y: map.y, width: map.x, height: map.height },
           { x: 0, y: top, width: side, height: bottom - top },
         ),
-        fittedView('map', map, { x: side, y: top, width: width - side, height: bottom - top }, Infinity, {}, 1),
+        fittedView(
+          'map',
+          map,
+          { x: side, y: top, width: width - side, height: bottom - top },
+          Infinity,
+          {},
+          1,
+        ),
         fittedView(
           'status',
           { x: 0, y: grid.rows - 1, width: grid.cols, height: 1 },

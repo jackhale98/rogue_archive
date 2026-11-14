@@ -5,7 +5,16 @@
 // snapshot, every message, and every file the game wrote (savefiles, scores).
 // Usage: node replay.mjs --native <bin> --wasm <cjs> --lib <dir> --runs <dir> --scenarios <json>
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { parseEvents } from './events.mjs';
@@ -20,8 +29,10 @@ const { values: args } = parseArgs({
   },
 });
 
-function freshDir(dir) {
-  rmSync(dir, { recursive: true, force: true });
+/** A fresh copy of the game data; the user directory is kept for a scenario that `continues` the previous one. */
+function freshDir(dir, keepUser) {
+  if (!keepUser) rmSync(dir, { recursive: true, force: true });
+  rmSync(join(dir, 'angband/lib'), { recursive: true, force: true });
   mkdirSync(join(dir, 'angband/user'), { recursive: true });
   cpSync(args.lib, join(dir, 'angband/lib'), { recursive: true });
 }
@@ -55,8 +66,8 @@ for (const scenario of scenarios) {
   const env = { RA_REPLAY_KEYS: events, RA_REPLAY_GRAPHICS: String(scenario.graphics ?? '') };
   const nativeDir = join(args.runs, 'native');
   const wasmDir = join(args.runs, 'wasm');
-  freshDir(nativeDir);
-  freshDir(wasmDir);
+  freshDir(nativeDir, scenario.continues);
+  freshDir(wasmDir, scenario.continues);
   const native = run(args.native, GAME_ARGS, env, nativeDir);
   const wasm = run(process.execPath, [args.wasm, ...GAME_ARGS], {
     ...env,
@@ -67,7 +78,9 @@ for (const scenario of scenarios) {
   writeFileSync(join(args.runs, `${scenario.name}.wasm.txt`), wasm, 'latin1');
 
   const problems = [];
-  if (!/^== end after \d+ events$/m.test(native)) problems.push('the native run did not use up its events');
+  // A run ends when its events run out, or (`exits`) when Angband quits after the last one.
+  if (!/^== end after \d+ events$/m.test(native) && !scenario.exits)
+    problems.push('the native run did not use up its events');
   for (const text of scenario.expect ?? []) {
     if (!native.includes(text)) problems.push(`expected text not seen: ${JSON.stringify(text)}`);
   }

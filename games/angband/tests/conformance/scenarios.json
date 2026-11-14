@@ -1,10 +1,85 @@
 {
-  "$comment": "Event scripts replayed by replay.mjs in the native and WebAssembly builds from the same fixed seed. Keys: literal characters, plus {CR} {ESC} {TAB} {SPACE} {BS} {UP} {DOWN} {LEFT} {RIGHT}, {^X} for Ctrl+X and {M:x,y,button} for a mouse click on a screen cell (button 1, or 2 for the second button; +16 Ctrl, +32 Shift, +64 Alt: Angband's modifiers << 4). `graphics`: a graphics mode to switch to once the map shows, as the page's Display setting does. `expect`: text that must appear in the native output; `expectFiles`: files the game must write under the user directory.",
+  "$comment": "Event scripts replayed by replay.mjs in the native and WebAssembly builds from the same fixed seed. Keys: literal characters, plus {CR} {ESC} {TAB} {SPACE} {BS} {UP} {DOWN} {LEFT} {RIGHT} {HOME} {PGUP} {END} {PGDOWN}, {^X} for Ctrl+X, {S+UP} for Shift with a key ({K+5}: a keypad key), and {M:x,y,button} for a mouse click on a screen cell (button 1, or 2 for the second button; +64 with Alt: Angband's modifiers << 4). Angband starts at its savefile menu (-c) after its splash screen. `graphics`: a graphics mode to switch to once the map shows, as the page's Display setting does. `continues`: keep the user directory (savefiles) of the previous scenario. `exits`: Angband quits after the last event. `expect`: text that must appear in the native output; `expectFiles`: files the game must write under the user directory.",
   "scenarios": [
     {
-      "name": "warrior-town",
-      "keys": ["{SPACE}{CR}", "{CR}{CR}{CR}{CR}", "Tester{CR}", "y", "{SPACE}", "i{ESC}e{ESC}C{ESC}", "4444466666"],
-      "expect": ["Tester", "Down staircase"]
+      "name": "warrior-town-store",
+      "keys": [
+        "{SPACE}{CR}",
+        "{CR}{CR}{CR}{CR}",
+        "Tester{CR}y{SPACE}",
+        "d{ESC}i{ESC}e{ESC}C{ESC}l{ESC}",
+        "{M:50,13,1}{M:50,13,1}{M:50,13,1}{M:50,13,1}{M:50,13,1}33",
+        "pc{CR}{CR}{CR}",
+        "{ESC}i{ESC}"
+      ],
+      "expect": ["General Store", "You bought a Ration of Food", "Down staircase"]
+    },
+    {
+      "name": "mage-dungeon",
+      "keys": [
+        "{SPACE}{CR}",
+        "c{CR}b{CR}{CR}{CR}",
+        "Mage{CR}y{SPACE}",
+        "ba{ESC}{ESC}",
+        ">{CR}",
+        "{UP}{LEFT}{DOWN}{RIGHT}{HOME}{PGUP}{END}{PGDOWN}",
+        "{S+DOWN}{S+LEFT}{S+UP}{S+RIGHT}",
+        "R{CR}",
+        "M{ESC}[{ESC}]{ESC}l{ESC}",
+        "2222444466668888"
+      ],
+      "expect": ["Magic Missile", "You enter a maze of down staircases", "50' (L1)"]
+    },
+    {
+      "$comment": "Tiles: Adam Bolt's (graphics mode 2), switched on at the first map as the Display setting does, then a walk, the inventory and travel by mouse.",
+      "name": "tiles",
+      "graphics": 2,
+      "keys": [
+        "{SPACE}{CR}",
+        "{CR}{CR}{CR}{CR}",
+        "Tiler{CR}y{SPACE}",
+        "i{ESC}",
+        "{DOWN}{DOWN}{LEFT}{LEFT}",
+        "{M:50,13,1}{M:50,13,1}",
+        ">{CR}2222"
+      ],
+      "expect": ["== graphics 2", "Down staircase"]
+    },
+    {
+      "$comment": "Keys and clicks as the touch controls send them: travel by click, look by Alt+click, Angband's context menu (second button), the command menu (Enter), a keypad key, a direction prompt.",
+      "name": "touch-events",
+      "keys": [
+        "{SPACE}{CR}",
+        "{CR}{CR}{CR}{CR}",
+        "Toucher{CR}y{SPACE}",
+        "{M:46,6,1}",
+        "{M:46,13,65}{ESC}",
+        "{M:46,4,2}{ESC}",
+        "{CR}{ESC}{ESC}",
+        "{K+5}",
+        "o{ESC}",
+        "{M:60,13,1}"
+      ],
+      "expect": [
+        "Toucher",
+        "You see an open floor",
+        "(Enter to select, ESC) Command:",
+        "Direction or <click>"
+      ]
+    },
+    {
+      "$comment": "Save and quit (Ctrl+X): the savefile, then the scores; Angband quits. The next scenario continues the character.",
+      "name": "save-and-quit",
+      "exits": true,
+      "keys": ["{SPACE}{CR}", "{CR}{CR}{CR}{CR}", "Keeper{CR}y{SPACE}", "4466", "{^S}", "{^X}{CR}{ESC}"],
+      "expect": ["Saving game... done.", "Hall of Fame"],
+      "expectFiles": ["Angband/save/Keeper"]
+    },
+    {
+      "name": "continue",
+      "continues": true,
+      "keys": ["{SPACE}", "{DOWN}{CR}", "C{ESC}", "8822"],
+      "expect": ["Use Keeper", "Keeper"]
     }
   ]
 }

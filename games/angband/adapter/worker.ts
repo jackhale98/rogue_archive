@@ -362,7 +362,13 @@ async function importFiles(id: number, files: SaveFile[]): Promise<void> {
       // A savefile on its own (as desktop Angband keeps it in its save folder) goes to save/.
       if (!file.path.includes('/')) file = { ...file, path: `save/${file.path}` };
       const [dir, ...rest] = file.path.split('/');
-      if (!dir || !(DIRS.includes(dir) || dir === 'user') || rest.length !== 1 || !rest[0] || rest[0].startsWith('.'))
+      if (
+        !dir ||
+        !(DIRS.includes(dir) || dir === 'user') ||
+        rest.length !== 1 ||
+        !rest[0] ||
+        rest[0].startsWith('.')
+      )
         throw new Error(`Unsupported file name: ${file.path}`);
       const folder = dir === 'user' ? HOME : `${HOME}/${dir}`;
       mkdirs(folder);

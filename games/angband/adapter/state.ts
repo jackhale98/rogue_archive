@@ -204,7 +204,7 @@ export function isTargeting(top: string): boolean {
 
 /** "Press any key", "-more-", "Press Return": the game waits for any key. */
 const CONTINUE =
-  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key to (?:continue|page forward)|\(press any key\)/i;
+  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key to (?:continue|page forward|accept)|\(press any key\)/i;
 
 /** A store or the home: the shopkeeper's line and "Gold Remaining" at the bottom. */
 export function isStore(grid: Grid): boolean {
@@ -225,7 +225,8 @@ export function detectContext(grid: Grid, state: AngbandState): AngbandContext {
   if (CONTINUE.test(top) || CONTINUE.test(bottom)) return 'more';
   // A text field (names, quantities, inscriptions, rest counts): the cursor waits on the prompt line.
   const cursor = grid.cursor;
-  const textField = !!cursor?.visible && cursor.y === 0 && top.trim().length > 0 && cursor.x >= top.trimEnd().length - 12;
+  const textField =
+    !!cursor?.visible && cursor.y === 0 && top.trim().length > 0 && cursor.x >= top.trimEnd().length - 12;
   if (!state.inGame) return textField ? 'text' : 'birth';
   if (isStore(grid)) return textField ? 'text' : 'store';
   if (textField) return 'text';
@@ -240,5 +241,8 @@ export type StatusTone = 'good' | 'info' | 'warn' | 'bad';
  * timed effects, what is underfoot), for the phone band, as on screen.
  */
 export function statusLine(grid: Grid): string {
-  return rowText(grid, grid.rows - 1).replace(/\s{2,}/g, ' · ').replace(/^ · | · $/g, '').trim();
+  return rowText(grid, grid.rows - 1)
+    .replace(/\s{2,}/g, ' · ')
+    .replace(/^ · | · $/g, '')
+    .trim();
 }
