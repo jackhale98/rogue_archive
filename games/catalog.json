@@ -765,7 +765,7 @@
       "title": "Angband",
       "subtitle": "Version 4.2",
       "description": "A free, single-player dungeon exploration game. You play an adventurer seeking riches, fighting monsters and preparing for a final battle with Morgoth, the Lord of Darkness.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 6,
       "effort": "medium",
       "rationale": "Mature C codebase and traditional terminal interface.",
@@ -777,20 +777,127 @@
         "repository": "https://github.com/angband/angband"
       },
       "license": {
-        "code": "GPL-2.0 or the Angband license (route to be selected for redistribution)",
-        "assets": "Graphics and sound to be audited separately"
+        "code": "GPL-2.0-only (Angband is dual-licensed: GPL-2.0 or the Angband licence; distributed here under GPL-2.0)",
+        "assets": "Adam Bolt's 16x16 tiles (redistributable for any purpose, per upstream's copying.rst). Other tilesets, sounds and fonts are not shipped.",
+        "report": "games/angband/LICENSES.md"
       },
       "interface": ["ascii", "tiles"],
       "input": {
         "keyboard": true,
         "mouse": true,
-        "touch": false
+        "touch": true
       },
       "tags": ["Classic", "Turn-based"],
       "glyph": "A",
+      "version": "4.2.6",
+      "sourceRevision": "f3082213b73f3e463e3d0d60bff4b00462beae6e",
+      "renderMode": "terminal-fit",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "angband",
+      "runtimeManifest": "runtime/angband/runtime-manifest.json",
       "about": [
-        "Alex Cutler and Andy Astrand, with other students at the University of Warwick, wrote Angband in 1990 from the source of Umoria 5.2.1, itself a descendant of Robert Alan Koeneke's Moria. A line of maintainers has kept it going since, and today the Angband Dev Team develops it. You create a character from a choice of races and classes, buy supplies in the town and go down, a hundred levels deep, to Sauron and then Morgoth."
-      ]
+        "Alex Cutler and Andy Astrand, with other students at the University of Warwick, wrote Angband in 1990 from the source of Umoria 5.2.1, itself a descendant of Robert Alan Koeneke's Moria. A line of maintainers has kept it going since, and today the Angband Dev Team develops it. You create a character from a choice of races and classes, buy supplies in the town and go down, a hundred levels deep, to Sauron and then Morgoth.",
+        "This port compiles the official Angband 4.2.6 source to WebAssembly without changing any game code; only a browser display module is added, as upstream has for curses, X11, SDL, Windows and macOS. The map is drawn as text, as in a terminal, or with Adam Bolt's tiles through Angband's own graphics mode. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "Arrow keys · numpad · 1–9 · Home/End/PageUp/PageDown",
+          "action": "Move or attack; Shift+direction to run"
+        },
+        {
+          "keys": "Click a map cell",
+          "action": "Walk there (Angband's own pathfinding); right-click for Angband's context menu"
+        },
+        {
+          "keys": "R · , · < · >",
+          "action": "Rest, stay still (enters a shop), take the stairs"
+        },
+        {
+          "keys": "f · h · v · m",
+          "action": "Fire, fire at the nearest target, throw, cast a spell"
+        },
+        {
+          "keys": "i · e · g · w · t · d",
+          "action": "Inventory, equipment, pick up, wear, take off, drop"
+        },
+        {
+          "keys": "E · q · r · u · a · z",
+          "action": "Eat, quaff, read, use a staff, aim a wand, zap a rod"
+        },
+        {
+          "keys": "o · c · D · T",
+          "action": "Open, close, disarm, tunnel"
+        },
+        {
+          "keys": "l · M · C · ~",
+          "action": "Look, map, character sheet, knowledge"
+        },
+        {
+          "keys": "Enter",
+          "action": "Angband's command menu (every command)"
+        },
+        {
+          "keys": "Ctrl+S · Ctrl+X",
+          "action": "Save · save and return to Angband's savefile menu"
+        },
+        {
+          "keys": "?",
+          "action": "Full in-game command list"
+        },
+        {
+          "keys": "Phone",
+          "action": "Dock that follows the situation (stairs, shops and objects underfoot; monsters in view or adjacent, with one tap to fire or attack; low health), thumb pad, item prompts, stores and menus as buttons, tap the map to travel there, long-press to look, status band with health, mana, depth and Angband's status line, More lists every command"
+        },
+        {
+          "keys": "Menu → Settings → Display",
+          "action": "Text or tiles (Adam Bolt's)"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download the save, scores and user files; desktop Angband 4.2 savefiles can be imported too"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
+        "One tileset: Adam Bolt's 16x16 tiles. David Gervais' tiles are not shipped yet (see LICENSES.md); Shockbolt's may not be used by other projects without permission; Nomad's and the original 8x8 tiles have no licence statement upstream.",
+        "No sound (Angband's sounds are not shipped).",
+        "The 80×24 screen is shown whole on desktop (with tiles, the map in square cells at the size that fits); on phones the map is zoomed around the player and the sidebar is replaced by a status band. Stores and full-screen pages are shown whole on phones, small, with their choices as buttons.",
+        "The Borg (an automatic player some upstream builds include) is not compiled in."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "New character, map, inventory, tiles, save, reload and continue verified by end-to-end tests."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Creation by taps, the savefile menu, the map dock, travel and attack by touch and tiles exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ],
+      "cover": {
+        "src": "covers/angband.webp",
+        "alt": "Angband's town drawn with Adam Bolt's tiles: stone shops with their doors, rubble, streams of lava and townspeople in the streets.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "drl",

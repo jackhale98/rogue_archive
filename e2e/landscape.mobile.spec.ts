@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { createByTaps } from './angband-helpers.ts';
 import { openBrogue, waitInGame } from './helpers.ts';
 import { dcssContext, startCharacter, waitForContext as dcssWait } from './dcss-helpers.ts';
 import { openHyperRogue } from './hyperrogue-helpers.ts';
@@ -58,6 +59,9 @@ const toGame: Record<string, (page: Page) => Promise<void>> = {
       () => page.touchscreen.tap(320, 200),
       () => tapLine(/No, just start play/),
     );
+  },
+  angband: async (page) => {
+    await createByTaps(page, 'Thumbs');
   },
 };
 

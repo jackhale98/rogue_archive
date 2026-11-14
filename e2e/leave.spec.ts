@@ -4,6 +4,7 @@ import { gameContext, openBrogue, screenText, waitForScreenText, waitInGame } fr
 import { openHyperRogue, waitForContext as waitHyper } from './hyperrogue-helpers.ts';
 import { startRogue } from './rogue-helpers.ts';
 import { nethack, startNetHack, toMap, waitForContext as waitNetHack } from './nethack-helpers.ts';
+import { newCharacter as newAngband, openAngband, screenText as angbandScreen } from './angband-helpers.ts';
 import { openSil, screenText as silScreen, silContext, waitForContext as waitSil } from './sil-q-helpers.ts';
 
 test.describe.configure({ timeout: 300_000 });
@@ -124,4 +125,17 @@ test('Save and leave (NetHack): S, y, then the character continues', async ({ pa
   await expect(page.locator('.ra-start').getByRole('button', { name: /Continue Leaver/ })).toBeVisible({
     timeout: 120_000,
   });
+});
+
+test('Save and leave (Angband): "Saving game... done.", then the character is in the savefile menu', async ({
+  page,
+}) => {
+  await newAngband(page, 'Leaver');
+  const dialog = await leaveDialog(page);
+  await expect(dialog).toContainText('saves when you take the stairs');
+  await expect(dialog.getByRole('button', { name: 'Leave without saving' })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Save and leave' }).click();
+  await expect(page).toHaveURL(/#\/games\/angband$/, { timeout: 30_000 });
+  await openAngband(page);
+  await expect.poll(() => angbandScreen(page)).toContain('Use Leaver');
 });

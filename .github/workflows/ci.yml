@@ -91,8 +91,14 @@ jobs:
         with:
           path: games/nethack/dist
           key: runtime-nethack-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/nethack/upstream.env', 'games/nethack/scripts/**', 'games/nethack/port/**', 'games/nethack/patches/**', 'games/nethack/tests/conformance/**', 'games/nethack/adapter/windowport.ts', '!games/nethack/**/*.md') }}
+      - name: Restore Angband runtime
+        id: angband
+        uses: actions/cache/restore@v4
+        with:
+          path: games/angband/dist
+          key: runtime-angband-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/angband/upstream.env', 'games/angband/scripts/**', 'games/angband/port/**', 'games/angband/patches/**', 'games/angband/licenses/**', 'games/angband/tests/conformance/**', 'games/angband/adapter/input.ts', '!games/angband/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true' || steps.angband.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -183,6 +189,18 @@ jobs:
         with:
           path: games/nethack/dist
           key: ${{ steps.nethack.outputs.cache-primary-key }}
+      - name: Build Angband runtime
+        if: steps.angband.outputs.cache-hit != 'true'
+        run: pnpm build:angband
+      - name: Angband engine conformance (key coverage, native vs WASM replay)
+        if: steps.angband.outputs.cache-hit != 'true'
+        run: pnpm test:engine:angband
+      - name: Save Angband runtime (built and verified)
+        if: steps.angband.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: games/angband/dist
+          key: ${{ steps.angband.outputs.cache-primary-key }}
       - name: Report runtime sizes
         run: |
           echo "### Runtime sizes" >> "$GITHUB_STEP_SUMMARY"

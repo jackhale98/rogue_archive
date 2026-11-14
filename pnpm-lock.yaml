@@ -56,6 +56,9 @@ importers:
       '@rogue-archive/catalog':
         specifier: workspace:*
         version: link:../../packages/catalog
+      '@rogue-archive/game-angband':
+        specifier: workspace:*
+        version: link:../../games/angband
       '@rogue-archive/game-api':
         specifier: workspace:*
         version: link:../../packages/game-api
@@ -99,6 +102,15 @@ importers:
       vite:
         specifier: 8.3.8
         version: 8.3.8(@types/node@24.19.2)
+
+  games/angband:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+      '@rogue-archive/term-view':
+        specifier: workspace:*
+        version: link:../../packages/term-view
 
   games/brogue-ce:
     dependencies:

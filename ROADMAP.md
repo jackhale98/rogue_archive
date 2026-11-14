@@ -155,6 +155,27 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass
 
+## Phase 6e — Angband 4.2.6 🟡 experimental
+
+- [x] Feasibility report: docs/games/angband-feasibility.md
+- [x] License/provenance report (GPL-2.0-only of upstream's GPL-2.0-or-Angband-licence offer; two BSD-licensed files' notices shipped; each tileset checked against `docs/copying.rst`: Adam Bolt's shipped, Gervais' held back, Shockbolt's excluded by its terms, Nomad's and the 8x8 set excluded for want of terms; sounds and fonts not shipped)
+- [x] WASM build of 4.2.6 with no patches: a browser display module for Angband's term interface (text and tiles), selected through upstream's unchanged `main.c`; source list from upstream's `src/Makefile.inc`
+- [x] Angband's own savefile menu at start (new character, or continue one); new characters' savefiles named after them; save and quit returns to that menu
+- [x] Saves, scores, character dumps and pref files in IndexedDB; export/import (desktop 4.2 savefiles)
+- [x] Tiles: Adam Bolt's 16x16 tiles through Angband's own graphics mode (Display setting, switched at the next wait for input as upstream's SDL2 front end does)
+- [x] Mouse: clicks are Angband's own (menus pick the row; on the map, walk or travel there; right-click context menus)
+- [x] Phone layout: status band (health, mana, level, depth, Angband's status line, message line), map around the player with pinch zoom, lists as tappable sheets
+- [x] Context docks: the savefile menu's rows, creation choices, -more- and "press any key" pages, yes/no, direction, aim (closest, choose a target, at the target), look/target, item prompts (items by name, the other lists), stores (buy, sell, wares), text, menus
+- [x] Map dock from read-only snapshot fields: leads for stairs, a shop entrance and objects underfoot; one-tap Fire at the nearest monster (or Throw) and Attack an adjacent one; Cast for casters; healing first at low health; Open for an adjacent door; tap to travel, long-press to look
+- [x] Message log (Angband's repeat counts merged, not duplicated)
+- [x] Engine conformance: key coverage against `ui-game.c`'s command tables and `pref.prf`'s keymaps in both keysets; native (Clang) vs WebAssembly replay of seeded games (screens, tiles, RNG state, messages and savefiles identical: creation, the town and a store, the dungeon, travel and look by mouse, tiles, save and quit, continue)
+- [x] e2e: desktop (creation, item prompt, inventory, travel by click, log, save and quit, reload and continue, tiles) and phone (creation by taps, band, dock, item buttons, travel by tap, long-press look, tiles, save and continue; one-tap attack; landscape rails); the leave dialog
+- [x] CI build, deploy, weekly canary (latest release and `master`)
+- [ ] David Gervais' 32x32 tiles, once the terms of the artists whose tiles the sheet adds are confirmed
+- [ ] A readable phone view of stores and full-screen pages (they are shown whole, with their choices as buttons)
+- [ ] Test on physical phones, Firefox and Safari
+- [ ] Promote to `playable` once the above pass
+
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
@@ -163,5 +184,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → Angband → DRL → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → ~~Angband 4.2.6~~ (experimental, Phase 6e) → DRL → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

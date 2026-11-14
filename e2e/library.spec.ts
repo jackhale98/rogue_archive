@@ -26,7 +26,7 @@ test('cards play directly; the full roadmap and watchlist fold away', async ({ p
     /#\/games\/rogue$/,
   );
   // The next three roadmap games are listed; the rest and the watchlist are folded.
-  await expect(page.getByRole('link', { name: /Angband/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /DRL/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeHidden();
   await page.getByText(/The full roadmap/).click();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();
@@ -52,10 +52,10 @@ test('game detail shows provenance, controls and limitations', async ({ page }) 
 });
 
 test('roadmap games are not launchable', async ({ page }) => {
-  await page.goto('#/games/angband');
+  await page.goto('#/games/drl');
   await expect(page.getByText('This game is on the roadmap and is not playable yet.')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Play / })).toHaveCount(0);
-  await page.goto('#/play/angband');
+  await page.goto('#/play/drl');
   await expect(page.getByRole('heading', { name: 'Nothing down here' })).toBeVisible();
 });
 
@@ -81,17 +81,17 @@ test('the library searches, filters and sorts', async ({ page }) => {
   await expect(page.getByRole('searchbox')).toBeFocused();
   await page.keyboard.type('1987');
   await expect.poll(titles).toEqual(['NetHack']);
-  await expect(page.getByText(/1 of 6 games/)).toBeVisible();
+  await expect(page.getByText(/1 of 7 games/)).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect.poll(async () => (await titles()).length).toBe(6);
+  await expect.poll(async () => (await titles()).length).toBe(7);
   // Filters: graphical games only, then clear.
   await page.getByRole('radio', { name: 'Graphical' }).check();
   await expect.poll(titles).toEqual(['HyperRogue']);
   await page.getByRole('button', { name: 'Clear filters' }).first().click();
-  await expect.poll(async () => (await titles()).length).toBe(6);
+  await expect.poll(async () => (await titles()).length).toBe(7);
   // Sorting: A–Z, then oldest first (Rogue, 1980).
   await page.getByLabel('Sort').selectOption('title');
-  await expect.poll(async () => (await titles())[0]).toBe('Brogue');
+  await expect.poll(async () => (await titles())[0]).toBe('Angband');
   await page.getByLabel('Sort').selectOption('oldest');
   await expect.poll(async () => (await titles())[0]).toBe('Rogue');
   // No game is labelled with a status.

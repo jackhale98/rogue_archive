@@ -6,7 +6,7 @@ test('library and game pages never scroll sideways on a phone', async ({ page })
     './',
     './#/games/nethack',
     './#/games/dcss',
-    './#/games/angband',
+    './#/games/drl',
     './#/settings',
     './#/about',
   ]) {

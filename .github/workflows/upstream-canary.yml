@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue, nethack]
+        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue, nethack, angband]
         ref: [latest-release, master]
         # NetHack has no master branch: its development branch for 5.0 is NetHack-5.0.
         exclude:
