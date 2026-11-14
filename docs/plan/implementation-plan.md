@@ -136,11 +136,10 @@ Build the shared platform around the real needs of these two games while keeping
 | 4 | NetHack 5.0.0 | Medium–high | Genre-defining game; substantial interface and integration work. |
 | 5 | Angband | Medium | Mature C codebase and traditional terminal interface. |
 | 6 | DRL | Medium–high | Distinctive Doom-inspired roguelike; Pascal runtime and asset considerations. |
-| 7 | Allure of the Stars | Medium–high | Interesting text-based sci-fi roguelike with an existing browser implementation. |
-| 8 | Cataclysm: Dark Days Ahead | High | Existing upstream Emscripten build workflow, but substantial mobile UX and runtime complexity. |
-| 9 | Shattered Pixel Dungeon | High | Excellent mobile-oriented gameplay, but a Java/libGDX porting effort. |
-| 10 | IVAN | High | Interesting traditional roguelike with a custom C++ engine. |
-| 11 | Infra Arcana | High | Atmospheric roguelike; requires additional runtime and licensing investigation. |
+| 7 | Cataclysm: Dark Days Ahead | High | Existing upstream Emscripten build workflow, but substantial mobile UX and runtime complexity. |
+| 8 | Shattered Pixel Dungeon | High | Excellent mobile-oriented gameplay, but a Java/libGDX porting effort. |
+| 9 | IVAN | High | Interesting traditional roguelike with a custom C++ engine. |
+| 10 | Infra Arcana | High | Atmospheric roguelike; requires additional runtime and licensing investigation. |
 
 **Watchlist (outside the planned distribution catalog):**
 
@@ -1171,10 +1170,9 @@ These are initial hypotheses for the porting agents, not implementation guarante
 - Separate GPL source from game data, graphics, music and sounds; do not bundle binary data because a README references it.
 - Defer rather than build a brittle port if runtime or licensing cost is too high.
 
-## 12.9 Allure of the Stars
+## 12.9 Allure of the Stars (dropped)
 
-- Investigate its existing browser implementation (Haskell/LambdaHack) and reproduce it from source.
-- Verify license and asset provenance independently of the existing build.
+Removed from the roadmap in November 2026: still in beta (last release 0.11.0.0, December 2021; upstream's own README calls its browser build slow and its browser saves prone to corruption) and rarely discussed, so it is neither a classic nor a finished game. Candidates to take its place, if one is wanted: Umoria (GPL-3.0, Angband's ancestor, a curses game) or Hack 1.0.3 (BSD-type licence, the link between Rogue and NetHack).
 
 ## 12.10 Cataclysm: Dark Days Ahead
 
@@ -1716,7 +1714,7 @@ Acceptance:
 
 ## Phase 6 — Expand the catalog
 
-Follow the expansion order in §2.2 (Sil-Q, Rogue 5.4.4, HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana). ToME and GearHead stay on the watchlist.
+Follow the expansion order in §2.2 (Sil-Q, Rogue 5.4.4, HyperRogue, NetHack 5.0.0, Angband, DRL, Cataclysm DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana). ToME and GearHead stay on the watchlist.
 
 Each game must independently pass the full porting process and answer all three release-readiness questions in §2.3.
 
@@ -1871,10 +1869,9 @@ Use official project repositories and documentation as the source of truth. Re-c
 - DRL: https://github.com/chaosforgeorg/drl
 - Sil-Q: https://github.com/sil-quirk/sil-q
 - HyperRogue: https://github.com/zenorogue/hyperrogue
-- Allure of the Stars: https://github.com/AllureOfTheStars/Allure
 - Shattered Pixel Dungeon: https://github.com/00-Evan/shattered-pixel-dungeon
 - IVAN: https://github.com/Attnam/ivan
-- Infra Arcana: https://github.com/InfraArcana/ia
+- Infra Arcana: https://gitlab.com/martin-tornqvist/ia (the GitHub repository is deprecated)
 - NetHackJS (research reference): https://github.com/apowers313/NetHackJS
 - FPC Valkyrie: https://github.com/ChaosForge/fpcvalkyrie/
 

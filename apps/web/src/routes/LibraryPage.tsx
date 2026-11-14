@@ -4,16 +4,23 @@ import {
   type CatalogGame,
   type InterfaceStyle,
 } from '@rogue-archive/catalog';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { catalog, gamesById } from '../app/catalog.ts';
 import { repositoryFileUrl } from '../app/config.ts';
 import { href } from '../app/router.ts';
 import { getStore } from '../app/store.ts';
 import { GameCard } from '../components/GameCard.tsx';
 import { GameCover } from '../components/GameCover.tsx';
-import { StatusBadge } from '../components/StatusBadge.tsx';
-import { EMPTY_FILTERS, librarySections, type LibraryFilters } from '../features/library/filter.ts';
+import {
+  EMPTY_FILTERS,
+  isFiltering,
+  librarySections,
+  LIBRARY_SORTS,
+  type LibraryFilters,
+  type LibrarySort,
+} from '../features/library/filter.ts';
 import { DownloadAll } from '../features/offline/OfflineControls.tsx';
+import { leadAuthor } from '../lib/authors.ts';
 import { relativeTime } from '../lib/relative-time.ts';
 
 const INTERFACE_LABELS: Record<InterfaceStyle, string> = {
@@ -21,15 +28,12 @@ const INTERFACE_LABELS: Record<InterfaceStyle, string> = {
   tiles: 'Tiles',
   graphical: 'Graphical',
 };
-const EFFORT_LABELS = {
-  low: 'Low',
-  'low-medium': 'Low–medium',
-  medium: 'Medium',
-  'medium-high': 'Medium–high',
-  high: 'High',
+const SORT_LABELS: Record<LibrarySort, string> = {
+  featured: 'Featured',
+  title: 'A–Z',
+  newest: 'Newest first',
+  oldest: 'Oldest first',
 };
-/** Search and filters appear once there are enough playable games to need them. */
-const FILTERS_FROM = 8;
 /** Roadmap entries shown before "the full roadmap". */
 const NEXT_UP = 3;
 
@@ -85,47 +89,103 @@ function ContinuePlaying({ recent }: { recent: RecentEntry[] }) {
   );
 }
 
-function Filters({
+function SearchIcon() {
+  return (
+    <svg className="library-search__icon" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+      <circle cx="8.5" cy="8.5" r="5.75" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="m13 13 4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Search, filters and order: one quiet bar above the games. */
+function LibraryToolbar({
   filters,
   onChange,
+  total,
 }: {
   filters: LibraryFilters;
   onChange: (filters: LibraryFilters) => void;
+  total: number;
 }) {
+  const searchRef = useRef<HTMLInputElement>(null);
+  // "/" jumps to the search field, as on many sites.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   return (
-    <form className="filters" role="search" onSubmit={(event) => event.preventDefault()}>
-      <label className="filters__search">
+    <form className="library-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
+      <label className="library-search">
+        <SearchIcon />
         <span className="visually-hidden">Search games</span>
         <input
+          ref={searchRef}
           type="search"
-          placeholder="Search by title, author or style"
+          placeholder={`Search ${total} games`}
+          title="Search by title, author, year or style"
           value={filters.query}
+          enterKeyHint="search"
+          autoComplete="off"
+          spellCheck={false}
           onChange={(event) => onChange({ ...filters, query: event.target.value })}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && filters.query) {
+              event.preventDefault();
+              onChange({ ...filters, query: '' });
+            }
+          }}
         />
+        <kbd className="library-search__hint" aria-hidden="true">
+          /
+        </kbd>
       </label>
-      <fieldset className="chip-group">
-        <legend className="visually-hidden">Interface style</legend>
-        {(['any', ...INTERFACE_STYLES] as const).map((style) => (
-          <label key={style} className="chip">
+      <div className="library-toolbar__row">
+        <fieldset className="chip-group library-chips">
+          <legend className="visually-hidden">Interface style</legend>
+          {(['any', ...INTERFACE_STYLES] as const).map((style) => (
+            <label key={style} className="chip">
+              <input
+                type="radio"
+                name="interface"
+                value={style}
+                checked={filters.interfaceStyle === style}
+                onChange={() => onChange({ ...filters, interfaceStyle: style })}
+              />
+              <span>{style === 'any' ? 'All' : INTERFACE_LABELS[style]}</span>
+            </label>
+          ))}
+          <span className="library-chips__rule" aria-hidden="true" />
+          <label className="chip">
             <input
-              type="radio"
-              name="interface"
-              value={style}
-              checked={filters.interfaceStyle === style}
-              onChange={() => onChange({ ...filters, interfaceStyle: style })}
+              type="checkbox"
+              checked={filters.touchOnly}
+              onChange={(event) => onChange({ ...filters, touchOnly: event.target.checked })}
             />
-            <span>{style === 'any' ? 'All styles' : INTERFACE_LABELS[style]}</span>
+            <span>Touch controls</span>
           </label>
-        ))}
-        <label className="chip">
-          <input
-            type="checkbox"
-            checked={filters.touchOnly}
-            onChange={(event) => onChange({ ...filters, touchOnly: event.target.checked })}
-          />
-          <span>Touch controls</span>
+        </fieldset>
+        <label className="library-sort">
+          <span className="library-sort__label">Sort</span>
+          <select
+            value={filters.sort}
+            onChange={(event) => onChange({ ...filters, sort: event.target.value as LibrarySort })}
+          >
+            {LIBRARY_SORTS.map((sort) => (
+              <option key={sort} value={sort}>
+                {SORT_LABELS[sort]}
+              </option>
+            ))}
+          </select>
         </label>
-      </fieldset>
+      </div>
     </form>
   );
 }
@@ -141,13 +201,11 @@ function RoadmapList({ games }: { games: CatalogGame[] }) {
             </span>
             <span className="roadmap__text">
               <span className="roadmap__title">{game.title}</span>
-              <span className="roadmap__rationale">{game.rationale ?? game.description}</span>
+              <span className="roadmap__rationale">{game.description}</span>
             </span>
             <span className="roadmap__meta">
-              <StatusBadge status={game.status} />
-              {game.effort ? (
-                <span className="roadmap__effort">Effort: {EFFORT_LABELS[game.effort]}</span>
-              ) : null}
+              {game.firstReleased ? <span>{game.firstReleased}</span> : null}
+              <span className="roadmap__author">{leadAuthor(game.authors)}</span>
             </span>
           </a>
         </li>
@@ -159,17 +217,12 @@ function RoadmapList({ games }: { games: CatalogGame[] }) {
 export function LibraryPage() {
   const [filters, setFilters] = useState<LibraryFilters>(EMPTY_FILTERS);
   const all = useMemo(() => librarySections(catalog.games, EMPTY_FILTERS), []);
-  const showFilters = all.playable.length >= FILTERS_FROM;
-  const sections = useMemo(
-    () => (showFilters ? librarySections(catalog.games, filters) : all),
-    [all, filters, showFilters],
-  );
+  const sections = useMemo(() => librarySections(catalog.games, filters), [filters]);
   const recent = useRecentGames();
-  const filtered =
-    showFilters && (filters.query.trim() !== '' || filters.interfaceStyle !== 'any' || filters.touchOnly);
-  const resultCount = sections.playable.length + sections.roadmap.length + sections.watchlist.length;
+  const filtered = isFiltering(filters);
   const nextUp = filtered ? sections.roadmap : sections.roadmap.slice(0, NEXT_UP);
   const later = filtered ? [] : sections.roadmap.slice(NEXT_UP);
+  const clear = () => setFilters({ ...EMPTY_FILTERS, sort: filters.sort });
 
   return (
     <div className="page library">
@@ -188,16 +241,23 @@ export function LibraryPage() {
           <h2 id="play-title" className="section-title">
             Play now
           </h2>
-          <p className="section-note" aria-live="polite">
-            {filtered
-              ? `${resultCount} ${resultCount === 1 ? 'game matches' : 'games match'}`
-              : `${all.playable.length} games ready to play · ${catalog.games.length} catalogued`}
-          </p>
+          <div className="library-offline">
+            <DownloadAll games={all.playable} />
+          </div>
         </div>
-        <div className="library-offline">
-          <DownloadAll games={all.playable} />
-        </div>
-        {showFilters ? <Filters filters={filters} onChange={setFilters} /> : null}
+        <LibraryToolbar filters={filters} onChange={setFilters} total={all.playable.length} />
+        <p className="library-results" aria-live="polite">
+          {filtered ? (
+            <>
+              {sections.playable.length} of {all.playable.length} games
+              <button type="button" className="link-button" onClick={clear}>
+                Clear filters
+              </button>
+            </>
+          ) : (
+            `${all.playable.length} games${filters.sort === 'featured' ? '' : `, ${SORT_LABELS[filters.sort].toLowerCase()}`}`
+          )}
+        </p>
         {sections.playable.length > 0 ? (
           <div className="game-grid">
             {sections.playable.map((game) => (
@@ -205,7 +265,12 @@ export function LibraryPage() {
             ))}
           </div>
         ) : (
-          <p className="empty-state">No playable games match these filters.</p>
+          <div className="empty-state">
+            <p>No games match{filters.query.trim() ? ` “${filters.query.trim()}”` : ' these filters'}.</p>
+            <button type="button" className="button button--quiet button--small" onClick={clear}>
+              Clear filters
+            </button>
+          </div>
         )}
       </section>
 
@@ -251,8 +316,6 @@ export function LibraryPage() {
         </section>
       ) : null}
 
-      {filtered && resultCount === 0 ? <p className="empty-state">No games match these filters.</p> : null}
-
       <section className="library-section about-strip">
         <h2 className="section-title">How this archive works</h2>
         <div className="about-strip__grid">
@@ -265,8 +328,8 @@ export function LibraryPage() {
             telemetry, and you can export your saves at any time.
           </p>
           <p>
-            <strong>Honest about status.</strong> Games are marked playable only after they pass their tests;
-            known limitations are listed on each game's page.{' '}
+            <strong>Tested before it ships.</strong> A game joins the library once it builds from source and
+            passes its tests; anything not yet working is listed on its page.{' '}
             <a href={repositoryFileUrl('CONTRIBUTING.md')}>Help port the next one.</a>
           </p>
         </div>

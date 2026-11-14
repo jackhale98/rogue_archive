@@ -2,7 +2,7 @@ import { isLaunchable, type CatalogGame } from '@rogue-archive/catalog';
 import { href } from '../app/router.ts';
 import { OfflineButton } from '../features/offline/OfflineControls.tsx';
 import { GameCover } from './GameCover.tsx';
-import { StatusBadge } from './StatusBadge.tsx';
+import { leadAuthor } from '../lib/authors.ts';
 
 const INTERFACE_LABELS = { ascii: 'Text', tiles: 'Tiles', graphical: 'Graphical' } as const;
 
@@ -15,10 +15,10 @@ export function GameCard({ game }: { game: CatalogGame }) {
         <GameCover game={game} className="game-card__cover" />
       </a>
       <div className="game-card__body">
-        <div className="game-card__meta">
-          <StatusBadge status={game.status} />
+        <p className="game-card__meta">
           {game.firstReleased ? <span>{game.firstReleased}</span> : null}
-        </div>
+          <span className="game-card__author">{leadAuthor(game.authors)}</span>
+        </p>
         <h3 className="game-card__title">
           <a href={details}>{game.title}</a>
         </h3>

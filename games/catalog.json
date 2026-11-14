@@ -5,10 +5,10 @@
       "id": "brogue-ce",
       "title": "Brogue",
       "subtitle": "Community Edition",
-      "description": "A luminous, tightly designed dungeon dive: twenty-six levels, no experience points, and every item a decision. Find the Amulet of Yendor at the bottom.",
+      "description": "A single-player strategy game set in a mysterious, randomly generated dungeon. Retrieve the Amulet of Yendor from the 26th level and make it back out alive.",
       "about": [
-        "Brogue was created by Brian Walker and is now maintained by the community as Brogue: Community Edition. It strips the classic roguelike down to its essentials—no classes, no grinding—and builds its depth from item identification, allies, terrain and light.",
-        "This port compiles the official Brogue CE source to WebAssembly without changing any game code. The screen is drawn from Brogue's own tile sheet in text, tiles or hybrid mode, and the game's keyboard and mouse controls work exactly as on the desktop."
+        "Brian Walker released Brogue in 2009 and developed it up to version 1.7.5. Brogue: Community Edition carries the game on, with the stated aims of fixing bugs, adding quality-of-life features and keeping the gameplay exciting. The goal is the fabled Amulet of Yendor on the 26th level of the Dungeons of Doom, past monsters and trap-ridden terrain, with weapons, potions and artifacts to find on the way. As the README puts it: “You will make sacrifices, narrow escapes, and maybe even some friends along the way.”",
+        "This port compiles the official Brogue CE source to WebAssembly without changing any game code. The screen is drawn from Brogue's own tile sheet in text, tiles or hybrid mode, and the keyboard and mouse controls are the desktop game's."
       ],
       "status": "playable",
       "priority": 0,
@@ -131,8 +131,8 @@
     {
       "id": "dcss",
       "title": "Dungeon Crawl Stone Soup",
-      "subtitle": "The community-developed classic",
-      "description": "A deep, open-source dungeon crawl with dozens of species and backgrounds, a sprawling branch structure and a design culture of removing tedium.",
+      "subtitle": "Version 0.34",
+      "description": "A game of dungeon exploration, combat and magic, with characters of diverse skills worshipping deities of great power and caprice. Find the Orb of Zot.",
       "status": "playable",
       "priority": 1,
       "effort": "medium-high",
@@ -158,8 +158,8 @@
       "tags": ["Classic", "Turn-based", "Permadeath"],
       "glyph": "D",
       "about": [
-        "Dungeon Crawl Stone Soup grew out of Linley's Dungeon Crawl and has been developed in the open by a large volunteer team since 2006. It is known for its many species, backgrounds and gods, a branching dungeon, and a design philosophy that removes tedium rather than adding it.",
-        "This port compiles the official DCSS source to WebAssembly without changing any game code, and shows it with DCSS's own WebTiles client, the same one the official online servers use. It runs entirely in your browser: no server and no account."
+        "Crawl began as Linley's Dungeon Crawl, written by Linley Henzell in 1995. Dungeon Crawl Stone Soup took it up in 2006, when version 0.1 was posted to Usenet, and a volunteer team has developed it in the open ever since. You pick a species and a background, may take up with one of the game's many gods, and, in the manual's words, “travel deep into a subterranean cave complex and retrieve the Orb of Zot”. The Orb lies in the Realms of Zot, which only open to someone carrying at least three runes.",
+        "This port compiles the official DCSS source to WebAssembly without changing any game code, and shows it with DCSS's own WebTiles client, the one the official online servers use. It runs entirely in your browser: no server and no account."
       ],
       "version": "0.34.1",
       "sourceRevision": "1eebc1a2892e1c89776a0d7a10691f8dac8d9796",
@@ -263,13 +263,13 @@
     {
       "id": "sil-q",
       "title": "Sil-Q",
-      "subtitle": "Tactical descent into Angband",
-      "description": "A tactical roguelike set in Tolkien's First Age, where stealth, positioning and a single run to steal a Silmaril matter more than loot.",
+      "subtitle": "A continuation of Sil",
+      "description": "A dungeon heist game: venture into Angband, the fortress of the Dark Lord Morgoth, steal a Silmaril from his iron crown and escape alive.",
       "status": "playable",
       "priority": 2,
       "effort": "medium",
       "rationale": "Distinct tactical roguelike; existing browser/WASM work provides a useful starting point.",
-      "authors": "Sil-Q maintainers, building on Sil by half and Kanga",
+      "authors": "Sil-Q maintainers, building on Sil by Toby Ord and Owen Cotton-Barratt",
       "upstream": {
         "name": "Sil-Q",
         "repository": "https://github.com/sil-quirk/sil-q"
@@ -298,7 +298,8 @@
       "adapter": "sil-q",
       "runtimeManifest": "runtime/sil-q/runtime-manifest.json",
       "about": [
-        "Sil is a tactical roguelike by half and Kanga, set in Tolkien's First Age: you descend into Morgoth's fortress of Angband to steal a Silmaril from his crown. There is no town and no shopping; experience comes largely from discovery rather than killing, and stealth, light, positioning and a strong combat model decide fights. Sil-Q is the community continuation of Sil.",
+        "Toby Ord and Owen Cotton-Barratt released Sil in 2012. Its manual calls it “a role-playing game with a strong emphasis on discovery and tactical combat” that stays true to Tolkien: there are no wizards or priests, no plate mail or magical scrolls, and magic comes from songs. There is no town, and experience comes mostly from seeing new things rather than from killing them.",
+        "Sil-Q forked from Sil in 2018 to improve what its manual calls the weaker parts of the original. It drops junk items, reworks skills and, since version 1.5.0, has tiles. The task is still the same: go down into Angband, take a Silmaril from Morgoth's crown and get out.",
         "This port compiles the official Sil-Q source to WebAssembly without changing any game code; only a browser display module is added, as upstream has for curses, X11, Windows and macOS. It runs entirely in your browser: no server and no account."
       ],
       "controlsSummary": [
@@ -387,13 +388,14 @@
         "alt": "Sil-Q's title screen: a verse about the young world, the welcome to Sil in the First Age of Middle-earth, and the menu: Tutorial, New character, Open saved character, Quit.",
         "width": 1200,
         "height": 675
-      }
+      },
+      "firstReleased": 2012
     },
     {
       "id": "rogue",
       "title": "Rogue",
       "subtitle": "5.4.4 source release",
-      "description": "The game that named the genre: explore the Dungeons of Doom, identify what you find, and bring back the Amulet of Yendor.",
+      "description": "Exploring the Dungeons of Doom: “grab as much treasure as you can, find the Amulet of Yendor, and get out of the Dungeons of Doom alive.” The game the genre is named after.",
       "status": "playable",
       "priority": 3,
       "effort": "low-medium",
@@ -434,8 +436,8 @@
       "adapter": "rogue",
       "runtimeManifest": "runtime/rogue/runtime-manifest.json",
       "about": [
-        "Rogue is the 1980 game that named the genre: descend through the Dungeons of Doom, identify potions, scrolls, rings and wands by trying them, and bring back the Amulet of Yendor. Every level is new, every death is final, and the screen is made of letters.",
-        "This port compiles the Rogue 5.4.4 source release, the later BSD-licensed version, without changing it, on a small curses written for the browser. It runs entirely in your browser: no server and no account."
+        "Michael Toy and Glenn Wichman wrote Rogue at UC Santa Cruz in 1980; Ken Arnold joined them at Berkeley, and the game spread with BSD Unix. Its guidebook, A Guide to the Dungeons of Doom, points out what was new: commands are a keystroke or two, and the results are drawn on the screen “rather than being explained in words”. Rogue builds a new dungeon every time you play, potions, scrolls, rings and wands are unknown until you try them, and a death is final.",
+        "This port compiles Rogue 5.4.4, the later BSD-licensed source release, without changes, on a small curses written for the browser. It runs entirely in your browser: no server and no account."
       ],
       "controlsSummary": [
         {
@@ -526,7 +528,7 @@
       "id": "hyperrogue",
       "title": "HyperRogue",
       "subtitle": "A roguelike in non-Euclidean space",
-      "description": "Collect treasure on a hyperbolic plane, where the world grows exponentially around you and geometry is the main puzzle.",
+      "description": "A puzzle roguelike in the hyperbolic plane, where time moves when you move. Gather treasure across more than sixty lands and find the Orbs of Yendor.",
       "status": "playable",
       "priority": 4,
       "effort": "medium-high",
@@ -549,7 +551,7 @@
         "mouse": true,
         "touch": true
       },
-      "tags": ["Puzzle", "Experimental"],
+      "tags": ["Puzzle", "Non-Euclidean"],
       "glyph": "∞",
       "cover": {
         "src": "covers/hyperrogue.webp",
@@ -568,7 +570,7 @@
       "adapter": "hyperrogue",
       "runtimeManifest": "runtime/hyperrogue/runtime-manifest.json",
       "about": [
-        "HyperRogue is a roguelike on the hyperbolic plane: every cell has seven neighbours, the world grows exponentially as you walk, and two steps the wrong way can lose you forever. Collect treasure across more than sixty lands, each with its own monsters, terrain and magic orbs, and reach the Orbs of Yendor in Hell.",
+        "Zeno Rogue (Eryk Kopczyński) released the first version, then called Hyperbolic Rogue, in 2011, and has extended it ever since. The world is the hyperbolic plane, the geometry of some of M. C. Escher's prints, and it grows exponentially around you. Collecting a land's treasure draws its monsters to you, and enough treasure brings magic orbs with one-off or time-limited powers. There are over sixty lands, each with its own monsters, treasure, orbs and terrain; the Orbs of Yendor are hidden in Hell. The game won't let you make a move that would kill you outright, like the check rule in chess.",
         "This port builds HyperRogue's own web version from the pinned upstream source, unchanged, with saving switched back on. It runs entirely in your browser: no server and no account."
       ],
       "controlsSummary": [
@@ -645,7 +647,7 @@
       "id": "nethack",
       "title": "NetHack",
       "subtitle": "5.0.0",
-      "description": "The genre-defining dungeon adventure, famous for how much it anticipates: almost anything you try has been thought of.",
+      "description": "A single-player dungeon exploration game: retrieve the Amulet of Yendor and escape the Mazes of Menace alive. The emphasis is on discovering the dungeon, not killing everything in sight.",
       "status": "experimental",
       "priority": 5,
       "effort": "medium-high",
@@ -681,8 +683,8 @@
       "adapter": "nethack",
       "runtimeManifest": "runtime/nethack/runtime-manifest.json",
       "about": [
-        "NetHack is the dungeon adventure famous for how much it anticipates: descend through the Dungeons of Doom, survive Gehennom, retrieve the Amulet of Yendor and ascend. Almost anything you try has been thought of, and every death is final.",
-        "This port builds NetHack 5.0.0 with upstream's own WebAssembly build and its window interface, answered in the browser the way NetHack's terminal version draws: the map in text or with NetHack's own tiles, menus and messages as on a terminal. It runs entirely in your browser: no server and no account."
+        "NetHack descends from Hack, which Jay Fenlason wrote and Andries Brouwer reworked and posted to Usenet in 1984. Mike Stephenson merged the versions of Hack into NetHack 1.4 in 1987, and the NetHack DevTeam has developed it ever since; version 5.0.0 came out on 2 May 2026. You pick a role, from Archeologist to Wizard, and a race, and set off into the Mazes of Menace. As NetHack's own site puts it, “the emphasis in NetHack is on discovering the detail of the dungeon and not simply killing everything in sight.”",
+        "This port builds NetHack 5.0.0 with upstream's own WebAssembly build and window interface, and draws it in the browser the way NetHack's terminal version does: the map in text or with NetHack's own tiles, menus and messages as on a terminal. It runs entirely in your browser: no server and no account."
       ],
       "controlsSummary": [
         {
@@ -761,8 +763,8 @@
     {
       "id": "angband",
       "title": "Angband",
-      "subtitle": "The long descent to Morgoth",
-      "description": "A vast, traditional dungeon dive of a hundred levels beneath Angband, with a mature codebase and a classic terminal interface.",
+      "subtitle": "Version 4.2",
+      "description": "A free, single-player dungeon exploration game. You play an adventurer seeking riches, fighting monsters and preparing for a final battle with Morgoth, the Lord of Darkness.",
       "status": "planned",
       "priority": 6,
       "effort": "medium",
@@ -785,13 +787,16 @@
         "touch": false
       },
       "tags": ["Classic", "Turn-based"],
-      "glyph": "A"
+      "glyph": "A",
+      "about": [
+        "Alex Cutler and Andy Astrand, with other students at the University of Warwick, wrote Angband in 1990 from the source of Umoria 5.2.1, itself a descendant of Robert Alan Koeneke's Moria. A line of maintainers has kept it going since, and today the Angband Dev Team develops it. You create a character from a choice of races and classes, buy supplies in the town and go down, a hundred levels deep, to Sauron and then Morgoth."
+      ]
     },
     {
       "id": "drl",
       "title": "DRL",
       "subtitle": "Formerly DoomRL",
-      "description": "A fast, brutal roguelike in the spirit of a classic first-person shooter: shotguns, demons, and very little time to think.",
+      "description": "D, the Roguelike, formerly DoomRL: a fast and furious coffee-break roguelike heavily inspired by the popular 90s first-person shooter.",
       "status": "planned",
       "priority": 7,
       "effort": "medium-high",
@@ -813,46 +818,22 @@
         "touch": false
       },
       "tags": ["Action", "Turn-based"],
-      "glyph": "D"
-    },
-    {
-      "id": "allure-of-the-stars",
-      "title": "Allure of the Stars",
-      "subtitle": "Sci-fi tactical roguelike",
-      "description": "A text-based science-fiction roguelike of squad tactics aboard a derelict cruise liner, built on the LambdaHack engine.",
-      "status": "planned",
-      "priority": 8,
-      "effort": "medium-high",
-      "rationale": "Interesting text-based sci-fi roguelike with an existing browser implementation.",
-      "authors": "Mikolaj Konarski and contributors",
-      "upstream": {
-        "name": "Allure of the Stars",
-        "repository": "https://github.com/AllureOfTheStars/Allure"
-      },
-      "license": {
-        "code": "To be verified",
-        "assets": "To be verified"
-      },
-      "interface": ["ascii"],
-      "input": {
-        "keyboard": true,
-        "mouse": true,
-        "touch": false
-      },
-      "tags": ["Sci-fi", "Tactical"],
-      "glyph": "*"
+      "glyph": "D",
+      "about": [
+        "Kornel Kisielewicz of ChaosForge began DoomRL in 2002 as a turn-based fan game of the 1993 shooter, written in FreePascal. It was renamed DRL in 2016 and its source released under the GPL. ChaosForge went on to make Jupiter Hell, a 3D spiritual successor, and has since returned to DRL itself; the game stays free. Its own feature list starts with “corner-shooting, shotgun-scouting, gift-dropping, weapon unloading and of course, DIAGONAL MOVEMENT”."
+      ]
     },
     {
       "id": "cataclysm-dda",
       "title": "Cataclysm: Dark Days Ahead",
       "subtitle": "Post-apocalyptic survival",
-      "description": "An enormous open-world survival roguelike: scavenge, craft, build vehicles and outlast a collapsed world.",
+      "description": "A turn-based survival game set in a post-apocalyptic world. Scavenge for food, equipment and, if you are lucky, a vehicle with a full tank of gas to get you out of Dodge.",
       "status": "planned",
-      "priority": 9,
+      "priority": 8,
       "effort": "high",
       "rationale": "Upstream already has an Emscripten build workflow, but large data, memory needs and complex mobile UX keep this high effort.",
       "firstReleased": 2013,
-      "authors": "CleverRaven and contributors",
+      "authors": "The Cataclysm: DDA community (CleverRaven), building on Cataclysm by Whales",
       "upstream": {
         "name": "Cataclysm: Dark Days Ahead",
         "website": "https://cataclysmdda.org/",
@@ -869,15 +850,18 @@
         "touch": false
       },
       "tags": ["Survival", "Open world", "Crafting"],
-      "glyph": "C"
+      "glyph": "C",
+      "about": [
+        "Cataclysm was created by Whales, who released its source in 2010 and stopped working on it around 2012. Its players forked it in early 2013 as Dark Days Ahead and have developed it in the open since, as CleverRaven on GitHub. You wake “with hazy memories of violence and terror from when the world suddenly unravelled around you” in a large, persistent, procedurally generated world. First come food, water and shelter; staying alive after that means learning skills and fighting or avoiding zombies, giant insects, killer robots and much stranger things."
+      ]
     },
     {
       "id": "shattered-pixel-dungeon",
       "title": "Shattered Pixel Dungeon",
-      "subtitle": "Mobile-first pixel-art roguelike",
-      "description": "A polished, approachable pixel-art dungeon crawler designed for touch from the start.",
+      "subtitle": "Building on Pixel Dungeon",
+      "description": "A traditional roguelike dungeon crawler RPG that's simple to get into but hard to master: six heroes, randomized levels and enemies, and hundreds of items.",
       "status": "planned",
-      "priority": 10,
+      "priority": 9,
       "effort": "high",
       "rationale": "Excellent mobile-oriented gameplay, but a Java/libGDX porting effort.",
       "firstReleased": 2014,
@@ -896,19 +880,22 @@
         "mouse": true,
         "touch": true
       },
-      "tags": ["Pixel art", "Mobile-friendly"],
-      "glyph": "P"
+      "tags": ["Pixel art", "Turn-based"],
+      "glyph": "P",
+      "about": [
+        "Evan Debenham started Shattered Pixel Dungeon in 2014 as a project to rebalance Pixel Dungeon, Watabou's open-source game from 2012, and it has since grown into a game of its own. Six heroes, the Warrior, Mage, Rogue, Huntress, Duelist and Cleric, each gain talents, a subclass and late-game abilities on the way down 26 floors in five regions: the sewers, the prison, the caves, the dwarven city and “maybe something even worse further down”. It is released on Android, iOS, Steam, GOG and itch.io, with an update every few months."
+      ]
     },
     {
       "id": "ivan",
       "title": "IVAN",
       "subtitle": "Iter Vehemens ad Necem",
-      "description": "A traditional roguelike with a detailed body-part combat model and a dark sense of humour, built on its own C++ engine.",
+      "description": "Iter Vehemens ad Necem, a Violent Road to Death: a graphical roguelike with “advanced body part and material handling, multi-colored lighting and, above all, deep game play”.",
       "status": "planned",
-      "priority": 11,
+      "priority": 10,
       "effort": "high",
       "rationale": "Interesting traditional roguelike with a custom C++ engine.",
-      "authors": "Timo Kiviluoto and the IVAN community",
+      "authors": "Timo Kiviluoto and Heikki Sairanen; continued by the Attnam community",
       "upstream": {
         "name": "IVAN",
         "repository": "https://github.com/Attnam/ivan"
@@ -924,21 +911,25 @@
         "touch": false
       },
       "tags": ["Classic", "Detailed combat"],
-      "glyph": "I"
+      "glyph": "I",
+      "firstReleased": 2001,
+      "about": [
+        "Timo Kiviluoto wrote IVAN with Heikki Sairanen, with graphics by Tuukka Virtaperko. The first release, 0.301, came out in December 2001 and the original team stopped in 2004; members of the Attnam forum took it up again in 2015. The manual promises great magic, equipment of mysterious materials, the blessings of mighty gods and loyal allies, then warns that you will be poisoned, catch diseases, lose limbs and be turned into pitiful creatures, and that “at the end of the road, you are bound to perish in a most gruesome and painful way.”"
+      ]
     },
     {
       "id": "infra-arcana",
       "title": "Infra Arcana",
       "subtitle": "Lovecraftian horror",
-      "description": "An atmospheric roguelike of cultists, dynamite and dwindling sanity in the 1920s.",
+      "description": "A roguelike set in the early 20th century: explore the lair of the cult called the Church of Starry Wisdom and unearth the Shining Trapezohedron beneath it.",
       "status": "planned",
-      "priority": 12,
+      "priority": 11,
       "effort": "high",
       "rationale": "Atmospheric roguelike; requires additional runtime and licensing investigation.",
       "authors": "Martin Törnqvist and contributors",
       "upstream": {
         "name": "Infra Arcana",
-        "repository": "https://github.com/InfraArcana/ia"
+        "repository": "https://gitlab.com/martin-tornqvist/ia"
       },
       "license": {
         "code": "To be investigated",
@@ -951,13 +942,17 @@
         "touch": false
       },
       "tags": ["Horror", "Turn-based"],
-      "glyph": "?"
+      "glyph": "?",
+      "firstReleased": 2011,
+      "about": [
+        "Martin Törnqvist has developed Infra Arcana since version 1.0 in June 2011. Beneath the hallowed grounds of the Church of Starry Wisdom lies the Shining Trapezohedron, “a window to all secrets of the universe”, and your goal is to dig it up. The theme comes mainly from H. P. Lovecraft, with some flavour from B horror films and the shooter Blood, and the game aims for what its site calls the virtues of the genre: “high replay value and challenging tactical gameplay.”"
+      ]
     },
     {
       "id": "tome",
       "title": "Tales of Maj'Eyal",
       "subtitle": "Watchlist",
-      "description": "A large, graphical, class-driven roguelike on the T-Engine4. Kept off the distribution catalog until its asset licensing is resolved.",
+      "description": "A free, open source roguelike RPG with tactical turn-based combat and advanced character building, set in the world of Eyal.",
       "status": "blocked",
       "priority": 100,
       "authors": "DarkGod (Nicolas Casalini) and contributors",
@@ -978,13 +973,17 @@
       "blockers": [
         "Official graphics, audio and music are granted for use with Tales of Maj'Eyal only; redistribution rights are unresolved."
       ],
-      "glyph": "T"
+      "glyph": "T",
+      "firstReleased": 2012,
+      "about": [
+        "DarkGod (Nicolas Casalini) released Tales of Maj'Eyal, version 4 of ToME, in 2012 on his own T-Engine 4. You play one of many races and classes in the world of Eyal, exploring random dungeons. It is free from te4.org and sold on Steam."
+      ]
     },
     {
       "id": "gearhead",
       "title": "GearHead",
       "subtitle": "Watchlist",
-      "description": "A mecha roguelike RPG. Kept on the watchlist because of noncommercial restrictions on its assets.",
+      "description": "Joseph Hewitt's roguelike mecha role-playing game, in its own words “like fifty tons of Rogue”.",
       "status": "blocked",
       "priority": 101,
       "authors": "Joseph Hewitt",
@@ -1004,7 +1003,11 @@
       "blockers": [
         "Asset licenses carry noncommercial restrictions that are incompatible with open redistribution."
       ],
-      "glyph": "G"
+      "glyph": "G",
+      "firstReleased": 2002,
+      "about": [
+        "Joseph Hewitt released GearHead: Arena in 2002 and GearHead 2 a few years later, and is now making GearHead Caramel. The code is LGPL; the art is under a Creative Commons non-commercial licence."
+      ]
     }
   ]
 }

@@ -136,6 +136,13 @@ main {
   margin: 0 auto;
   padding: var(--space-5) var(--gutter) var(--space-8);
 }
+/* Reading pages scroll up and down only: nothing on them pans sideways (pinch zoom still works). */
+.page:not(.library) {
+  overflow-x: clip;
+}
+.detail {
+  touch-action: pan-y pinch-zoom;
+}
 .page--narrow {
   max-width: 46rem;
 }
@@ -293,24 +300,32 @@ main {
   margin-bottom: var(--space-3);
 }
 
-/* Status badges ----------------------------------------------------------- */
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35em;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+/* Release year and author: a quiet eyebrow on cards and detail pages. */
+.game-card__meta,
+.detail__eyebrow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0 0 var(--space-2);
   color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.status-badge--playable,
-.status-badge--experimental {
-  color: var(--success);
+.game-card__meta > span:first-child:not(:only-child)::after,
+.detail__eyebrow > span:first-child:not(:only-child)::after {
+  content: '·';
+  margin-left: var(--space-2);
 }
-.status-badge--blocked {
-  color: var(--danger);
+.game-card__author {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.detail__eyebrow {
+  flex-wrap: wrap;
 }
 
 /* Covers ---------------------------------------------------------------- */
@@ -403,24 +418,157 @@ main {
   margin: var(--space-5) 0 var(--space-3);
 }
 
-.filters {
-  display: flex;
-  flex-wrap: wrap;
+/* The library's search, filters and order: one bar that stays in reach while scrolling the games. */
+.library-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
   gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+  padding: var(--space-3) var(--space-2);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-bottom: 1px solid transparent;
+}
+.library-search {
+  position: relative;
+  display: flex;
   align-items: center;
 }
-.filters__search {
-  flex: 1 1 18rem;
+.library-search__icon {
+  position: absolute;
+  left: var(--space-4);
+  color: var(--text-muted);
+  pointer-events: none;
 }
-.filters input[type='search'] {
+.library-search input {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-m);
+  min-height: 3rem;
+  padding: 0 3rem 0 2.9rem;
+  border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
   font: inherit;
+  font-size: 1rem;
+  transition:
+    border-color var(--motion),
+    box-shadow var(--motion);
+}
+.library-search input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+.library-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.library-search input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+.library-search__hint {
+  position: absolute;
+  right: var(--space-4);
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.4rem;
+  text-align: center;
+  pointer-events: none;
+}
+.library-search input:focus ~ .library-search__hint,
+.library-search input:not(:placeholder-shown) ~ .library-search__hint {
+  display: none;
+}
+.library-toolbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.chip-group.library-chips {
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Room for the focus ring inside the scroller. */
+  padding: 3px;
+  margin: -3px;
+}
+.library-chips::-webkit-scrollbar {
+  display: none;
+}
+.library-chips .chip span {
+  min-height: 2.25rem;
+  white-space: nowrap;
+}
+.library-chips__rule {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 1.4rem;
+  margin: 0 var(--space-1);
+  background: var(--line);
+}
+.library-sort {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.library-sort select {
+  appearance: none;
+  min-height: 2.25rem;
+  padding: 0 2rem 0 var(--space-4);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b3a88f' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
+      no-repeat right 0.85rem center,
+    var(--surface);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.library-sort select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.library-results {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-height: 1.5rem;
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.link-button:hover {
+  text-decoration: underline;
+}
+.link-button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 .chip-group {
   display: flex;
@@ -454,9 +602,12 @@ main {
     color var(--motion);
 }
 .chip input:checked + span {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
+}
+.chip span:hover {
+  color: var(--text);
 }
 .chip input:focus-visible + span {
   outline: 2px solid var(--focus);
@@ -491,13 +642,6 @@ main {
   flex-direction: column;
   flex: 1;
   padding: var(--space-4) var(--space-5) var(--space-5);
-}
-.game-card__meta {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--space-2);
-  color: var(--text-muted);
-  font-size: 0.85rem;
 }
 .game-card__title {
   font-size: 1.45rem;
@@ -583,7 +727,7 @@ button.offline-button:focus-visible {
 .library-offline {
   display: flex;
   justify-content: flex-end;
-  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+  margin: 0;
 }
 .library-offline:empty {
   display: none;
@@ -715,6 +859,12 @@ p.download-all {
   color: var(--text-muted);
   text-align: right;
 }
+.roadmap__author {
+  max-width: 14rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 .roadmap-more {
   margin-top: var(--space-4);
 }
@@ -741,6 +891,9 @@ p.download-all {
   border: 1px dashed var(--line);
   border-radius: var(--radius-m);
   text-align: center;
+}
+.empty-state p {
+  margin: 0 0 var(--space-3);
 }
 .about-strip__grid {
   display: grid;
@@ -913,6 +1066,53 @@ p.download-all {
 
 /* Phones: library cards as compact rows (a square cover beside the text). */
 @media (max-width: 600px) {
+  .facts-table th,
+  .facts-table td {
+    overflow-wrap: anywhere;
+  }
+  /* The compatibility table: each row a small block (browser, then result and notes). */
+  .compat-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .compat-table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-3);
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .compat-table th[scope='row'] {
+    grid-column: 1 / -1;
+    width: auto;
+    padding: 0 0 var(--space-1);
+    border: 0;
+  }
+  .compat-table td {
+    padding: 0;
+    border: 0;
+  }
+  .library-sort__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  /* On a phone the bar scrolls away with the page: kept in view it would cover too much. */
+  .library-toolbar {
+    position: static;
+    padding-top: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .library-search__hint {
+    display: none;
+  }
   .game-card {
     display: grid;
     grid-template-columns: 6.5rem minmax(0, 1fr);

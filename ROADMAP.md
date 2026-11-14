@@ -161,5 +161,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → Angband → DRL → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { withDefaults } from '@rogue-archive/catalog';
 import { parseRoute } from '../../app/router.ts';
-import { EMPTY_FILTERS, librarySections } from './filter.ts';
+import { EMPTY_FILTERS, isFiltering, librarySections, type LibraryFilters } from './filter.ts';
 
 const catalog = withDefaults(
   JSON.parse(readFileSync(new URL('../../../../../games/catalog.json', import.meta.url), 'utf8')),
@@ -49,6 +49,25 @@ describe('librarySections', () => {
       'nethack',
     ]);
     expect(touch.roadmap).toHaveLength(0);
+  });
+});
+
+describe('library order', () => {
+  it('sorts by title (ignoring a leading article) and by release year either way', () => {
+    const order = (sort: LibraryFilters['sort']) =>
+      librarySections(catalog.games, { ...EMPTY_FILTERS, sort }).playable.map((g) => g.id);
+    expect(order('title')).toEqual(['brogue-ce', 'dcss', 'hyperrogue', 'nethack', 'rogue', 'sil-q']);
+    const years = (sort: LibraryFilters['sort']) =>
+      librarySections(catalog.games, { ...EMPTY_FILTERS, sort }).playable.map((g) => g.firstReleased!);
+    expect(years('oldest')).toEqual([...years('oldest')].sort((a, b) => a - b));
+    expect(years('newest')).toEqual([...years('oldest')].reverse());
+    expect(order('oldest')[0]).toBe('rogue');
+  });
+
+  it('knows when the list is narrowed', () => {
+    expect(isFiltering(EMPTY_FILTERS)).toBe(false);
+    expect(isFiltering({ ...EMPTY_FILTERS, sort: 'title' })).toBe(false);
+    expect(isFiltering({ ...EMPTY_FILTERS, query: ' nethack ' })).toBe(true);
   });
 });
 

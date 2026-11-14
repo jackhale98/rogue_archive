@@ -71,3 +71,29 @@ test('settings explain how long saves are kept', async ({ page }) => {
   // Chromium answers persisted() either way; the page states which.
   await expect(page.getByText(/agreed to keep this site's data|may clear this site's data/)).toBeVisible();
 });
+
+test('the library searches, filters and sorts', async ({ page }) => {
+  await page.goto('./');
+  const titles = () => page.locator('.game-grid .game-card__title').allInnerTexts();
+  // Search by title, author or year ("/" jumps to it); Escape clears the field.
+  await expect(page.getByRole('searchbox')).toBeVisible();
+  await page.keyboard.press('/');
+  await expect(page.getByRole('searchbox')).toBeFocused();
+  await page.keyboard.type('1987');
+  await expect.poll(titles).toEqual(['NetHack']);
+  await expect(page.getByText(/1 of 6 games/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await titles()).length).toBe(6);
+  // Filters: graphical games only, then clear.
+  await page.getByRole('radio', { name: 'Graphical' }).check();
+  await expect.poll(titles).toEqual(['HyperRogue']);
+  await page.getByRole('button', { name: 'Clear filters' }).first().click();
+  await expect.poll(async () => (await titles()).length).toBe(6);
+  // Sorting: A–Z, then oldest first (Rogue, 1980).
+  await page.getByLabel('Sort').selectOption('title');
+  await expect.poll(async () => (await titles())[0]).toBe('Brogue');
+  await page.getByLabel('Sort').selectOption('oldest');
+  await expect.poll(async () => (await titles())[0]).toBe('Rogue');
+  // No game is labelled with a status.
+  await expect(page.getByText(/^(Playable|Experimental)$/)).toHaveCount(0);
+});

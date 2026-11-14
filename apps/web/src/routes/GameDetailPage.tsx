@@ -8,7 +8,6 @@ import { href } from '../app/router.ts';
 import { gameSettingsScope } from '../app/settings.tsx';
 import { getStore } from '../app/store.ts';
 import { GameCover } from '../components/GameCover.tsx';
-import { StatusBadge } from '../components/StatusBadge.tsx';
 import { downloadOffline, removeOffline, useOfflineStatus } from '../features/offline/offline-store.ts';
 import {
   formatBytes,
@@ -17,6 +16,7 @@ import {
   type LoadedRuntime,
 } from '../features/game-shell/runtime.ts';
 import { NotFoundPage } from './NotFoundPage.tsx';
+import { leadAuthor } from '../lib/authors.ts';
 
 const INTERFACE_LABELS = { ascii: 'Text (ASCII)', tiles: 'Tiles', graphical: 'Graphical' } as const;
 const RESULT_LABELS = {
@@ -167,7 +167,10 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
       </p>
       <header className="detail__header">
         <div className="detail__intro">
-          <StatusBadge status={game.status} />
+          <p className="detail__eyebrow">
+            {game.firstReleased ? <span>{game.firstReleased}</span> : null}
+            <span>{leadAuthor(game.authors)}</span>
+          </p>
           <h1 className="detail__title">{game.title}</h1>
           <p className="detail__subtitle">{game.subtitle}</p>
           <p className="detail__description">{game.description}</p>
