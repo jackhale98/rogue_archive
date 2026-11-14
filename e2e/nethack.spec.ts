@@ -40,6 +40,8 @@ test('NetHack: character creation, the map and status, menus, tiles, save and co
   await waitForContext(page, 'map');
 
   // A turn passes (search), and the game's messages reach the log.
+  // (m: search even when a monster is next to you, as NetHack 5.0 asks.)
+  await page.keyboard.press('m');
   await page.keyboard.press('s');
   await expect.poll(async () => (await nethack(page))?.state?.moves).toBeGreaterThan(1);
 

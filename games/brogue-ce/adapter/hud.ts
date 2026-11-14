@@ -80,8 +80,9 @@ export class BrogueHud {
     this.element.style.setProperty('--reserve', `${portrait ? 0 : px}px`);
     // Keep the flavor line above controls that run along the bottom (portrait).
     this.#flavor.style.bottom = bottomInset > 0 ? `${bottomInset + 8}px` : '';
-    // In portrait the tools sit above the status row instead of beside the messages.
-    this.element.style.paddingTop = portrait ? `max(${44 + 6}px, env(safe-area-inset-top))` : '';
+    // In portrait the tools sit above the status row instead of beside the messages
+    // (when they are over the game at all: phones held sideways have them in a rail).
+    this.element.style.paddingTop = portrait && px > 0 ? `max(${44 + 6}px, env(safe-area-inset-top))` : '';
     if (portrait !== this.#portrait) {
       this.#portrait = portrait;
       this.element.toggleAttribute('data-portrait', portrait);

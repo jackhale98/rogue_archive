@@ -159,3 +159,28 @@ test('Sil-Q phone: context leads, song buttons, status band, long-press to look 
   await dock.getByRole('button', { name: /^Cancel/ }).tap();
   await waitForContext(page, 'map');
 });
+
+test('Sil-Q phone: tiles by MicroChasm, the map in square cells', async ({ page }) => {
+  await page.goto('?debug=1#/games/sil-q');
+  await page.getByLabel('Display').selectOption('tiles');
+  await openSil(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: /Tutorial/ }).tap();
+  await expect.poll(() => screenText(page)).toContain('Laurilfea');
+  for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+    if ((await screenText(page)).includes('Return to game')) await page.keyboard.press('Escape');
+  }
+  await waitForContext(page, 'map');
+  const map = await page.evaluate(() => {
+    const adapter = (
+      window as unknown as {
+        __rogueArchive: { adapter: { debug: { state: { graphics: boolean }; views(): string[] } } };
+      }
+    ).__rogueArchive.adapter;
+    return { graphics: adapter.debug.state.graphics, views: adapter.debug.views() };
+  });
+  expect(map).toEqual({ graphics: true, views: ['map'] });
+  await page.screenshot({ path: test.info().outputPath('sil-tiles-phone.png') });
+});

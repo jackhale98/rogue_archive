@@ -154,7 +154,8 @@ const first = await run('Tester', null, (frame, screen) => {
     );
     check(frame.state[0] === 1 && frame.state[5] === 1, 'state: in the game, depth 1');
     check(frame.state[10] === 2, 'state: the hero starts on the up staircase');
-    return 's'.charCodeAt(0); // search one turn
+    // Search one turn (m: even with a monster next to the hero, as NetHack 5.0 asks).
+    return [109, 115];
   }
   if (step === 1) {
     // A message during the turn ("You hear ...") comes first.

@@ -57,6 +57,11 @@ export interface SilState {
   doorsAdjacent: number;
   /** The throw prompt's letter for the first flask of oil in the pack ('' for none). */
   flask: string;
+  /** The game draws with MicroChasm's tiles. */
+  graphics: boolean;
+  /** The alert and glow icons' tiles (attr, char as the game maps them). */
+  iconAlert: { attr: number; char: number };
+  iconGlow: { attr: number; char: number };
 }
 
 /** SNG_NOTHING: no song. */
@@ -110,6 +115,9 @@ export function parseState(raw: Int32Array): SilState {
     quiver2: raw[35] ?? 0,
     doorsAdjacent: raw[36] ?? 0,
     flask: (raw[37] ?? 0) > 0 ? String.fromCharCode(96 + raw[37]!) : '',
+    graphics: (raw[38] ?? 0) !== 0,
+    iconAlert: { attr: raw[39] ?? 0, char: raw[40] ?? 0 },
+    iconGlow: { attr: raw[41] ?? 0, char: raw[42] ?? 0 },
   };
 }
 

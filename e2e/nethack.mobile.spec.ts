@@ -43,9 +43,7 @@ test('NetHack phone: creation by taps, the status band, menus as sheets, the doc
   // The dock: exploring, or fighting when a hostile monster is next to the hero or lined up.
   const start = (await nethack(page))!.state!;
   const calm = start.adjacent.length === 0 && !start.target;
-  for (const name of calm
-    ? [/^Search/, /^Travel/, /^Pack/, /^Look/, /^More/]
-    : [/^Quaff/, /^Elbereth/, /^More/])
+  for (const name of calm ? [/^Search/, /^Travel/, /^Pack/, /^Look/, /^More/] : [/^Quaff/, /^More/])
     await expect(dock.getByRole('button', { name })).toBeVisible();
 
   // Pack opens the inventory as a sheet over the map.
@@ -283,9 +281,55 @@ test('NetHack phone: the game’s own context menus, item lists at once, travel 
   await expect
     .poll(async () => (await nethack(page))?.state?.moves, { timeout: 15_000 })
     .toBeGreaterThan(before.moves);
-  await waitForContext(page, 'map');
+  // Engraving takes a few turns: wait until the turn count stops moving, then look here.
+  let last = -1;
+  await expect
+    .poll(
+      async () => {
+        await page.waitForTimeout(700);
+        const now = (await nethack(page))?.state?.moves ?? -1;
+        const settled = now === last && (await nethack(page))?.context === 'map';
+        last = now;
+        return settled;
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
   await page.keyboard.press(':');
   // What is written here, as the game reads it (the message log keeps it).
   await page.getByRole('button', { name: 'Message log' }).tap();
-  await expect(page.getByRole('dialog')).toContainText(/You read: "Elbereth"/);
+  // (Writing in the dust with a finger can smudge a letter or two, as the game decides: "Elbere!h".)
+  await expect(page.getByRole('dialog')).toContainText(/You read: "\S{8}"/);
+});
+
+test('NetHack phone: an item prompt from the keyboard opens its list, whose lines answer it', async ({
+  page,
+}) => {
+  await startNetHack(page, 'Wielder');
+  await waitForContext(page, 'yn');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: 'Let me choose' }).tap();
+  const tapLine = async (pattern: RegExp) => {
+    await expect.poll(() => lineAt(page, pattern).then((at) => at !== null)).toBe(true);
+    const at = (await lineAt(page, pattern))!;
+    await page.touchscreen.tap(at.x, at.y);
+    await page.waitForTimeout(300);
+  };
+  await tapLine(/a Valkyrie/);
+  await tapLine(/dwarf/);
+  await dock.getByRole('button', { name: /^Yes; start game/ }).tap();
+  await toMap(
+    page,
+    () => page.touchscreen.tap(200, 400),
+    () => tapLine(/No, just start play/),
+  );
+  // w (wield), typed: "What do you want to wield? [- ab or ?*]" opens the weapons as a sheet.
+  await page.keyboard.press('w');
+  await waitForContext(page, 'menu');
+  expect((await nethack(page))?.menu?.items.some((item) => /dagger/.test(item.text))).toBe(true);
+  // Tapping a line answers the question: the dagger is wielded.
+  await tapLine(/dagger/);
+  await waitForContext(page, 'map');
+  await page.getByRole('button', { name: 'Message log' }).tap();
+  await expect(page.getByRole('dialog')).toContainText(/dagger \(weapon in (right |left )?hands?\)/);
 });

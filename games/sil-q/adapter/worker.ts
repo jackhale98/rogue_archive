@@ -52,6 +52,8 @@ let running = false;
 const keys: number[] = [];
 let wake: (() => void) | null = null;
 let pendingFlushes: number[] = [];
+/** Tiles mode: the terrain layer for the next frame (ra_terrain, just before ra_present). */
+let terrain: Uint8Array | undefined;
 let syncChain: Promise<void> = Promise.resolve();
 
 let lastSaves = '';
@@ -206,10 +208,23 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
     ) {
       // At the title screen (not in the dungeon), keep the list of saved characters current.
       if (state[0] === 0) postSaves();
-      post({ type: 'frame', cols, rows, cells, cursor: { x: cx, y: cy, visible: cursor !== 0 }, state }, [
-        cells.buffer,
-        state.buffer,
-      ]);
+      const layer = terrain;
+      terrain = undefined;
+      post(
+        {
+          type: 'frame',
+          cols,
+          rows,
+          cells,
+          cursor: { x: cx, y: cy, visible: cursor !== 0 },
+          state,
+          ...(layer ? { terrain: layer } : {}),
+        },
+        [cells.buffer, state.buffer, ...(layer ? [layer.buffer] : [])],
+      );
+    },
+    raTerrain(layer: Uint8Array) {
+      terrain = layer;
     },
     raPollKey(): number {
       return keys.shift() ?? 0;

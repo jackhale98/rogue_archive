@@ -5,7 +5,7 @@
 `.github/workflows/deploy.yml` runs when CI has passed for a push to `main` (and manually), on that commit:
 
 1. Install pinned dependencies (`pnpm install --frozen-lockfile`).
-2. Restore each game runtime CI built and verified for these inputs. Runtimes are cached under `runtime-<game>-<hash>`, the hash covering the game's directory (minus docs and build output) and the toolchain files, so CI rebuilds and re-verifies only the games a push changed. On a cache miss deploy builds from pinned source with the pinned Emscripten SDK.
+2. Restore each game runtime CI built and verified for these inputs. Runtimes are cached under `runtime-<game>-<hash>`, the hash covering what builds or verifies the runtime: the toolchain files, the game's pin (`upstream.env`), `scripts/`, `port/`, `patches/` (and DCSS's `client-host/`, Rogue's `tiles/`), its engine conformance tests, and the adapter files those tests import. The rest of the adapter (layout, docks, UI) is bundled by the site build and checked by the end-to-end tests, so changing it reuses the runtime: CI rebuilds and re-verifies only the games whose build or conformance inputs a push changed. `tools/ci-cache-keys.test.ts` checks the keys cover every adapter file the conformance tests import, and that `ci.yml` and `deploy.yml` use the same keys. On a cache miss deploy builds from pinned source with the pinned Emscripten SDK.
 3. `pnpm build` with `ROGUE_ARCHIVE_BASE=/<repository>/`: validate the catalog, verify and stage runtimes, build the site.
 4. Upload `apps/web/dist` with `actions/upload-pages-artifact` and publish with `actions/deploy-pages`. A concurrency group prevents stale deployments from overtaking newer ones.
 

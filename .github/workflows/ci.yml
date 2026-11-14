@@ -45,8 +45,13 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # Each game's runtime is cached under a hash of everything that builds or
-      # verifies it (its directory, minus docs and output, and the toolchain).
-      # A push that does not touch a game reuses its runtime and skips its
+      # verifies it: the toolchain, the game's pin, build scripts, port sources
+      # and patches, its engine conformance tests, and the adapter files those
+      # tests import (the command list for key coverage, the window port for
+      # NetHack's play check). Keep the keys identical in deploy.yml. The rest
+      # of the adapter (layout, docks, UI) is bundled by the site build and
+      # covered by the end-to-end tests, so changing it reuses the runtime.
+      # A push that does not touch these reuses the runtime and skips its
       # build and engine conformance, which already passed for those inputs.
       # Each runtime is saved as soon as its own build and conformance pass,
       # so a later failure (end-to-end tests) doesn't discard it.
@@ -55,37 +60,37 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: games/brogue-ce/dist
-          key: runtime-brogue-ce-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/brogue-ce/**', '!games/brogue-ce/dist/**', '!games/brogue-ce/node_modules/**', '!games/brogue-ce/**/*.md') }}
+          key: runtime-brogue-ce-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/brogue-ce/upstream.env', 'games/brogue-ce/scripts/**', 'games/brogue-ce/port/**', 'games/brogue-ce/patches/**', 'games/brogue-ce/tests/conformance/**', 'games/brogue-ce/adapter/constants.ts', 'games/brogue-ce/adapter/input.ts', 'games/brogue-ce/adapter/protocol.ts', '!games/brogue-ce/**/*.md') }}
       - name: Restore DCSS runtime
         id: dcss
         uses: actions/cache/restore@v4
         with:
           path: games/dcss/dist
-          key: runtime-dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/dcss/**', '!games/dcss/dist/**', '!games/dcss/node_modules/**', '!games/dcss/**/*.md') }}
+          key: runtime-dcss-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/dcss/upstream.env', 'games/dcss/scripts/**', 'games/dcss/port/**', 'games/dcss/patches/**', 'games/dcss/client-host/**', 'games/dcss/tests/conformance/**', 'games/dcss/adapter/input.ts', 'games/dcss/adapter/messages.ts', 'games/dcss/adapter/state.ts', '!games/dcss/**/*.md') }}
       - name: Restore Sil-Q runtime
         id: sil
         uses: actions/cache/restore@v4
         with:
           path: games/sil-q/dist
-          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/**', '!games/sil-q/dist/**', '!games/sil-q/node_modules/**', '!games/sil-q/**/*.md') }}
+          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/upstream.env', 'games/sil-q/scripts/**', 'games/sil-q/port/**', 'games/sil-q/patches/**', 'games/sil-q/tests/conformance/**', 'games/sil-q/adapter/input.ts', '!games/sil-q/**/*.md') }}
       - name: Restore Rogue runtime
         id: rogue
         uses: actions/cache/restore@v4
         with:
           path: games/rogue/dist
-          key: runtime-rogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/rogue/**', '!games/rogue/dist/**', '!games/rogue/node_modules/**', '!games/rogue/**/*.md') }}
+          key: runtime-rogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/rogue/upstream.env', 'games/rogue/scripts/**', 'games/rogue/port/**', 'games/rogue/patches/**', 'games/rogue/tiles/**', 'games/rogue/tests/conformance/**', 'games/rogue/adapter/input.ts', '!games/rogue/**/*.md') }}
       - name: Restore HyperRogue runtime
         id: hyperrogue
         uses: actions/cache/restore@v4
         with:
           path: games/hyperrogue/dist
-          key: runtime-hyperrogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/hyperrogue/**', '!games/hyperrogue/dist/**', '!games/hyperrogue/node_modules/**', '!games/hyperrogue/**/*.md') }}
+          key: runtime-hyperrogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/hyperrogue/upstream.env', 'games/hyperrogue/scripts/**', 'games/hyperrogue/port/**', 'games/hyperrogue/patches/**', 'games/hyperrogue/tests/conformance/**', 'games/hyperrogue/adapter/input.ts', '!games/hyperrogue/**/*.md') }}
       - name: Restore NetHack runtime
         id: nethack
         uses: actions/cache/restore@v4
         with:
           path: games/nethack/dist
-          key: runtime-nethack-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/nethack/**', '!games/nethack/dist/**', '!games/nethack/node_modules/**', '!games/nethack/**/*.md') }}
+          key: runtime-nethack-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/nethack/upstream.env', 'games/nethack/scripts/**', 'games/nethack/port/**', 'games/nethack/patches/**', 'games/nethack/tests/conformance/**', 'games/nethack/adapter/windowport.ts', '!games/nethack/**/*.md') }}
       - name: Cache Emscripten SDK
         if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true'
         uses: actions/cache@v4

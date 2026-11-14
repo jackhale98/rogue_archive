@@ -30,6 +30,12 @@ export type FromWorker =
       cursor: { x: number; y: number; visible: boolean };
       /** Read-only game state; see adapter/state.ts for the field order. */
       state: Int32Array;
+      /**
+       * Tiles mode: what lies under each tile cell (terrain attr, char; two
+       * bytes per cell, 0 for text cells). Cells drawn as tiles have the high
+       * bit set in both their character and attribute.
+       */
+      terrain?: Uint8Array;
     }
   /** Angband's colour table: 256 entries of [kv, r, g, b]. */
   | { type: 'palette'; table: Uint8Array }

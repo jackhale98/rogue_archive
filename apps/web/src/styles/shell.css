@@ -105,6 +105,10 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'screen';
   min-height: 0;
+  /* A long press on the game (look, act there) must not start a text selection or iOS's callout. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .play__screen {
   grid-area: screen;
@@ -442,7 +446,8 @@
   width: clamp(8rem, 20vmin, 10rem);
 }
 
-/* Compact (phones): the game fills the screen; controls float over it. ---- */
+/* Compact (phones): upright, the game fills the screen and the controls float
+   over it; held sideways, they sit in rails beside it (.play--rails). ------ */
 
 .play--compact {
   grid-template-rows: minmax(0, 1fr);
@@ -463,7 +468,9 @@
   gap: 0.25rem;
 }
 .play__float--tools .tool-button,
-.play__float--tools .play__back {
+.play__float--tools .play__back,
+.play__rail-tools .tool-button,
+.play__rail-tools .play__back {
   min-width: 2.25rem;
   min-height: 2.25rem;
   padding: 0;
@@ -473,7 +480,9 @@
   background: rgb(22 19 15 / 0.8);
 }
 .play__float--tools .tool-button__label,
-.play__float--tools .play__back-label {
+.play__float--tools .play__back-label,
+.play__rail-tools .tool-button__label,
+.play__rail-tools .play__back-label {
   display: none;
 }
 .play__dock,
@@ -502,6 +511,84 @@
   right: auto;
   left: max(0.5rem, calc(env(safe-area-inset-left) * 0.6));
 }
+/* Phones held sideways: the dock, and the pad under the tools, in rails beside
+   the game, so nothing covers it. The rails keep their width whatever the
+   context shows (the game is not resized when the pad comes and goes), and
+   their outer edges clear a side notch. */
+.play--rails {
+  --rail-dock: 8rem;
+  --rail-pad: clamp(10rem, 40vmin, 12rem);
+}
+.play--rails .play__rail {
+  box-sizing: content-box;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-height: 0;
+  padding: max(0.4rem, env(safe-area-inset-top)) 0.25rem max(0.6rem, env(safe-area-inset-bottom));
+  background: #000;
+}
+.play--rails .play__rail--actions {
+  width: var(--rail-dock);
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+}
+.play--rails .play__rail--pad {
+  width: var(--rail-pad);
+  justify-content: space-between;
+  align-items: center;
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+}
+.play--rails[data-hand='left'] .play__rail--actions {
+  padding-left: 0.25rem;
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+}
+.play--rails[data-hand='left'] .play__rail--pad {
+  padding-right: 0.25rem;
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+}
+.play__rail-tools {
+  align-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+/* A long dock fits the rail's height: the buttons give up a little height. */
+.play--rails .play__rail .action-dock {
+  width: auto;
+  min-height: 0;
+  max-height: 100%;
+}
+.play--rails .action-dock__slot {
+  display: flex;
+  flex: 0 1 3rem;
+  min-height: 2.4rem;
+}
+.play--rails .dock-button,
+.play--rails .action-dock__slot--wide .dock-button {
+  min-width: 0;
+  min-height: 0;
+  gap: 0.4rem;
+  padding: 0 0.55rem 0 0.8rem;
+}
+/* Long labels take two lines rather than widening the rail. */
+.play--rails .dock-button__label {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-size: 0.9rem;
+  line-height: 1.15;
+  text-align: left;
+  overflow-wrap: break-word;
+}
+.play--rails .action-dock__slot--wide .dock-button__label {
+  text-align: center;
+}
+
 @media (orientation: portrait) {
   .play--compact .play__dock {
     max-width: calc(100% - 11rem);

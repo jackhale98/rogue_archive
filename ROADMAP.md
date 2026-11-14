@@ -23,6 +23,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Versioned game API (`GAME_API_VERSION = 1`), lifecycle state machine
 - [x] Session host: manifest loading, integrity checks, status and errors, input routing, persist on hide/exit
 - [x] Touch control primitives (pad with hold-to-repeat, action buttons, command list, on-screen keyboard)
+- [x] Phones held sideways: the dock and the thumb pad in rails beside the game (the game never under a control, the side notch cleared), checked for every game by `e2e/landscape.mobile.spec.ts`
 - [x] IndexedDB settings and recent games; `.roguearchive` save export/import format
 - [x] Ask for persistent storage once a game runs; Settings → Keeping your saves (status, space used, Safari's 7-day rule and the Home Screen app)
 - [ ] Optional cloud sync of saves to the player's own Dropbox or OneDrive (browser-only OAuth with PKCE, app folder; see docs/architecture/storage.md)
@@ -88,6 +89,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] WASM build of v1.5.0 with no patches: a browser display module for Sil's term interface, selected through upstream's unchanged `main.c`
 - [x] Shared terminal renderer for text-grid games (`packages/term-view`, MIT): views, follow-the-player map, hit-testing, tap/long-press/pan/pinch
 - [x] Saves in IndexedDB (lib/save, apex, user), export/import; savefiles interchangeable with desktop Sil-Q 1.5
+- [x] Tiles: Sil-Q's own MicroChasm tileset (Display setting), drawn as upstream's X11 build composes it
 - [x] Phone layout: status band, map around the player with pinch zoom, lists as tappable sheets
 - [x] Context docks: title and creation choices as buttons, saved characters as Continue buttons, item prompts (letters, then named items), -more-, yes/no, direction, look/target, text, menus
 - [x] Message log (Sil's repeated messages merged, not duplicated)
