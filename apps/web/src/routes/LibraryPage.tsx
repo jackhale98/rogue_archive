@@ -29,7 +29,6 @@ const INTERFACE_LABELS: Record<InterfaceStyle, string> = {
   graphical: 'Graphical',
 };
 const SORT_LABELS: Record<LibrarySort, string> = {
-  featured: 'Featured',
   title: 'A–Z',
   newest: 'Newest first',
   oldest: 'Oldest first',
@@ -277,7 +276,7 @@ export function LibraryPage() {
               </button>
             </>
           ) : (
-            `${all.playable.length} games${filters.sort === 'featured' ? '' : `, ${SORT_LABELS[filters.sort].toLowerCase()}`}`
+            `${all.playable.length} games${filters.sort === 'title' ? '' : `, ${SORT_LABELS[filters.sort].toLowerCase()}`}`
           )}
         </p>
         {sections.playable.length > 0 ? (
