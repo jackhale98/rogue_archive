@@ -189,3 +189,12 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Read the game's own save rule before promising "continue".** HyperRogue resumes a game only with an Orb of Safety or in casual mode; the Android background save records the score. Say so in the resume hint.
 - **Upstream's "no-SDL" build may not exist; its headless mode may:** `-nogui` plus a seed (`-fixx`) and a small harness built natively and for Node gave native-vs-WebAssembly equivalence without patching.
 
+### From Angband
+
+- **Angband 4.2's term has a mouse.** Menus pick a clicked row and the map walks or travels to a clicked cell (`Term_mousepress`, `textui_process_click`). Forward taps as clicks rather than inventing touch semantics; tests must then focus the canvas (`locator.focus()`), not click it, or the click reaches the game.
+- **Argument evaluation order is unspecified in C.** Angband draws random numbers inside a call's arguments (`loc(rand_spread(…), rand_spread(…))`), so a GCC build and a Clang build make different dungeons from the same seed. Build the native reference with Clang, as Emscripten is, before suspecting the port.
+- **WebAssembly reads address 0 without trapping.** The native conformance build caught a null read (the message log before it exists) that the WebAssembly build silently survived.
+- **Emscripten's `callMain` mutates its argument** (it puts the program name in front). Pass a copy if the same array starts the game again, or the second run reads the program name as an option.
+- **Graphics modes are game data.** A front end selects one (`init_graphics_modes`, `use_graphics`, `reset_visuals`) and draws what `pict_hook` gives it; switch at a wait for input, as upstream's SDL2 front end does, and ship only the tilesets whose own terms allow it (check each in `docs/copying.rst`).
+- **Save and quit can end the program.** Start a fresh module instance after `exit` to return to the game's own start (Angband's savefile menu), as relaunching the desktop game would.
+

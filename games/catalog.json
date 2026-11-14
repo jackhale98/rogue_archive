@@ -891,7 +891,13 @@
           "environment": "Chrome for Android",
           "result": "untested"
         }
-      ]
+      ],
+      "cover": {
+        "src": "covers/angband.webp",
+        "alt": "Angband's town drawn with Adam Bolt's tiles: stone shops with their doors, rubble, streams of lava and townspeople in the streets.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "drl",

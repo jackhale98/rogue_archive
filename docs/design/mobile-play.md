@@ -237,6 +237,37 @@ Character creation: "Shall I pick a character for you?" answers as Pick for me, 
 
 The Elbereth button (fighting, trouble, the command list; only with Settings → *Strategy shortcuts* on, off by default, since the game never tells you about Elbereth directly) engraves it in the dust: `E`, fingers, no to adding to an engraving, the text; every question is still the game's, and the game decides whether it works.
 
+## Angband
+
+Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `packages/term-view`), or with Display set to Tiles, the map with Adam Bolt's tiles through Angband's own graphics mode, in square cells (on desktop between the text sidebar, message line and status line, at the size that fits the whole map panel; on phones the whole map view). Angband 4.2 has mouse support of its own, so on any screen a tap is a click on that cell, as a mouse would give it.
+
+- **Layout on phones:** a status band replaces the sidebar: health (with a bar), mana for casters, level and depth (Town, or feet and level); Angband's own status line (light, hunger, speed, timed effects, what is underfoot) as it words it; and the message line. Tapping it opens the message log. The map is drawn at a readable cell size following the player; pinch to zoom, drag to look around (it recentres when the player moves). The savefile menu, character creation, stores and full-screen pages (the character sheet, knowledge, help) are fitted whole, with their choices also as dock buttons.
+- **Text over the map** (the inventory, item prompts, the command menu, context menus, monster and object lists) opens as a sheet over the dimmed map; tap a row to choose it (a click on it, which Angband's menus take), tap outside to close (Escape).
+- **Taps on the map** are Angband's clicks (`ui-context.c`, the `mouse_movement` option, on by default): next to the player walks there (attacking a monster in the way), farther away travels there by Angband's pathfinding (stopped, as running is, when something comes into view); on the player picks up or holds. **Long-press** looks at the cell (Alt+click: look mode with its cursor there; Next, Target, Recall, Close in the dock). On desktop, right-click opens Angband's context menu for the cell.
+- **Situation** comes from read-only fields the port adds to its snapshot (`port/main-web.c`, read with upstream's own predicates): stairs, a shop entrance or objects underfoot; visible monsters in view and adjacent, with the direction to an adjacent one (the current target first); a launcher with ammunition (`player_can_fire`); a spellcasting class and whether it can cast now; known closed doors next to the player; resting or running.
+- **Keysets:** buttons send Angband's original keys, or the roguelike keyset's when that option is on (the snapshot carries it; each command knows both, from `ui-game.c`'s tables). Movement uses the arrow and Home/PageUp/End/PageDown keys, which `pref.prf` maps to walking in both keysets; Run latches Shift for the next direction.
+
+| Context | Dock |
+|---|---|
+| Splash screen, scores and other "press any key" pages | Continue (Enter), Skip; on pages left with Escape (the scores), Done and Next page |
+| Savefile menu (Angband's own, at start and after save and quit) | **New character** and **Continue *name*** for each savefile (two clicks on its row: the menu moves to a row on the first and chooses it on the second); the pad |
+| Character creation | The screen's lettered choices (race, class, how to roll stats); OK (Enter), Random (`*`), Back (Escape); the pad (up/down move, left/right change the point-based stats) |
+| Map, exploring | The lead (below) · Rest (`R`, Enter: as needed; fan: hold, run, open, close, disarm, tunnel, alter, stairs, pick up), or **Door** (`o`) when a closed door is next to the player · Cast for casters (fan: browse, study, staffs, wands, rods, activate) · Pack (fan: equipment, quiver, wear, take off, eat, quaff, read, use, drop, examine, fuel) · Look (fan: map, monster and object lists, character, knowledge, messages, locate) · More (fan: Angband's command menu); the pad with Hold in the centre |
+| Map, monsters in view | Lead · **Fire** at the nearest (`h`; roguelike Tab) with a launcher and ammunition, else **Throw** · Cast · Look · Pack · More |
+| Map, monster adjacent | Lead · **Attack** (one tap: a move towards the monster) · Cast · Fire/Throw · Pack · More |
+| Map, below half health with monsters in view | Stairs if standing on them · **Quaff** (fan: eat, use) · Read · Attack if one is adjacent · Pack · More |
+| Lead | Down/Up on stairs · **Enter shop** on a shop entrance (`,`, which enters it) · **Pick up** with objects underfoot |
+| Item prompt ("Drop which item? (Inven: a-d, / for Equip, ESC)") | The items by letter and name; Worn/Pack (`/`), Quiver (`\|`), Floor (`-`) when offered; Cancel |
+| Store or home | Buy (`p`), Sell (`s`), Examine (`l`), Pack, Leave (Escape), the wares by letter; the pad |
+| Menus and lists | The lettered rows, Close, Select, Page, Type; the pad |
+| yes/no | Yes, No, Cancel |
+| Aim ("Direction ('*' or <click> to target, "'" for closest…)") | The pad; **Closest** (`'`), **At target** (`t`) once one is set, Choose target (`*`), Cancel; or tap the map |
+| Direction (open, close, disarm, tunnel) | The pad and Cancel; or tap the map |
+| Look / target | The pad; Next (Space), Target (`t`), Recall (`r`), Close |
+| Text field (name, quantities, rest count, inscriptions) | Type, OK, Back |
+
+`games/angband/tests/conformance/key-coverage.ts` checks that each command sends, in both keysets, the key `ui-game.c`'s tables bind to that command and that no keymap takes first; the conformance replays send the same keys and clicks as the dock and the map gestures.
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad** (160–192 CSS px across, scaled to the screen): press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.
