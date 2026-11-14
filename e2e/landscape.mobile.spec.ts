@@ -5,7 +5,7 @@ import { createByTaps as createDcssByTaps, startCharacter } from './dcss-helpers
 import { openHyperRogue } from './hyperrogue-helpers.ts';
 import { lineAt, startNetHack, toMap, waitForContext as netHackWait } from './nethack-helpers.ts';
 import { startRogue } from './rogue-helpers.ts';
-import { openSil, silContext, waitForContext as silWait } from './sil-q-helpers.ts';
+import { createByTaps as createSilByTaps, openSil } from './sil-q-helpers.ts';
 
 // Phones held sideways: the dock and the thumb pad (under the shell's tools)
 // sit in rails beside the game, so nothing the game draws is under them.
@@ -24,14 +24,7 @@ const toGame: Record<string, (page: Page) => Promise<void>> = {
   },
   'sil-q': async (page) => {
     await openSil(page);
-    const dock = page.getByRole('group', { name: 'Actions' });
-    await dock.getByRole('button', { name: /New character/ }).tap();
-    for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
-      await page.waitForTimeout(400);
-      if ((await silContext(page)) === 'map') break;
-      await dock.getByRole('button', { name: /^OK/ }).tap();
-    }
-    await silWait(page, 'map');
+    await createSilByTaps(page);
   },
   rogue: (page) => startRogue(page, 'Thumbs'),
   hyperrogue: openHyperRogue,

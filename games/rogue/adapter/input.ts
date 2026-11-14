@@ -575,6 +575,7 @@ export function controlsFor(
           a('cancel'),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'menu': {
@@ -591,6 +592,7 @@ export function controlsFor(
       }
       return {
         actions: [...choiceButtons, a('continue', { label: 'Close', emphasis: 'primary' }), a('cancel')],
+        reading: true,
         palette: PALETTE,
       };
     }

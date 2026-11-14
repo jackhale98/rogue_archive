@@ -283,6 +283,15 @@
   flex-wrap: wrap-reverse;
   align-items: flex-end;
 }
+/* Menus and lettered choices read top to bottom, still anchored at the bottom. */
+.action-dock--vertical.action-dock--reading {
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.action-dock--horizontal.action-dock--reading {
+  flex-wrap: wrap;
+  align-content: flex-end;
+}
 .action-dock__slot {
   position: relative;
 }

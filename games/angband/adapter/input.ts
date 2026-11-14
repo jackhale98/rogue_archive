@@ -500,6 +500,7 @@ export function controlsFor(
             }),
           ),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'birth':
@@ -512,6 +513,7 @@ export function controlsFor(
           a('random', { label: 'Random' }),
           a('cancel', { label: 'Back' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'text':
@@ -579,6 +581,7 @@ export function controlsFor(
           ...(item?.floor ? [a('floor-item')] : []),
           a('cancel', { label: 'Cancel' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'store':
@@ -586,13 +589,14 @@ export function controlsFor(
       return {
         directionPad: MENU_PAD,
         actions: [
-          a('buy', { emphasis: 'primary' }),
-          a('sell'),
+          ...choiceButtons(6),
           a('store-examine'),
           a('inventory', { alternates: ['equipment', 'quiver', 'wear', 'takeoff', 'examine'] }),
           a('cancel', { label: 'Leave' }),
-          ...choiceButtons(6),
+          a('sell'),
+          a('buy', { emphasis: 'primary' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'menu': {
@@ -610,6 +614,7 @@ export function controlsFor(
           a('page', { label: 'Page' }),
           ...(hints.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
+        reading: true,
         palette: PALETTE,
       };
     }

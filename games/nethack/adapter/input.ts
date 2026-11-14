@@ -947,6 +947,7 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
             ...(paging ? [a('previous-page'), a('next-page')] : []),
             a('cancel', { label: 'Close', emphasis: 'primary' }),
           ],
+          reading: true,
           palette: PALETTE,
         };
       // Choosing one: a short menu's lines are buttons; a long one's "Random" (`*`, as the
@@ -970,6 +971,7 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
           a('cancel'),
           ...(buttons.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
+        reading: true,
         palette: PALETTE,
       };
     }
@@ -986,6 +988,7 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
           ),
           a('cancel'),
         ],
+        reading: true,
         palette: PALETTE,
       };
     }
@@ -1015,6 +1018,7 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
           a('cancel'),
           ...(items.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
+        reading: true,
         palette: PALETTE,
       };
     }

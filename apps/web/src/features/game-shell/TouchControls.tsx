@@ -212,6 +212,8 @@ interface DockProps {
   /** Commands the shell handles itself (command list, keyboard). */
   onShellCommand(command: string): boolean;
   orientation: 'vertical' | 'horizontal';
+  /** Reading order (menus, lettered choices) rather than stacked from the thumb. */
+  reading?: boolean;
 }
 
 interface FanState {
@@ -228,6 +230,7 @@ export function ActionDock({
   hapticsEnabled,
   onShellCommand,
   orientation,
+  reading = false,
 }: DockProps) {
   const [fan, setFan] = useState<FanState | null>(null);
   const press = useRef<{
@@ -269,7 +272,7 @@ export function ActionDock({
 
   return (
     <div
-      className={`action-dock action-dock--${orientation}`}
+      className={`action-dock action-dock--${orientation}${reading ? ' action-dock--reading' : ''}`}
       role="group"
       aria-label="Actions"
       data-context={context}

@@ -34,7 +34,7 @@ describe('DCSS character creation', () => {
       run: false,
       startKeys: tracker.startKeys,
     }).actions.map((action) => (typeof action === 'string' ? action : action.label));
-    expect(dock).toEqual(['OK', 'Recommended species', 'Random species', 'Back']);
+    expect(dock).toEqual(['Recommended species', 'Random species', 'Back', 'OK']);
     apply(tracker, [{ msg: 'ui-push', type: 'newgame-random-combo' }]);
     expect(tracker.context()).toBe('yesno');
   });

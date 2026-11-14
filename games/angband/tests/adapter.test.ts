@@ -352,7 +352,9 @@ describe('docks', () => {
     expect(ids(controlsFor('more', { ...base, bottom: '[Press ESC to exit, any other key ...]' }))[0]).toBe(
       'cancel',
     );
-    expect(ids(controlsFor('store', base))).toEqual(['buy', 'sell', 'store-examine', 'inventory', 'cancel']);
+    // Read top to bottom, Buy nearest the thumb.
+    expect(controlsFor('store', base).reading).toBe(true);
+    expect(ids(controlsFor('store', base))).toEqual(['store-examine', 'inventory', 'cancel', 'sell', 'buy']);
     expect(ids(controlsFor('text', base))[0]).toBe('shell:keyboard');
   });
 });

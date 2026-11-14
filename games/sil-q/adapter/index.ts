@@ -53,6 +53,8 @@ import {
 import type { FromWorker, ToWorker } from './protocol.ts';
 import {
   COL_MAP,
+  birthStep,
+  currentColumn,
   detectContext,
   itemPrompt,
   mapOverlay,
@@ -562,6 +564,10 @@ class SilAdapter implements GameAdapter {
       grid && (context === 'title' || context === 'menu' || context === 'item')
         ? screenChoices(grid, overlay ?? undefined)
         : [];
+    // Creation menus keep earlier steps' choices on screen (the race beside the houses).
+    const birth = grid && context === 'title' ? birthStep(grid) : null;
+    if (birth === 'menu') choices = currentColumn(screenChoices(grid!, undefined, true));
+    else if (birth) choices = [];
     const top = grid ? rowText(grid, 0) : '';
     const item = grid && context === 'item' ? itemPrompt(top) : null;
     // The song prompt names only letters: the songs' names are Sil's.
@@ -579,7 +585,7 @@ class SilAdapter implements GameAdapter {
     }
     const layout = controlsFor(
       context,
-      { ...state, hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run, prompt: top },
+      { ...state, hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run, prompt: top, birth },
       choices,
       item,
       this.#saves,
