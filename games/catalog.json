@@ -192,6 +192,10 @@
           "action": "Cast, ability, evoke, fire (aim) · fire at nearest"
         },
         {
+          "keys": "( · ) · Ctrl+direction",
+          "action": "Cycle the quiver · attack without moving"
+        },
+        {
           "keys": "x · X · @ · m",
           "action": "Look, level map, character, skills"
         },
@@ -209,7 +213,7 @@
         },
         {
           "keys": "Phone",
-          "action": "Six-button dock (long-press for related actions), thumb pad, More lists every command"
+          "action": "Six-button dock that follows the game (exploring, fighting when monsters are in view, stairs or altar underfoot, menus, level-up), long-press for related actions, thumb pad, More lists every command"
         },
         {
           "keys": "Menu → Save files for desktop",
@@ -220,6 +224,7 @@
         "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only.",
         "The download is about 19 MB on the first visit (cached afterwards for offline play).",
         "Map zoom on phones follows DCSS's own fit-to-view; pinch zoom is not yet available.",
+        "DCSS only tells whether a character has spells inside its menus: the phone dock leads with Cast until the game has said there are none, then with Ability.",
         "No sound (DCSS's browser interface has none)."
       ],
       "compatibility": [
@@ -231,7 +236,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Phone layout, status drawer, character creation by tap, context dock and long-press fans exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Phone layout, status drawer, character creation by tap, context docks (stairs button, look, travel menu, combat dock when a monster is in view), latches and long-press fans exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

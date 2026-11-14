@@ -24,7 +24,11 @@ describe('DCSS context from WebTiles messages', () => {
     apply(tracker, [{ msg: 'input_mode', mode: InputMode.YESNO }]);
     expect(tracker.context()).toBe('yesno');
     apply(tracker, [{ msg: 'input_mode', mode: InputMode.TARGET }]);
-    expect(tracker.context()).toBe('targeting');
+    expect(tracker.context()).toBe('look');
+    apply(tracker, [{ msg: 'input_mode', mode: InputMode.TARGET_PATH }]);
+    expect(tracker.context()).toBe('aim');
+    apply(tracker, [{ msg: 'input_mode', mode: InputMode.TARGET_DIR }]);
+    expect(tracker.context()).toBe('direction');
     apply(tracker, [{ msg: 'input_mode', mode: InputMode.PROMPT }]);
     expect(tracker.context()).toBe('prompt');
     apply(tracker, [{ msg: 'input_mode', mode: InputMode.NORMAL }]);
@@ -64,8 +68,10 @@ describe('DCSS context from WebTiles messages', () => {
 describe('DCSS touch layouts', () => {
   const known = new Set([...DCSS_COMMANDS.map((command) => command.id), 'shell:palette', 'shell:keyboard']);
 
-  it('offers every non-move command in the palette', () => {
-    const commands = DCSS_COMMANDS.filter((c) => !c.id.startsWith('move-') && c.category !== 'Keys');
+  it('offers every command but single moves (and the attacks the Attack latch sends) in the palette', () => {
+    const commands = DCSS_COMMANDS.filter(
+      (c) => !c.id.startsWith('move-') && !c.id.startsWith('attack-') && c.category !== 'Keys',
+    );
     expect(PALETTE).toEqual(commands.map((c) => c.id));
   });
 
@@ -79,7 +85,17 @@ describe('DCSS touch layouts', () => {
   });
 
   it('only refers to known commands', () => {
-    for (const context of ['map', 'menu', 'more', 'yesno', 'prompt', 'targeting', 'level-map'] as const) {
+    for (const context of [
+      'map',
+      'menu',
+      'more',
+      'yesno',
+      'prompt',
+      'aim',
+      'look',
+      'direction',
+      'level-map',
+    ] as const) {
       for (const action of controlsFor(context, { hp: 1, hpMax: 1, run: false }).actions) {
         const ids = typeof action === 'string' ? [action] : [action.command, ...(action.alternates ?? [])];
         for (const id of ids) expect(known.has(id), `${context}: ${id}`).toBe(true);

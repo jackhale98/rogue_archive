@@ -103,8 +103,74 @@ check(
   'prompt.cc yesno() no longer uses a menu tagged "prompt"',
 );
 
+// 6. What the touch controls read from the client and the game (read only).
+//    host.js map_context_reader: the client's map knowledge and monster data.
+const statics = (file: string) => read(`webserver/game_data/static/${file}`);
+const knowledge = statics('map_knowledge.js');
+for (const name of ['get', 'visible', 'player_on_level'])
+  check(new RegExp(`\\b${name}:`).test(knowledge), `map_knowledge.js no longer exports ${name}`);
+check(
+  /var attitude_classes = \[\s*"hostile",/.test(statics('monster_list.js')),
+  'monster_list.js: attitude 0 is no longer "hostile" (host.js HOSTILE)',
+);
+check(
+  /is_excluded\(monster\)\s*\{\s*return \(monster\.typedata\.no_exp/.test(statics('monster_list.js')),
+  'monster_list.js changed which monsters it leaves out (host.js excluded())',
+);
+for (const field of ['"att"', '"threat"', '"mf"', '"pos"', '"quiver_desc"'])
+  check(tileweb.includes(field), `tileweb.cc no longer sends ${field}`);
+check(/pos: \{x: 0, y: 0\}/.test(statics('player.js')), 'player.js no longer keeps the player position');
+// The client's MF_* list (enums.js) must match the game's map_feature up to MF_PORTAL.
+const clientFeatures = [...enums.matchAll(/exports\.(MF_[A-Z_]+) = val\+\+;/g)].map((match) => match[1]!);
+const gameFeatures = [...read('map-feature.h').matchAll(/^\s*(MF_[A-Z_]+),/gm)].map((match) => match[1]!);
+const upTo = (list: string[]) => list.slice(0, list.indexOf('MF_PORTAL') + 1);
+check(
+  upTo(clientFeatures).length > 0 && upTo(clientFeatures).join() === upTo(gameFeatures).join(),
+  'enums.js MF_* no longer match map-feature.h (host.js underfoot())',
+);
+const featTiles = statics('tileinfo-feat.js');
+for (const tile of [
+  'DNGN_ALTAR_ZIN',
+  'SHOP_GENERAL',
+  'DNGN_RETURN_ZOT',
+  'DNGN_EXIT_ABYSS',
+  'DNGN_EXIT_SEWER',
+])
+  check(featTiles.includes(`exports.${tile} =`), `tileinfo-feat.js no longer names ${tile}`);
+check(/exports\.basetile = function/.test(statics('tileinfo-dngn.js')), 'tileinfo-dngn.js has no basetile()');
+// Portal vaults' places read "a Sewer", "an Ossuary" (state.ts inPortalVault).
+check(
+  /!is_connected_branch\(place\.branch\)\)\s*\{\s*short_name = article_a\(short_name\);/.test(tileweb),
+  'tileweb.cc no longer names one-level portal branches with an article',
+);
+//    Menus by tag, the stat prompt, Orb and Zot lights, spell knowledge (adapter/state.ts, input.ts).
+const tags: [string, string][] = [
+  ['travel.cc', 'tag = "travel";'],
+  ['invent.cc', 'menu.set_tag("pickup");'],
+  ['spl-cast.cc', 'spell_menu.set_tag("spell");'],
+  ['ability.cc', 'abil_menu.set_tag("ability");'],
+];
+for (const [file, code] of tags) check(read(file).includes(code), `${file} no longer has ${code}`);
+check(
+  read('player-stats.cc').includes('Increase (S)trength, (I)ntelligence, or (D)exterity? '),
+  'player-stats.cc changed the stat increase question',
+);
+check(read('message.cc').includes(`mpr("You don't know any spells.");`), 'message.cc: MSG_NO_SPELLS changed');
+const status = read('status.cc');
+check(
+  /inf\.light_colour = LIGHTMAGENTA;\s*inf\.light_text = "Orb";/.test(status),
+  'status.cc: the Orb light changed',
+);
+check(
+  status.includes('inf.light_text = make_stringf("Zot (%d)", turns_until_zot());') &&
+    /case 0:\s*inf\.light_colour = WHITE;/.test(status),
+  'status.cc: the Zot light changed',
+);
+
 if (problems.length) {
   console.error(`✗ upstream drift:\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log('✓ upstream drift: WebTiles socket interface, client modules and followed messages unchanged');
+console.log(
+  '✓ upstream drift: WebTiles socket interface, client modules, followed messages and touch-control reads unchanged',
+);

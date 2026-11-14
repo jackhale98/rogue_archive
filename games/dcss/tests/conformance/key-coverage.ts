@@ -6,7 +6,13 @@
 // Usage: node --experimental-strip-types key-coverage.ts <crawl-ref/source>
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DCSS_COMMANDS, PALETTE, controlsFor, type DcssContext } from '../../adapter/input.ts';
+import {
+  DCSS_COMMANDS,
+  PALETTE,
+  controlsFor,
+  type ControlState,
+  type DcssContext,
+} from '../../adapter/input.ts';
 
 const source = readFileSync(join(process.argv[2]!, 'cmd-keys.h'), 'utf8');
 
@@ -84,10 +90,46 @@ const EXPECTED: Record<string, string> = {
   'previous-target': 'CMD_TARGET_CYCLE_BACK',
   'describe-target': 'CMD_TARGET_DESCRIBE',
   'target-here': 'CMD_TARGET_SELECT_ENDPOINT',
+  'attack-nw': 'CMD_ATTACK_UP_LEFT',
+  'attack-n': 'CMD_ATTACK_UP',
+  'attack-ne': 'CMD_ATTACK_UP_RIGHT',
+  'attack-w': 'CMD_ATTACK_LEFT',
+  'attack-e': 'CMD_ATTACK_RIGHT',
+  'attack-sw': 'CMD_ATTACK_DOWN_LEFT',
+  'attack-s': 'CMD_ATTACK_DOWN',
+  'attack-se': 'CMD_ATTACK_DOWN_RIGHT',
+  'quiver-next': 'CMD_CYCLE_QUIVER_FORWARD',
+  'quiver-previous': 'CMD_CYCLE_QUIVER_BACKWARD',
+  'save-now': 'CMD_SAVE_GAME_NOW',
+  'macro-add': 'CMD_MACRO_ADD',
+  'select-all': 'CMD_MENU_SELECT_ALL',
+  'menu-mode': 'CMD_MENU_CYCLE_MODE',
 };
-/** Keys for prompts and menus, which those prompts read directly; and the Run latch. */
+/**
+ * Keys that a prompt reads itself, not through cmd-keys.h: the source file
+ * and the code that handles the key there.
+ */
+const PROMPT_KEYS: Record<string, [file: string, code: RegExp]> = {
+  'travel-repeat': ['travel.cc', /case '\\t':\s*if \(has_default_target\(\)\)/],
+  'travel-altars': ['travel.cc', /case '_':\s*if \(!mode_allowed\(Mode::altars\)\)/],
+  always: ['prompt.cc', /new MenuEntry\("Always", MEL_ITEM, 1, 'A'\)/],
+  'stat-str': [
+    'player-stats.cc',
+    /case 'S':\s*for \(int i = 0; i < statgain; i\+\+\)\s*modify_stat\(STAT_STR/,
+  ],
+  'stat-int': [
+    'player-stats.cc',
+    /case 'I':\s*for \(int i = 0; i < statgain; i\+\+\)\s*modify_stat\(STAT_INT/,
+  ],
+  'stat-dex': [
+    'player-stats.cc',
+    /case 'D':\s*for \(int i = 0; i < statgain; i\+\+\)\s*modify_stat\(STAT_DEX/,
+  ],
+};
+/** Keys for prompts and menus, which those prompts read directly; and the Run and Attack latches. */
 const NOT_A_BINDING = new Set([
   'run',
+  'attack',
   'confirm',
   'cancel',
   'continue',
@@ -121,6 +163,13 @@ for (const match of source.matchAll(/^\{\s*(.+?),\s*(CMD_[A-Z0-9_]+)\s*\}/gm)) {
 const problems: string[] = [];
 for (const command of DCSS_COMMANDS) {
   if (NOT_A_BINDING.has(command.id)) continue;
+  const prompt = PROMPT_KEYS[command.id];
+  if (prompt) {
+    const [file, code] = prompt;
+    if (!code.test(readFileSync(join(process.argv[2]!, file), 'utf8')))
+      problems.push(`${command.id}: ${file} no longer handles ${token(command)} as expected (${code})`);
+    continue;
+  }
   const expected = EXPECTED[command.id];
   if (!expected) {
     problems.push(`${command.id}: no expected upstream command recorded in key-coverage.ts`);
@@ -151,15 +200,27 @@ const contexts: DcssContext[] = [
   'yesno',
   'prompt',
   'text',
-  'targeting',
+  'aim',
+  'look',
+  'direction',
   'level-map',
   'busy',
 ];
+const map = { hostiles: 0, adjacent: 0, maxThreat: -1, underfoot: null };
+const states: ControlState[] = [
+  { hp: 10, hpMax: 10, run: false },
+  { hp: 1, hpMax: 10, run: true },
+  { hp: 10, hpMax: 10, run: false, attack: true, map: { ...map, hostiles: 2, adjacent: 1 }, caster: false },
+  { hp: 10, hpMax: 10, run: false, statPrompt: true, escape: true, map: { ...map, underfoot: 'altar' } },
+  ...['travel', 'pickup', 'spell', 'ability', 'inventory', 'prompt'].map((tag) => ({
+    hp: 10,
+    hpMax: 10,
+    run: false,
+    menu: { tag, flags: 0, always: true },
+  })),
+];
 for (const context of contexts) {
-  for (const state of [
-    { hp: 10, hpMax: 10, run: false },
-    { hp: 1, hpMax: 10, run: true },
-  ]) {
+  for (const state of states) {
     const layout = controlsFor(context, state);
     for (const action of layout.actions) {
       const ids = typeof action === 'string' ? [action] : [action.command, ...(action.alternates ?? [])];
@@ -174,5 +235,6 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(
-  `✓ key coverage: ${DCSS_COMMANDS.length - NOT_A_BINDING.size} commands send upstream's own bindings`,
+  `✓ key coverage: ${DCSS_COMMANDS.length - NOT_A_BINDING.size} commands send upstream's own bindings ` +
+    `(${Object.keys(PROMPT_KEYS).length} of them keys their prompts read)`,
 );

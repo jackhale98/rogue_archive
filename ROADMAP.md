@@ -68,8 +68,9 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Phone layout: status band, stats drawer, minimap popup button, full-frame popups and menus, shorter message pane, long-press to describe a square
 - [x] Action structure for DCSS's ~70 commands: six-button dock with long-press fans, thumb pad with Run latch, context docks (menus, --more--, yes/no, item prompts, text, targeting, level map), full palette (docs/design/mobile-play.md#dcss)
 - [x] Message log from DCSS's message stream (colours, rollbacks)
-- [x] Engine conformance: key coverage against `cmd-keys.h`; upstream drift check; native (clang + libc++) vs WebAssembly replay of seeded games through the same platform interface, message for message
-- [x] e2e: desktop (new character, auto-explore, log, menus, save, reload, continue) and phone (tap creation, status drawer, dock, fans)
+- [x] Touch controls from the controls audit (docs/design/controls-audit.md): combat dock when hostile monsters are in view (read from the client's own map, as upstream's monster list does; "Fire: *quiver*"; no Explore or Rest), stairs button from what is underfoot (Down/Up/Pray/Shop/Enter/Exit, else Travel), Orb or Zot → stairs first, Ability leads for non-casters, separate aim/look/direction docks, menu docks by tag (travel, pick up and multi-select, spells and abilities, yes/no with Always), Str/Int/Dex buttons at level-up, Attack latch (Ctrl+direction), quiver cycling, add macro, save now
+- [x] Engine conformance: key coverage against `cmd-keys.h` (and the keys prompts read themselves); upstream drift check (including what the touch controls read); native (clang + libc++) vs WebAssembly replay of seeded games through the same platform interface, message for message
+- [x] e2e: desktop (new character, auto-explore, log, menus, save, reload, continue) and phone (tap creation, status drawer, dock, fans, stairs button, look dock, Attack latch, Ability for a Fighter, travel menu dock, combat dock when a monster comes into view)
 - [x] CI build (cached), weekly canary for both games
 - [x] Confirm Brogue CE needed no DCSS-specific changes (shared code changed only to register the adapter; one e2e file renamed)
 - [ ] Pinch zoom of the map on phones (upstream's viewport scale)

@@ -19,6 +19,8 @@ import {
   type TouchAction,
   type TouchControlLayout,
 } from '@rogue-archive/game-api';
+import { plainText } from './messages.ts';
+import { MenuFlag, NO_MAP_CONTEXT, type MapContext, type MenuInfo, type Underfoot } from './state.ts';
 
 export type KeyInput = Extract<GameInput, { type: 'key' }>;
 
@@ -169,6 +171,40 @@ export const DCSS_COMMANDS: readonly DcssCommand[] = [
     shortLabel: 'Quiver',
     shortcut: 'Q',
     keys: key('Q'),
+    category: 'Combat',
+  },
+  {
+    id: 'attack',
+    label: 'Attack without moving',
+    shortLabel: 'Attack ⌃',
+    shortcut: 'Ctrl+direction',
+    keys: { key: 'Control' },
+    category: 'Combat',
+    description: 'The next direction attacks that square (Ctrl + direction) and never moves you.',
+  },
+  // What the Attack latch sends: Ctrl + the vi key (not listed in the palette).
+  { id: 'attack-nw', label: 'Attack up-left', shortcut: 'Ctrl+Y', keys: ctrl('y'), category: 'Combat' },
+  { id: 'attack-n', label: 'Attack up', shortcut: 'Ctrl+K', keys: ctrl('k'), category: 'Combat' },
+  { id: 'attack-ne', label: 'Attack up-right', shortcut: 'Ctrl+U', keys: ctrl('u'), category: 'Combat' },
+  { id: 'attack-w', label: 'Attack left', shortcut: 'Ctrl+H', keys: ctrl('h'), category: 'Combat' },
+  { id: 'attack-e', label: 'Attack right', shortcut: 'Ctrl+L', keys: ctrl('l'), category: 'Combat' },
+  { id: 'attack-sw', label: 'Attack down-left', shortcut: 'Ctrl+B', keys: ctrl('b'), category: 'Combat' },
+  { id: 'attack-s', label: 'Attack down', shortcut: 'Ctrl+J', keys: ctrl('j'), category: 'Combat' },
+  { id: 'attack-se', label: 'Attack down-right', shortcut: 'Ctrl+N', keys: ctrl('n'), category: 'Combat' },
+  {
+    id: 'quiver-next',
+    label: 'Next quivered action',
+    shortLabel: 'Quiver ▸',
+    shortcut: ')',
+    keys: key(')'),
+    category: 'Combat',
+  },
+  {
+    id: 'quiver-previous',
+    label: 'Previous quivered action',
+    shortLabel: 'Quiver ◂',
+    shortcut: '(',
+    keys: key('('),
     category: 'Combat',
   },
   {
@@ -457,6 +493,14 @@ export const DCSS_COMMANDS: readonly DcssCommand[] = [
     category: 'Game',
   },
   { id: 'save', label: 'Save and exit', shortLabel: 'Save', shortcut: 'S', keys: key('S'), category: 'Game' },
+  {
+    id: 'save-now',
+    label: 'Save and exit now (no question)',
+    shortLabel: 'Save now',
+    shortcut: 'Ctrl+S',
+    keys: ctrl('s'),
+    category: 'Game',
+  },
   { id: 'note', label: 'Make a note', shortLabel: 'Note', shortcut: ':', keys: key(':'), category: 'Game' },
   {
     id: 'annotate',
@@ -496,6 +540,14 @@ export const DCSS_COMMANDS: readonly DcssCommand[] = [
     shortLabel: 'Macros',
     shortcut: 'Ctrl+D',
     keys: ctrl('d'),
+    category: 'Game',
+  },
+  {
+    id: 'macro-add',
+    label: 'Add a macro or keymap',
+    shortLabel: 'Add macro',
+    shortcut: 'Ctrl+E',
+    keys: ctrl('e'),
     category: 'Game',
   },
   {
@@ -599,6 +651,49 @@ export const DCSS_COMMANDS: readonly DcssCommand[] = [
     keys: key('.'),
     category: 'Keys',
   },
+  {
+    id: 'select-all',
+    label: 'Select all',
+    shortLabel: 'All',
+    shortcut: ',',
+    keys: key(','),
+    category: 'Keys',
+  },
+  {
+    id: 'menu-mode',
+    label: 'Switch between using and describing',
+    shortLabel: 'Describe',
+    shortcut: '!',
+    keys: key('!'),
+    category: 'Keys',
+  },
+  {
+    id: 'travel-repeat',
+    label: 'Travel to the last destination',
+    shortLabel: 'Repeat',
+    shortcut: 'Tab',
+    keys: key('Tab'),
+    category: 'Keys',
+  },
+  {
+    id: 'travel-altars',
+    label: 'Altars (travel to a god)',
+    shortLabel: 'Altars',
+    shortcut: '_',
+    keys: key('_'),
+    category: 'Keys',
+  },
+  { id: 'always', label: 'Always', shortLabel: 'Always', shortcut: 'A', keys: key('A'), category: 'Keys' },
+  { id: 'stat-str', label: 'Strength', shortLabel: 'Str', shortcut: 'S', keys: key('S'), category: 'Keys' },
+  {
+    id: 'stat-int',
+    label: 'Intelligence',
+    shortLabel: 'Int',
+    shortcut: 'I',
+    keys: key('I'),
+    category: 'Keys',
+  },
+  { id: 'stat-dex', label: 'Dexterity', shortLabel: 'Dex', shortcut: 'D', keys: key('D'), category: 'Keys' },
 ];
 
 const BY_ID = new Map(DCSS_COMMANDS.map((command) => [command.id, command]));
@@ -619,14 +714,27 @@ const PAD = {
   se: 'move-se',
 } as const;
 
-/** Commands the palette ("More") lists: all but single moves and prompt keys. */
+/** The command a latch turns a pad move into: Run (Shift) or Attack (Ctrl). */
+export function latchedMove(moveId: string, latch: 'run' | 'attack'): KeySpec | null {
+  if (!moveId.startsWith('move-')) return null;
+  const move = findCommand(moveId);
+  if (!move) return null;
+  if (latch === 'run') return { ...move.keys, key: move.keys.key.toUpperCase(), shift: true };
+  return findCommand(moveId.replace('move-', 'attack-'))?.keys ?? null;
+}
+
+/**
+ * Commands the palette ("More") lists: all but single moves (and the attacks
+ * the Attack latch sends) and keys that answer prompts.
+ */
 export const PALETTE = DCSS_COMMANDS.filter(
-  (command) => !command.id.startsWith('move-') && command.category !== 'Keys',
+  (command) =>
+    !command.id.startsWith('move-') && !command.id.startsWith('attack-') && command.category !== 'Keys',
 ).map((command) => command.id);
 
 export const DCSS_TOUCH_LAYOUT: TouchControlLayout = {
   directionPad: PAD,
-  actions: ['explore', 'autofight', 'cast', 'inventory', 'look', SHELL_COMMAND.palette],
+  actions: ['explore', 'travel', 'cast', 'inventory', 'look', SHELL_COMMAND.palette],
   palette: PALETTE,
 };
 
@@ -642,20 +750,207 @@ export type DcssContext =
   | 'yesno'
   | 'prompt'
   | 'text'
-  | 'targeting'
+  /** Choosing a target along a path: firing, throwing, casting (TARGET_PATH). */
+  | 'aim'
+  /** The look cursor, or a spot to target (TARGET). */
+  | 'look'
+  /** A direction (TARGET_DIR). */
+  | 'direction'
   | 'level-map'
   | 'busy';
 
+/** What the docks follow besides the context. Everything but health and the latches is optional. */
+export interface ControlState {
+  hp: number;
+  hpMax: number;
+  /** The Run latch (Shift for the next direction). */
+  run: boolean;
+  /** The Attack latch (Ctrl for the next direction). */
+  attack?: boolean;
+  /** Monsters in view and what is underfoot, from the client's map. */
+  map?: MapContext;
+  /** player.quiver_desc: the quivered action ("Throw: 3 darts"). */
+  quiver?: string;
+  /** Carrying the Orb, or Zot is approaching: getting off the level comes first. */
+  escape?: boolean;
+  /** Whether the character has spells, once known. */
+  caster?: boolean | null;
+  /** The innermost open menu. */
+  menu?: MenuInfo | null;
+  /** The stat increase prompt. */
+  statPrompt?: boolean;
+}
+
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
+
+const MAX_QUIVER_LABEL = 20;
+
+/**
+ * The Fire button's label from the quivered action: "Throw: 3 darts",
+ * "Fire: +0 shortbow", "Cast: Magic Dart". Null when nothing is quivered.
+ */
+export function quiverLabel(desc: string | undefined): string | null {
+  const text = plainText(desc ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // quiver.cc quiver_description(): "<Verb>: [slot) ]<what>".
+  const match = /^([^:]{1,24}):\s*(?:[a-zA-Z]\)\s*)?(.+)$/.exec(text);
+  if (!match) return null;
+  const label = `${match[1]}: ${match[2]}`;
+  return label.length > MAX_QUIVER_LABEL ? `${label.slice(0, MAX_QUIVER_LABEL - 1).trimEnd()}…` : label;
+}
+
+/** The stairs button: what `<`/`>` would do here (main.cc _can_take_stairs), else Travel. */
+function stairsAction(underfoot: Underfoot | null, escape: boolean): TouchAction {
+  const fan = ['downstairs', 'upstairs', 'travel', 'map', 'search'];
+  const make = (command: string, label: string, primary: boolean): TouchAction =>
+    a(command, {
+      label,
+      alternates: fan.filter((id) => id !== command),
+      ...(primary || escape ? { emphasis: 'primary' as const } : {}),
+    });
+  switch (underfoot) {
+    case 'down':
+    case 'branch':
+      return make('downstairs', 'Down >', true);
+    case 'portal':
+      return make('downstairs', 'Enter >', true);
+    // Arriving puts you on these: they lead only when leaving is urgent.
+    case 'up':
+      return make('upstairs', 'Up <', false);
+    case 'exit':
+      return make('upstairs', 'Exit <', false);
+    // Up and down both work for altars and shops.
+    case 'altar':
+      return make('downstairs', 'Pray', true);
+    case 'shop':
+      return make('downstairs', 'Shop', true);
+    default:
+      return make('travel', 'Travel', false);
+  }
+}
+
+const LOOK_FAN = ['map', 'full-view', 'character', 'skills', 'resists', 'overview', 'mutations'];
+const MAGIC_FAN = ['evoke', 'memorise', 'spells', 'religion', 'force-cast'];
+
+/** The map docks: exploring, or fighting when hostile monsters are in view. */
+function mapControls(state: ControlState): TouchControlLayout {
+  const map = state.map ?? NO_MAP_CONTEXT;
+  const latch = state.run
+    ? a('run', { label: 'Run ⇧', active: true })
+    : state.attack
+      ? a('attack', { label: 'Attack ⌃', active: true })
+      : null;
+  // Non-casters (once the game has said so) lead with abilities.
+  const magic =
+    state.caster === false
+      ? a('abilities', { alternates: ['cast', ...MAGIC_FAN] })
+      : a('cast', { alternates: ['abilities', ...MAGIC_FAN] });
+  const look = a('look', { alternates: LOOK_FAN });
+  const more = a(SHELL_COMMAND.palette, { label: 'More' });
+
+  if (map.hostiles > 0) {
+    // Auto-explore and resting are refused with monsters in view.
+    const label = quiverLabel(state.quiver);
+    const actions: TouchAction[] = [
+      a('autofight', {
+        emphasis: 'primary',
+        alternates: ['primary-attack', 'attack', 'weapon-swap', 'wait', 'shout'],
+      }),
+      a('autofire', {
+        label: label ?? 'Fire',
+        alternates: ['fire', 'quiver', 'quiver-next', 'quiver-previous', 'fire-item'],
+      }),
+      magic,
+      a('quaff', { alternates: ['read', 'inventory', 'equip', 'unequip', 'pickup'] }),
+      look,
+      more,
+    ];
+    return { directionPad: PAD, actions: latch ? [latch, ...actions] : actions, palette: PALETTE };
+  }
+
+  const wounded = state.hpMax > 0 && state.hp < state.hpMax * 0.5;
+  const fan = ['wait', 'run', 'autofight', 'attack', 'quiver', 'weapon-swap'];
+  const lead =
+    latch ??
+    (wounded
+      ? a('rest', { emphasis: 'primary', alternates: ['explore', ...fan] })
+      : a('explore', { alternates: ['rest', ...fan] }));
+  const stairs = stairsAction(map.underfoot, !!state.escape);
+  const pack = a('inventory', {
+    alternates: ['pickup', 'equip', 'unequip', 'quaff', 'read', 'drop', 'inspect-floor'],
+  });
+  return {
+    directionPad: PAD,
+    // With the Orb, or with Zot approaching, leaving the level comes first.
+    actions: state.escape ? [stairs, lead, magic, pack, look, more] : [lead, stairs, magic, pack, look, more],
+    palette: PALETTE,
+  };
+}
+
+/** Menus, by the tag DCSS gives them. */
+function menuControls(menu: MenuInfo | null | undefined): TouchControlLayout {
+  const close = a('cancel', { label: 'Close' });
+  const type = a(SHELL_COMMAND.keyboard, { label: 'Type' });
+  // The interlevel travel prompt (travel.cc TravelPromptMenu): branches are
+  // its items; these are its keys.
+  if (menu?.tag === 'travel') {
+    return {
+      actions: [
+        a('downstairs', { label: 'Down >', emphasis: 'primary' }),
+        a('upstairs', { label: 'Up <' }),
+        a('travel-repeat'),
+        a('travel-altars'),
+        close,
+        type,
+      ],
+      palette: PALETTE,
+    };
+  }
+  // Multi-select menus (pick up, drop): select items, then accept.
+  if (menu && (menu.tag === 'pickup' || menu.flags & MenuFlag.MULTISELECT)) {
+    return {
+      actions: [
+        a('confirm', { label: 'Accept', emphasis: 'primary' }),
+        a('select-all'),
+        a('page-down', { alternates: ['page-up', 'line-down', 'line-up'] }),
+        close,
+        type,
+      ],
+      palette: PALETTE,
+    };
+  }
+  // Spells and abilities: "!" switches between using and describing.
+  if (menu?.tag === 'spell' || menu?.tag === 'ability') {
+    return {
+      actions: [
+        close,
+        a('page-up', { alternates: ['line-up'] }),
+        a('page-down', { alternates: ['line-down'] }),
+        a('menu-mode'),
+        a('confirm', { label: 'Select', emphasis: 'primary' }),
+        type,
+      ],
+      palette: PALETTE,
+    };
+  }
+  return {
+    actions: [
+      close,
+      a('page-up', { alternates: ['line-up'] }),
+      a('page-down', { alternates: ['line-down'] }),
+      a('confirm', { label: 'Select', emphasis: 'primary' }),
+      type,
+    ],
+    palette: PALETTE,
+  };
+}
 
 /**
  * The dock for each context. In the map, six buttons cover everything:
  * long-press any of them for related actions, and "More" lists every command.
  */
-export function controlsFor(
-  context: DcssContext,
-  state: { hp: number; hpMax: number; run: boolean },
-): TouchControlLayout {
+export function controlsFor(context: DcssContext, state: ControlState): TouchControlLayout {
   switch (context) {
     case 'launcher':
       return { actions: [], palette: [] };
@@ -683,10 +978,27 @@ export function controlsFor(
       };
     case 'yesno':
       return {
-        actions: [a('yes', { emphasis: 'primary' }), a('no'), a('cancel', { label: 'Cancel' })],
+        actions: [
+          a('yes', { emphasis: 'primary' }),
+          a('no'),
+          ...(state.menu?.always ? [a('always')] : []),
+          a('cancel', { label: 'Cancel' }),
+        ],
         palette: PALETTE,
       };
     case 'prompt':
+      // Level-up: the game waits for S, I or D (Escape does not cancel it).
+      if (state.statPrompt) {
+        return {
+          actions: [
+            a('stat-str'),
+            a('stat-int'),
+            a('stat-dex'),
+            a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ],
+          palette: PALETTE,
+        };
+      }
       // "Quaff which item?" and similar: the choices are a key away, or typed.
       return {
         actions: [
@@ -707,6 +1019,7 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'menu':
+      return menuControls(state.menu);
     case 'popup':
       return {
         actions: [
@@ -718,17 +1031,30 @@ export function controlsFor(
         ],
         palette: PALETTE,
       };
-    case 'targeting':
+    case 'aim':
       return {
         directionPad: PAD,
         actions: [
           a('confirm', { label: 'Fire', emphasis: 'primary', alternates: ['target-here'] }),
+          a('next-target', { alternates: ['previous-target', 'describe-target'] }),
+          a('quiver-next', { alternates: ['quiver-previous'] }),
+          a('cancel', { label: 'Cancel' }),
+        ],
+        palette: PALETTE,
+      };
+    case 'look':
+      return {
+        directionPad: PAD,
+        actions: [
+          a('confirm', { label: 'Select', emphasis: 'primary', alternates: ['target-here'] }),
           a('next-target', { alternates: ['previous-target'] }),
           a('describe-target', { label: 'Info' }),
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
       };
+    case 'direction':
+      return { directionPad: PAD, actions: [a('cancel', { label: 'Cancel' })], palette: PALETTE };
     case 'level-map':
       return {
         directionPad: PAD,
@@ -739,34 +1065,7 @@ export function controlsFor(
         ],
         palette: PALETTE,
       };
-    case 'map': {
-      // Badly hurt and nothing in view to fight: resting is the likely next move.
-      const wounded = state.hpMax > 0 && state.hp < state.hpMax * 0.5;
-      return {
-        directionPad: PAD,
-        actions: [
-          wounded
-            ? a('rest', {
-                emphasis: 'primary',
-                alternates: ['explore', 'wait', 'run', 'downstairs', 'upstairs', 'travel'],
-              })
-            : state.run
-              ? a('run', { label: 'Run ⇧', active: true })
-              : a('explore', { alternates: ['rest', 'wait', 'run', 'downstairs', 'upstairs', 'travel'] }),
-          a('autofight', {
-            alternates: ['autofire', 'fire', 'fire-item', 'quiver', 'primary-attack', 'weapon-swap'],
-          }),
-          a('cast', { alternates: ['abilities', 'evoke', 'memorise', 'spells', 'religion', 'force-cast'] }),
-          a('inventory', {
-            alternates: ['pickup', 'equip', 'unequip', 'quaff', 'read', 'drop', 'inspect-floor'],
-          }),
-          a('look', {
-            alternates: ['map', 'full-view', 'character', 'skills', 'resists', 'overview', 'mutations'],
-          }),
-          a(SHELL_COMMAND.palette, { label: 'More' }),
-        ],
-        palette: PALETTE,
-      };
-    }
+    case 'map':
+      return mapControls(state);
   }
 }

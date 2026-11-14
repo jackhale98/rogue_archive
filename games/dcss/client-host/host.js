@@ -20,6 +20,8 @@
  *     api.toggleMinimap()       phones: show/hide the minimap as a popup
  *     api.relayout()            re-fit the client to the frame
  *   raBridge.focusShell()       hand keyboard focus back to the page
+ *   raBridge.mapContext(ctx)    monsters in view and what is underfoot, read
+ *                               from the client's map (map_context_reader)
  */
 (function () {
   'use strict';
@@ -105,9 +107,12 @@
     var current_layer = 'loader';
     var layers = ['crt', 'normal'];
 
+    var map_listener = null;
     function handle_message_backlog() {
+      var map_changed = false;
       while (message_queue.length && message_inhibit === 0) {
         var msg = message_queue.shift();
+        if (msg.msg === 'map' || msg.msg === 'player') map_changed = true;
         try {
           comm.handle_message(msg);
         } catch (err) {
@@ -115,6 +120,7 @@
           console.error(err);
         }
       }
+      if (map_changed && map_listener) map_listener();
     }
 
     function inhibit_messages() {
@@ -315,6 +321,10 @@
     exports.show_dialog = function () {};
     exports.hide_dialog = function () {};
     exports.receive = receive;
+    /** Called after the client has applied map or player messages (not part of upstream's client.js). */
+    exports.on_map_change = function (listener) {
+      map_listener = listener;
+    };
     return exports;
   });
 
@@ -526,6 +536,89 @@
     document.addEventListener('touchcancel', cancel, { passive: true });
   }
 
+  /**
+   * Context for the touch controls, read (never written) from the client's
+   * own map knowledge, the way upstream's monster_list.js reads it:
+   * - hostile monsters in view (attitude ATT_HOSTILE, monster_list.js's
+   *   exclusions), how many are adjacent and the highest threat;
+   * - what the player stands on: the cell's minimap feature (map-feature.h,
+   *   enums.js MF_*) for stairs and portals, and its feature tile's name
+   *   (tileinfo-feat.js) for altars, shops and portal exits.
+   */
+  function map_context_reader(map_knowledge, player, enums, dngn, feat) {
+    // LOS_MAX_RANGE is 8: nothing further away is in view.
+    var VIEW = 9;
+    var HOSTILE = 0;
+    var names = {};
+    Object.keys(feat).forEach(function (name) {
+      var value = feat[name];
+      if (typeof value === 'number' && !(value in names)) names[value] = name;
+    });
+
+    function excluded(mon) {
+      // monster_list.js is_excluded: plants and other monsters giving no experience.
+      return (
+        mon.typedata &&
+        mon.typedata.no_exp &&
+        !(mon.name === 'active ballistomycete' || /tentacle$/.test(mon.name))
+      );
+    }
+
+    function feature_name(cell) {
+      if (!cell.t || cell.t.bg === undefined) return '';
+      var bg = enums.prepare_bg_flags(cell.t.bg);
+      return names[dngn.basetile(bg.value)] || '';
+    }
+
+    function underfoot(cell) {
+      switch (cell.mf) {
+        case enums.MF_STAIR_DOWN:
+          return 'down';
+        case enums.MF_STAIR_BRANCH:
+          return 'branch';
+        case enums.MF_STAIR_UP:
+          return 'up';
+        case enums.MF_PORTAL:
+          // Gates out of portals and Hell lead up; the Abyss and Pandemonium
+          // exits lead "down" (terrain.cc feat_stair_direction).
+          var name = feature_name(cell);
+          return /^DNGN_(EXIT|RETURN)/.test(name) && !/ABYSS|PANDEMONIUM/.test(name) ? 'exit' : 'portal';
+        case enums.MF_FEATURE:
+          var feature = feature_name(cell);
+          if (/^DNGN_ALTAR/.test(feature)) return 'altar';
+          if (/^SHOP_/.test(feature)) return 'shop';
+          return null;
+        default:
+          return null;
+      }
+    }
+
+    return function read() {
+      var pos = player.pos || { x: 0, y: 0 };
+      var hostiles = 0;
+      var adjacent = 0;
+      var max_threat = -1;
+      for (var dy = -VIEW; dy <= VIEW; dy++) {
+        for (var dx = -VIEW; dx <= VIEW; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          var cell = map_knowledge.get(pos.x + dx, pos.y + dy);
+          var mon = cell.mon;
+          if (!mon || mon.att !== HOSTILE || excluded(mon) || !map_knowledge.visible(cell)) continue;
+          hostiles++;
+          if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) adjacent++;
+          if (typeof mon.threat === 'number' && mon.threat > max_threat) max_threat = mon.threat;
+        }
+      }
+      return {
+        hostiles: hostiles,
+        adjacent: adjacent,
+        maxThreat: max_threat,
+        underfoot:
+          map_knowledge.player_on_level() === false ? null : underfoot(map_knowledge.get(pos.x, pos.y)),
+      };
+    };
+  }
+
   function load_markup() {
     // Upstream's game.html, as the server would send it: without its script
     // (we load the client below) and stylesheets (index.html links them), and
@@ -570,14 +663,34 @@
             client.uninhibit_messages();
           });
         }
-        require(['game/game', 'game/minimap', 'game/enums', 'game/display'], function (
-          game,
-          minimap,
-          enums,
-          display,
-        ) {
+        require([
+          'game/game',
+          'game/minimap',
+          'game/enums',
+          'game/display',
+          'game/map_knowledge',
+          'game/player',
+          'game/tileinfo-dngn',
+          'game/tileinfo-feat',
+        ], function (game, minimap, enums, display, map_knowledge, player, dngn, feat) {
           attach_long_press();
           order_newgame_choices();
+          var read_map_context = map_context_reader(map_knowledge, player, enums, dngn, feat);
+          var last_map_context = '';
+          client.on_map_change(function () {
+            if (!bridge.mapContext) return;
+            var context;
+            try {
+              context = read_map_context();
+            } catch (err) {
+              console.error('Reading the map context failed', err);
+              return;
+            }
+            var text = JSON.stringify(context);
+            if (text === last_map_context) return;
+            last_map_context = text;
+            bridge.mapContext(context);
+          });
           var shell_classes = [];
           var minimap_open = false;
           function apply_classes() {
@@ -617,6 +730,7 @@
               key: press,
               restart: function () {
                 $(document).trigger('game_cleanup');
+                last_map_context = '';
                 start();
               },
               setClasses: function (classes) {

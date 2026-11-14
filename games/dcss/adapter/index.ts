@@ -30,12 +30,14 @@ import {
   controlsFor,
   findCommand,
   keyInput,
+  latchedMove,
+  type ControlState,
   type DcssContext,
   type KeyInput,
 } from './input.ts';
 import { MessageLog, type GameMessage } from './messages.ts';
 import type { FromWorker, SavedCharacter, ToWorker } from './protocol.ts';
-import { GameTracker, parseLines } from './state.ts';
+import { GameTracker, NO_MAP_CONTEXT, parseLines, underfootHere, type MapContext } from './state.ts';
 
 export const GAME_ID = 'dcss';
 const FLUSH_TIMEOUT_MS = 8000;
@@ -57,6 +59,8 @@ interface ClientApi {
 interface ClientBridge {
   send(text: string): void;
   ready(api: ClientApi): void;
+  /** What the client host reads from the client's map (monsters in view, underfoot). */
+  mapContext(context: MapContext): void;
 }
 
 export interface DcssDebugState {
@@ -66,6 +70,10 @@ export interface DcssDebugState {
   popups: string[];
   menus: string[];
   inputMode: number;
+  /** Monsters in view and what is underfoot, as the client host reported them. */
+  map: MapContext;
+  /** The latched modifier for the next direction. */
+  latch: 'run' | 'attack' | null;
   /** The client's document (same origin), for tests. */
   document(): Document | null;
   /** Visible text of the client (map excluded), for tests. */
@@ -137,13 +145,18 @@ class DcssAdapter implements GameAdapter {
   #launchName = '';
   #version = '';
   #drawer = false;
-  #run = false;
+  /** A latched modifier for the next direction. */
+  #latch: 'run' | 'attack' | null = null;
+  /** Monsters in view and what is underfoot, read by the client host. */
+  #map: MapContext = NO_MAP_CONTEXT;
   #cleanup: (() => void)[] = [];
   readonly debug: DcssDebugState;
 
   constructor() {
     const tracker = this.#tracker;
     this.debug = {
+      map: NO_MAP_CONTEXT,
+      latch: null,
       context: null,
       get inGame() {
         return tracker.inGame;
@@ -163,6 +176,10 @@ class DcssAdapter implements GameAdapter {
       document: () => this.#frame?.contentDocument ?? null,
       text: () => this.#frame?.contentDocument?.body.innerText ?? '',
     };
+    Object.defineProperties(this.debug, {
+      map: { get: () => ({ ...this.#map }), enumerable: true },
+      latch: { get: () => this.#latch, enumerable: true },
+    });
   }
 
   async initialize(host: GameHost, options: InitializeOptions): Promise<void> {
@@ -228,6 +245,10 @@ class DcssAdapter implements GameAdapter {
         ready: (api) => {
           this.#client = api;
           resolve();
+        },
+        mapContext: (context) => {
+          this.#map = context;
+          this.#publishContext();
         },
       };
       (frame as HTMLIFrameElement & { raBridge?: ClientBridge }).raBridge = bridge;
@@ -298,19 +319,19 @@ class DcssAdapter implements GameAdapter {
       return;
     }
     if (input.type !== 'command') return;
-    if (input.commandId === 'run') {
-      this.#run = !this.#run;
+    // Latches for the next direction: Run (Shift) and Attack (Ctrl), one at a time.
+    if (input.commandId === 'run' || input.commandId === 'attack') {
+      const latch = input.commandId;
+      this.#latch = this.#latch === latch ? null : latch;
       this.#publishContext(true);
       return;
     }
     const command = findCommand(input.commandId);
     if (!command) return;
-    const spec = { ...command.keys };
-    // The Run latch turns the next move into a run (Shift + direction).
-    if (this.#run && command.id.startsWith('move-')) {
-      spec.key = spec.key.toUpperCase();
-      spec.shift = true;
-      this.#run = false;
+    let spec = command.keys;
+    if (this.#latch && command.id.startsWith('move-')) {
+      spec = latchedMove(command.id, this.#latch) ?? spec;
+      this.#latch = null;
       this.#publishContext(true);
     }
     this.#press(keyInput(spec));
@@ -484,6 +505,8 @@ class DcssAdapter implements GameAdapter {
       case 'exit':
         // The game process ended; the worker has a fresh one ready.
         this.#tracker.reset();
+        this.#map = NO_MAP_CONTEXT;
+        this.#latch = null;
         this.#client?.restart();
         this.#characters = message.characters;
         this.#showLauncher(message.reason);
@@ -556,8 +579,7 @@ class DcssAdapter implements GameAdapter {
       if (context === 'loading') this.#launcher?.showPreparing(this.#launchName);
       else if (this.#launcher?.preparing) this.#launcher.hide();
     }
-    const player = this.#tracker.player;
-    const layout = controlsFor(context, { hp: player.hp ?? 0, hpMax: player.hp_max ?? 0, run: this.#run });
+    const layout = controlsFor(context, this.#controlState());
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature && !force) return;
     this.#layoutSignature = signature;
@@ -569,6 +591,23 @@ class DcssAdapter implements GameAdapter {
         mode: context,
       },
     });
+  }
+
+  #controlState(): ControlState {
+    const tracker = this.#tracker;
+    const player = tracker.player;
+    return {
+      hp: player.hp ?? 0,
+      hpMax: player.hp_max ?? 0,
+      run: this.#latch === 'run',
+      attack: this.#latch === 'attack',
+      map: { ...this.#map, underfoot: underfootHere(this.#map, player.place) },
+      quiver: player.quiver_desc,
+      escape: tracker.orb || tracker.zotLow,
+      caster: tracker.caster,
+      menu: tracker.menu,
+      statPrompt: tracker.statPrompt,
+    };
   }
 
   #focusClient(): void {

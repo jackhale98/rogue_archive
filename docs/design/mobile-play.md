@@ -67,18 +67,37 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
 
 **The command set.** DCSS has about 70 commands bound to keys, far more than Brogue. The goal is that every one is reachable by touch without a settings screen, a help page or the keyboard. Three levels:
 
-1. **Dock: six buttons for the map context**, one per kind of action, each leading with the most common one:
+1. **Dock: six buttons for the map**, one per kind of action, each leading with the most common one. Which six depends on whether hostile monsters are in view.
+
+   Exploring (nothing hostile in view):
 
    | Button (tap) | Long-press fan (slide and release) |
    |---|---|
-   | **Explore** `o`, or **Rest** `5` when badly hurt | Rest, Wait, Run (next direction), Down `>`, Up `<`, Travel `G` |
-   | **Fight** `Tab` | Fire at nearest `p`, Aim `f`, Throw `F`, Quiver `Q`, Strike `v`, Swap weapons `'` |
-   | **Cast** `z` | Ability `a`, Evoke `V`, Learn `M`, Spells `I`, God `^`, Force cast `Z` |
+   | **Explore** `o`, or **Rest** `5` when badly hurt | Rest (or Explore), Wait, Run (next direction), Fight `Tab`, Attack (next direction), Quiver `Q`, Swap weapons `'` |
+   | **Stairs**: what `<`/`>` does where you stand: **Down >**, **Up <**, **Pray** (altar), **Shop**, **Enter >** (portal), **Exit <** (portal vault exit); elsewhere **Travel** `G` | The others of Down `>`, Up `<`, Travel `G`, Map `X`, Find `Ctrl-F` |
+   | **Cast** `z`, or **Ability** `a` once DCSS has said the character knows no spells | Ability (or Cast), Evoke `V`, Learn `M`, Spells `I`, God `^`, Force cast `Z` |
    | **Pack** `i` | Pick up `g`, Equip `e`, Unequip `c`, Quaff `q`, Read `r`, Drop `d`, Items here `;` |
    | **Look** `x` | Map `X`, In view `Ctrl-X`, Status `@`, Skills `m`, Resists `%`, Overview `Ctrl-O`, Mutations `A` |
    | **More** | The palette: every command by category (Movement, Combat, Magic, Items, Information, Game) |
 
-2. **The thumb pad** moves (vi keys `hjklyubn`), its centre waits a turn (`s`), and **Run** latches Shift for the next direction (shown pressed while latched). The same pad moves the cursor while targeting and on the level map.
+   Down stairs, branch stairs, portals, altars and shops underfoot make the stairs button the emphasized one; up stairs and portal-vault exits (where arriving puts you) do not, unless you carry the Orb or Zot is approaching, which also moves the stairs button first.
+
+   Fighting (hostile monsters in view; auto-explore and resting are refused then, so neither is offered):
+
+   | Button (tap) | Long-press fan |
+   |---|---|
+   | **Fight** `Tab` | Strike `v`, Attack (next direction), Swap weapons `'`, Wait `s`, Shout `t` |
+   | **Fire: *quiver*** `p`, labelled from the game's quiver ("Throw: 3 darts", "Cast: Magic Dart") | Aim `f`, Quiver `Q`, next `)` / previous `(` quivered action, Throw `F` |
+   | **Cast** `z` (or **Ability** `a`) | as above |
+   | **Quaff** `q` | Read `r`, Pack `i`, Equip `e`, Unequip `c`, Pick up `g` |
+   | **Look** `x` | as above |
+   | **More** | The palette |
+
+   A latched Run or Attack stays visible (pressed) in the first slot in both docks, also when wounded.
+
+   *Where it comes from:* `client-host/host.js` reads the WebTiles client's own map knowledge after each map update, the way upstream's `monster_list.js` does (read only): visible monsters with hostile attitude (leaving out what the monster list leaves out, such as plants), how many are adjacent and the highest threat, and the player's cell's minimap feature (stairs up, down, branch, portal, feature) plus its feature tile name (altar, shop, portal exit). It posts `{hostiles, adjacent, maxThreat, underfoot}` to the adapter. The Orb and Zot come from the status lights; spells from the spell menu or the "You don't know any spells." message.
+
+2. **The thumb pad** moves (vi keys `hjklyubn`), its centre waits a turn (`s`). **Run** latches Shift and **Attack** latches Ctrl for the next direction (attack that square without moving, `Ctrl+hjklyubn`); a latch shows pressed while on. The same pad moves the cursor while targeting and on the level map.
 
 3. **Context docks.** The dock changes with what the game is waiting for. It follows `input_mode`, popups, menus and text prompts (`games/dcss/adapter/state.ts`):
 
@@ -87,15 +106,23 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
    | Start screen | (none: the start screen's own buttons and name field) |
    | Character creation, game menu | OK, Back, Type |
    | Menu or popup (inventory, descriptions, character sheet) | Close, Page ▲ (Up), Page ▼ (Down), Select, Type |
+   | Travel menu (`G`, tag `travel`) | Down `>`, Up `<`, Repeat `Tab` (last destination), Altars `_`, Close, Type; the branches are the menu's own items |
+   | Pick up and other multi-select menus (tag `pickup`, or the multi-select flag) | Accept, All `,`, Page ▼ (▲, lines), Close, Type |
+   | Spells and abilities (tags `spell`, `ability`) | Close, Page ▲, Page ▼, Describe `!` (switches between using and describing), Select, Type |
    | `--more--` | Continue, Skip |
-   | Yes/no question | Yes, No, Cancel |
+   | Yes/no question | Yes, No, **Always** `A` when the question offers it, Cancel |
+   | Level-up stat increase | Str `S`, Int `I`, Dex `D`, Type (the game re-asks on Escape) |
    | Item prompt ("Quaff which item?") | Choices (`?` lists them), Type, OK, Cancel |
    | Text field | Type, OK, Cancel |
-   | Targeting | Fire (or *Stop here* `.`), Next (or Previous), Info, Cancel, plus the pad |
+   | Aiming (fire, throw, cast at a target; `TARGET_PATH`) | Fire (or *Stop here* `.`), Next (or Previous, Info), Quiver ▸ `)` (or ◂ `(`), Cancel, plus the pad |
+   | Looking (`x`, or a spot to target; `TARGET`) | Select (or *Stop here*), Next (or Previous), Info `v`, Cancel, plus the pad |
+   | A direction (`TARGET_DIR`) | The pad, Cancel |
    | Level map | Travel, `>` (or `<`), Close, plus the pad |
    | Busy (travel, resting) | Stop |
 
-Upstream's own touch-friendly pieces stay. Tapping the map travels there, the action panel above the map offers one-tap use of consumables, and every menu item and creation choice is tappable. `games/dcss/tests/conformance/key-coverage.ts` checks that each touch command sends the key upstream binds to that command.
+Upstream's own touch-friendly pieces stay. Tapping the map travels there, the action panel above the map offers one-tap use of consumables, and every menu item and creation choice is tappable. `games/dcss/tests/conformance/key-coverage.ts` checks that each touch command sends the key upstream binds to that command (`cmd-keys.h`), and for keys a prompt reads itself (travel's `Tab` and `_`, yes/no's Always, the stat increase) that the prompt still handles them; `upstream-drift.ts` checks what the touch controls read from the client and the game (map knowledge, monster attitude, minimap features, menu tags, the stat question, the Orb and Zot lights).
+
+The palette also has the commands no dock leads with: cycle the quiver `(` `)`, attack without moving (the Attack latch), add a macro `Ctrl-E`, and save now `Ctrl-S` (save and exit without the question).
 
 ## Sil-Q
 
