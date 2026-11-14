@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 interface RogueDebug {
   context: string | null;
@@ -40,6 +40,17 @@ export async function startRogue(page: Page, name: string): Promise<void> {
 }
 
 /**
+ * The dungeon is random, and these tests never fight back: now and then a
+ * monster kills the hero before a test is done (the tombstone). That says
+ * nothing about the port, so the test is skipped, with the reason.
+ */
+export async function skipIfKilled(page: Page, context: string | null): Promise<void> {
+  if (context !== 'enter') return;
+  const text = await screenText(page);
+  test.skip(/REST\s+IN\s+PEACE|killed by/.test(text), 'A monster killed the hero (random dungeon).');
+}
+
+/**
  * Back to the map before the next step. The dungeon is random: a monster can
  * interrupt with --More-- (Space), and a trap or item can leave a question or
  * list on screen (Escape). Rogue ignores other keys at --More--. The context
@@ -56,6 +67,7 @@ export async function settle(page: Page): Promise<void> {
       continue;
     }
     maps = 0;
+    await skipIfKilled(page, context);
     if (context === 'more') await page.keyboard.press(' ');
     else if (context !== 'busy') await page.keyboard.press('Escape');
   }

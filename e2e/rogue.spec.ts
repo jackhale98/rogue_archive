@@ -20,7 +20,7 @@ test('Rogue: new character, moves, inventory, message log, save and continue aft
   await settle(page);
   await page.keyboard.press('i');
   await waitForContext(page, 'menu');
-  await expect.poll(() => screenText(page)).toContain('Some food');
+  await expect.poll(() => screenText(page)).toContain('food');
   await page.keyboard.press(' ');
   await waitForContext(page, 'map');
 

@@ -47,8 +47,11 @@ import {
   findCommand,
   keyToRogue,
   continueFirst,
+  directedKeys,
   isDirectionKey,
+  runKeys,
   type RogueContext,
+  type RunMode,
 } from './input.ts';
 import type { FromWorker, SavedGame, ToWorker } from './protocol.ts';
 import { loadTiles, type TileSet, type TileStyle } from './tiles.ts';
@@ -59,9 +62,11 @@ import {
   heroCell,
   listBox,
   mapOverlay,
+  mapLeads,
   mapRect,
   parseState,
   screenChoices,
+  type MapLeads,
   type RogueState,
 } from './state.ts';
 
@@ -81,6 +86,10 @@ export interface RogueDebugState {
   /** The tile style drawn when tiled ('tiles' or 'one-bit'), else null. */
   tileStyle: TileStyle | null;
   state: RogueState | null;
+  /** Monsters next to the hero and an aquator in sight, as the map dock reads them. */
+  leads: MapLeads | null;
+  /** The latched run toggle ('run' or 'run-ctrl'), if any. */
+  run: RunMode | false;
   saves: string[];
   screenText(): string;
   rowText(y: number): string;
@@ -170,7 +179,10 @@ class RogueAdapter implements GameAdapter {
   #mapCellCss = DEFAULT_MAP_CELL_CSS;
   #pan = { x: 0, y: 0 };
   #lastHero: { x: number; y: number } | null = null;
-  #run = false;
+  /** A latched run toggle: the next direction runs (Shift) or runs carefully (Ctrl). */
+  #run: RunMode | false = false;
+  /** A dock or palette command was just sent from the map: if it asks for an item, show the list at once. */
+  #autoList = false;
   #started = false;
   #requestId = 0;
   #pending = new Map<number, (message: FromWorker) => void>();
@@ -191,6 +203,8 @@ class RogueAdapter implements GameAdapter {
       tiled: false,
       tileStyle: null,
       state: null,
+      leads: null,
+      run: false,
       saves: [],
       rowText: row,
       screenText: () =>
@@ -332,6 +346,9 @@ class RogueAdapter implements GameAdapter {
     this.#playing = true;
     this.#name = name;
     this.#lastMessage = '';
+    this.#run = false;
+    this.debug.run = false;
+    this.#autoList = false;
     this.#host?.emit({ type: 'setting-changed', key: 'lastName', value: name });
     this.#post({ type: 'start', name, restore });
     this.#renderer?.canvas.focus({ preventScroll: true });
@@ -341,7 +358,10 @@ class RogueAdapter implements GameAdapter {
     if (!this.#playing) return;
     if (input.type === 'key') {
       const keys = keyToRogue(input);
-      if (keys) this.#send(continueFirst(this.#context, keys, { directionKey: isDirectionKey(input) }));
+      if (!keys) return;
+      const directionKey = isDirectionKey(input);
+      if (!directionKey && keys[0] !== 32) this.#unlatchRun();
+      this.#send(continueFirst(this.#context, keys, { directionKey }));
       return;
     }
     if (input.type === 'text') {
@@ -355,26 +375,48 @@ class RogueAdapter implements GameAdapter {
       this.#choose(input.commandId.charCodeAt(CHOOSE.length));
       return;
     }
-    if (input.commandId === 'run') {
-      this.#run = !this.#run;
-      this.#publishContext(true);
+    if (input.commandId === 'run' || input.commandId === 'run-ctrl') {
+      this.#setRun(this.#run === input.commandId ? false : input.commandId);
+      return;
+    }
+    // "Fight ↖B": `f` and the direction in one gesture (or `t`, at a floating eye).
+    const directed = directedKeys(input.commandId);
+    if (directed) {
+      this.#unlatchRun();
+      this.#autoList = this.#context === 'map';
+      this.#send(directed);
       return;
     }
     const command = findCommand(input.commandId);
     if (!command) return;
-    // Run: the next direction as a capital letter (on the map, or after --More--).
+    // Run: the next direction as a capital letter (Shift) or a control code
+    // (Ctrl), on the map or after --More--.
     if (
       this.#run &&
       command.id.startsWith('move-') &&
       (this.#context === 'map' || this.#context === 'more')
     ) {
-      this.#run = false;
-      const run = command.keys.map((key) => String.fromCharCode(key).toUpperCase().charCodeAt(0));
+      const run = runKeys(this.#run, String.fromCharCode(command.keys[0]!));
+      this.#setRun(false);
       this.#send(continueFirst(this.#context, run, { commandId: command.id }));
-      this.#publishContext(true);
       return;
     }
+    if (command.category !== 'Keys' && !command.id.startsWith('move-')) {
+      this.#unlatchRun();
+      this.#autoList = this.#context === 'map';
+    }
     this.#send(continueFirst(this.#context, command.keys, { commandId: command.id }));
+  }
+
+  #setRun(run: RunMode | false): void {
+    this.#run = run;
+    this.debug.run = run;
+    this.#publishContext(true);
+  }
+
+  /** Any action other than a move lets go of a latched run. */
+  #unlatchRun(): void {
+    if (this.#run) this.#setRun(false);
   }
 
   #send(keys: number[]): void {
@@ -591,14 +633,37 @@ class RogueAdapter implements GameAdapter {
     else if (context !== 'busy') this.#listFromPrompt = false;
     this.#context = context;
     this.debug.context = context;
+    // A touch command that asks for an item ("Eat", "Throw ↖E") shows the
+    // list at once (`*`, as the prompt offers); its lines then answer it.
+    // (Throw asks for the direction first.)
+    if (context !== 'busy' && context !== 'more' && context !== 'direction' && this.#autoList) {
+      this.#autoList = false;
+      if (context === 'item') {
+        this.#send([42]);
+        return;
+      }
+    }
     const state = this.#state;
     const grid = this.#grid;
     const choosable = context === 'item' || (context === 'menu' && this.#listFromPrompt);
     const list = grid && choosable ? listBox(grid) : null;
     const choices = grid && list ? screenChoices(grid, list) : [];
+    const leads = grid && state && context === 'map' ? mapLeads(grid, state) : null;
+    this.debug.leads = leads;
     const layout = controlsFor(
       context,
-      { hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run },
+      {
+        hp: state?.hp ?? 0,
+        maxHp: state?.maxHp ?? 0,
+        run: this.#run,
+        onStairs: state?.onStairs,
+        amulet: state?.amulet,
+        hunger: state?.hunger,
+        under: Boolean(state?.under),
+        armor: state?.armor,
+        adjacent: leads?.adjacent,
+        aquator: leads?.aquator,
+      },
       choices,
     );
     const signature = JSON.stringify([context, layout]);

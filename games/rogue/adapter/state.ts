@@ -23,6 +23,18 @@ export interface RogueState {
   waiting: boolean;
   /** A window other than the main screen is in front: a list, help, or a detection overlay. */
   overlay: boolean;
+  /** The hero stands on the stairs. */
+  onStairs: boolean;
+  /** The hero carries the Amulet of Yendor. */
+  amulet: boolean;
+  /** 0 not hungry, 1 Hungry, 2 Weak, 3 Faint. */
+  hunger: number;
+  /** The symbol of an object lying under the hero, or '' (Rogue picks most up as it steps on them). */
+  under: string;
+  /** Armour is worn. */
+  armor: boolean;
+  /** Hallucinating: the monster and object symbols on screen are random. */
+  hallucinating: boolean;
 }
 
 /** Mirrors the ST_* order in port/curses-web.c. */
@@ -37,6 +49,12 @@ export function parseState(raw: Int32Array): RogueState {
     gold: raw[6] ?? 0,
     waiting: raw[7] === 1,
     overlay: raw[8] === 1,
+    onStairs: raw[9] === 1,
+    amulet: raw[10] === 1,
+    hunger: raw[11] ?? 0,
+    under: raw[12] ? String.fromCharCode(raw[12]) : '',
+    armor: raw[13] === 1,
+    hallucinating: raw[14] === 1,
   };
 }
 
@@ -48,6 +66,64 @@ export function mapRect(grid: Grid): Rect {
 /** The hero's screen cell (Rogue's map coordinates are screen coordinates). */
 export function heroCell(state: RogueState): { x: number; y: number } | null {
   return state.inGame ? { x: state.heroX, y: state.heroY } : null;
+}
+
+/** The eight directions as Rogue's letters, clockwise from up-left, with arrows for labels. */
+export const NEIGHBOURS = [
+  { key: 'y', dx: -1, dy: -1, arrow: '↖' },
+  { key: 'k', dx: 0, dy: -1, arrow: '↑' },
+  { key: 'u', dx: 1, dy: -1, arrow: '↗' },
+  { key: 'h', dx: -1, dy: 0, arrow: '←' },
+  { key: 'l', dx: 1, dy: 0, arrow: '→' },
+  { key: 'b', dx: -1, dy: 1, arrow: '↙' },
+  { key: 'j', dx: 0, dy: 1, arrow: '↓' },
+  { key: 'n', dx: 1, dy: 1, arrow: '↘' },
+] as const;
+
+export interface Adjacent {
+  /** Rogue's direction letter towards it. */
+  key: string;
+  arrow: string;
+  /** The monster's letter on screen; '' while hallucinating (the letters are random then). */
+  letter: string;
+}
+
+/** What the map shows around the hero, for the dock's leads. */
+export interface MapLeads {
+  /** Monsters (capital letters) next to the hero, in pad order. */
+  adjacent: Adjacent[];
+  /** An aquator (A, which rusts armour) is in sight. */
+  aquator: boolean;
+}
+
+const isMonster = (code: number) => code >= 65 && code <= 90;
+
+/**
+ * Monsters next to the hero and in sight, read from the map as the player sees
+ * it (Rogue draws monsters as capital letters). While hallucinating the letters
+ * are random: a letter still marks a monster, but not which one.
+ */
+export function mapLeads(grid: Grid, state: RogueState): MapLeads {
+  const leads: MapLeads = { adjacent: [], aquator: false };
+  if (!state.inGame) return leads;
+  const map = mapRect(grid);
+  const at = (x: number, y: number) =>
+    x >= map.x && x < map.x + map.width && y >= map.y && y < map.y + map.height
+      ? grid.cells[(y * grid.cols + x) * 2]!
+      : 0;
+  for (const { key, dx, dy, arrow } of NEIGHBOURS) {
+    const code = at(state.heroX + dx, state.heroY + dy);
+    if (isMonster(code))
+      leads.adjacent.push({ key, arrow, letter: state.hallucinating ? '' : String.fromCharCode(code) });
+  }
+  if (!state.hallucinating)
+    for (let y = map.y; y < map.y + map.height && !leads.aquator; y++)
+      for (let x = map.x; x < map.x + map.width; x++)
+        if (at(x, y) === 65) {
+          leads.aquator = true;
+          break;
+        }
+  return leads;
 }
 
 /**

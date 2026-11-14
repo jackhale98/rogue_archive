@@ -14,14 +14,16 @@ An audit of every port's phone controls against the game's full command set and 
 
 ## Rogue 5.4.4
 
-Done in this change: `--More--` on the message line continues automatically (setting); overlays (lists, help, Discoveries, detection) stay up until closed; lists opened from an item prompt answer it.
+Done: `--More--` on the message line continues automatically (setting); overlays (lists, help, Discoveries, detection) stay up until closed; lists opened from an item prompt answer it.
 
-Still to do:
-- **Fight without --More--:** `f`+direction fights without a message per blow and stops itself when hit points fall to the largest single hit taken. Make the dock's Fight one gesture: when a monster letter is adjacent, "Fight ↖B" sends `f` and that direction.
-- **Context leads:** standing on stairs (new `ST_ON_STAIRS`) → Stairs; with the Amulet (new `ST_AMULET`) → Up `<`; Hungry/Weak (new `ST_HUNGER`) → Eat; an object underfoot (new `ST_UNDER`) → Pick up; a visible `A` (aquator) while armour is worn (new `ST_ARMOR`) → Take off; an adjacent `E` (floating eye) → Throw/Zap, not Fight.
-- **Repeat counts:** Search ×10 and Rest ×10 in the Search fan (`10s`, `10.`); Ctrl-run (stops beside things) next to Run.
-- **Again** (`a`) belongs with Fight/Pack, not Search; "Stop" in the busy dock does nothing in Rogue (it reads no keys while running) and should go.
-- Item prompts could open the list at once (send `*`), and the inventory could offer per-item verbs (Space, verb, letter).
+Done in the follow-up (new read-only fields `ST_ON_STAIRS`, `ST_AMULET`, `ST_HUNGER`, `ST_UNDER`, `ST_ARMOR`, `ST_HALLUCINATING`; the conformance replay stays identical):
+- **One-gesture Fight:** with a monster letter next to the hero, Fight becomes "Fight ↖B" and sends `f` and that direction (Rogue's `f` fights on without a message per blow and stops when hit points fall to the largest single hit taken). Plain Fight stays in its fan. While hallucinating the letters are random, so the button names only the direction and no letter-based lead applies.
+- **Context leads:** on the stairs, "Down >" leads; with the Amulet, "Up <"; Hungry → Eat (emphasised from Weak); an object underfoot → Pick up; a visible `A` (aquator) while armour is worn → Take off; an adjacent `E` (floating eye) → "Throw →E" (`t` + direction) with Zap first in its fan, unless another monster is also adjacent.
+- **Repeat counts and runs:** Search ×10 and Rest ×10 (`10s`, `10.`) and the careful run (Ctrl+direction, stops beside things) in the Search fan; any action other than a move lets go of a latched run.
+- **Again** (`a`) moved to the Fight and Pack fans; the busy dock is empty (Rogue reads no keys while it runs or rests).
+- **Item prompts** opened from the dock or the command list show the list at once (`*`); typed commands keep the original prompt.
+
+Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a verb would mean Space, the command, then the letter, with a prompt the player never saw).
 
 ## Brogue CE
 

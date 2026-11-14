@@ -48,6 +48,18 @@ enum
     /* 1 when the window last shown is not stdscr: a list, help or a
        detection overlay (show_win), not the message line. */
     ST_OVERLAY,
+    /* 1 when the hero stands on the stairs. */
+    ST_ON_STAIRS,
+    /* 1 once the hero carries the Amulet of Yendor. */
+    ST_AMULET,
+    /* hungry_state: 0 not hungry, 1 Hungry, 2 Weak, 3 Faint. */
+    ST_HUNGER,
+    /* The type (its symbol) of an object lying where the hero stands, else 0. */
+    ST_UNDER,
+    /* 1 while armour is worn. */
+    ST_ARMOR,
+    /* 1 while hallucinating: the screen's monster and object symbols are random. */
+    ST_HALLUCINATING,
     ST_FIELDS
 };
 static int state[ST_FIELDS];
@@ -85,6 +97,16 @@ void ra_service(void);
 void ra_sleep(int ms);
 #endif
 
+/* The type of an object on the floor under the hero (read only, as the
+   pick-up command looks for it in command.c), else 0. */
+static int object_under_hero(void)
+{
+    for (THING *obj = lvl_obj; obj != NULL; obj = next(obj))
+        if (obj->o_pos.y == hero.y && obj->o_pos.x == hero.x)
+            return obj->o_type;
+    return 0;
+}
+
 static void present(void)
 {
     WINDOW *scr = curscr;
@@ -103,6 +125,12 @@ static void present(void)
     state[ST_GOLD] = purse;
     state[ST_WAITING] = waiting ? 1 : 0;
     state[ST_OVERLAY] = (focus && focus != stdscr) ? 1 : 0;
+    state[ST_ON_STAIRS] = playing && ce(hero, stairs) ? 1 : 0;
+    state[ST_AMULET] = playing && amulet ? 1 : 0;
+    state[ST_HUNGER] = playing ? hungry_state : 0;
+    state[ST_UNDER] = playing ? object_under_hero() : 0;
+    state[ST_ARMOR] = playing && cur_armor != NULL ? 1 : 0;
+    state[ST_HALLUCINATING] = playing && on(player, ISHALU) ? 1 : 0;
     WINDOW *w = focus ? focus : stdscr;
     int cx = w ? w->_begx + w->_curx : 0;
     int cy = w ? w->_begy + w->_cury : 0;

@@ -103,6 +103,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Saves in IndexedDB (/rogue: savefiles, scoreboard), export/import; classic semantics (saved with S, removed on restore)
 - [x] Phone layout: status band, map around the hero with pinch zoom, lists as tappable sheets, long-press to identify a symbol
 - [x] Context docks: --More--, scores, yes/no, direction, item prompts, lists, text
+- [x] Map leads from new read-only fields (stairs, Amulet, hunger, object underfoot, armour, hallucination) and the screen: one-tap "Fight ↖B", Throw at a floating eye, Take off near an aquator; Search/Rest ×10 and the careful run in the Search fan; item lists shown at once from the dock
 - [x] Engine conformance: key coverage against `command.c`; native vs WebAssembly replay (screens, scoreboard and savefiles identical)
 - [x] e2e: desktop (moves, inventory, item prompt, log, save, reload, continue) and phone (band, pad, dock, sheet, direction prompt)
 - [x] CI build, deploy, weekly canary

@@ -5,11 +5,20 @@ import {
   CHOOSE,
   continueFirst,
   controlsFor,
+  directedKeys,
   isDirectionKey,
   keyToRogue,
   ROGUE_COMMANDS,
+  runKeys,
 } from '../adapter/input.ts';
-import { detectContext, heroCell, mapOverlay, parseState, screenChoices } from '../adapter/state.ts';
+import {
+  detectContext,
+  heroCell,
+  mapLeads,
+  mapOverlay,
+  parseState,
+  screenChoices,
+} from '../adapter/state.ts';
 
 const actions = (layout: { actions: (string | TouchAction)[] }): TouchAction[] =>
   layout.actions.map((action) => (typeof action === 'string' ? { command: action } : action));
@@ -43,6 +52,40 @@ describe('Rogue state', () => {
     expect(playing).toMatchObject({ inGame: true, hp: 7, maxHp: 12, level: 3, gold: 15, waiting: true });
     expect(heroCell(playing)).toEqual({ x: 40, y: 11 });
     expect(heroCell(raw([0, 0, 0, 0, 0, 0, 0, 1]))).toBeNull();
+    // On the stairs, with the Amulet, Weak, a potion underfoot, armour worn, hallucinating.
+    expect(raw([1, 7, 12, 3, 40, 11, 15, 1, 0, 1, 1, 2, 33, 1, 1])).toMatchObject({
+      onStairs: true,
+      amulet: true,
+      hunger: 2,
+      under: '!',
+      armor: true,
+      hallucinating: true,
+    });
+    expect(playing).toMatchObject({ onStairs: false, amulet: false, hunger: 0, under: '', armor: false });
+  });
+
+  it('reads the monsters next to the hero and an aquator in sight', () => {
+    const map = (rows: string[]) => grid(['', ...Array(9).fill(''), ...rows]);
+    // The hero at 40,11: a bat above, a floating eye to the right; an aquator further off.
+    const screen = map([`${' '.repeat(36)}|A..B..|`, `${' '.repeat(36)}|...@E.|`]);
+    expect(mapLeads(screen, playing)).toEqual({
+      adjacent: [
+        { key: 'k', arrow: '↑', letter: 'B' },
+        { key: 'l', arrow: '→', letter: 'E' },
+      ],
+      aquator: true,
+    });
+    // Hallucinating, the letters are random: monsters, but not which ones.
+    expect(mapLeads(screen, { ...playing, hallucinating: true })).toEqual({
+      adjacent: [
+        { key: 'k', arrow: '↑', letter: '' },
+        { key: 'l', arrow: '→', letter: '' },
+      ],
+      aquator: false,
+    });
+    expect(mapLeads(grid(MAP), playing)).toEqual({ adjacent: [], aquator: false });
+    // The status line's letters are not monsters.
+    expect(mapLeads(grid(MAP), { ...playing, heroY: 22 }).adjacent).toEqual([]);
   });
 
   it('tells what the game is waiting for', () => {
@@ -110,16 +153,90 @@ describe('Rogue keys and docks', () => {
       'text',
       'busy',
     ] as const) {
-      const layout = controlsFor(context, { hp: 3, maxHp: 12, run: false }, [
-        { key: 'a', label: 'Some food' },
-      ]);
+      const layout = controlsFor(
+        context,
+        { hp: 3, maxHp: 12, run: false, adjacent: [{ key: 'y', arrow: '↖', letter: 'E' }], under: true },
+        [{ key: 'a', label: 'Some food' }],
+      );
       for (const action of actions(layout)) {
         const known =
-          ids.has(action.command) || action.command.startsWith(CHOOSE) || action.command.startsWith('shell:');
+          ids.has(action.command) ||
+          action.command.startsWith(CHOOSE) ||
+          action.command.startsWith('shell:') ||
+          directedKeys(action.command) !== null;
         expect(known, `${context}: ${action.command}`).toBe(true);
         for (const alternate of action.alternates ?? []) expect(ids.has(alternate), alternate).toBe(true);
       }
     }
+  });
+
+  it('leads the map dock with what the situation calls for', () => {
+    const map = (state: Partial<Parameters<typeof controlsFor>[1]> = {}) =>
+      actions(controlsFor('map', { hp: 10, maxHp: 10, run: false, ...state }));
+    const labels = (state: Partial<Parameters<typeof controlsFor>[1]> = {}) =>
+      map(state).map((action) => action.label ?? action.command);
+    expect(labels()).toEqual(['search', 'fight', 'inventory', 'Stairs', 'Look', 'More']);
+    // Search's fan: counts and the careful run; Again sits with Fight and Pack.
+    expect(map()[0]?.alternates).toEqual(expect.arrayContaining(['search-10', 'rest-10', 'run-ctrl']));
+    expect(map()[0]?.alternates).not.toContain('repeat');
+    expect(map()[1]?.alternates).toContain('repeat');
+    expect(map()[2]?.alternates).toContain('repeat');
+
+    // A monster next to the hero: one gesture fights it (f + direction).
+    const bat = map({ adjacent: [{ key: 'y', arrow: '↖', letter: 'B' }] })[1]!;
+    expect(bat).toMatchObject({ command: 'fight-at:y', label: 'Fight ↖B' });
+    expect(bat.alternates).toContain('fight');
+    expect(directedKeys('fight-at:y')).toEqual([102, 121]);
+    expect(directedKeys('throw-at:n')).toEqual([116, 110]);
+    expect(directedKeys('fight-at:x')).toBeNull();
+    // A floating eye paralyses whoever hits it: throw instead, unless another monster is there.
+    expect(map({ adjacent: [{ key: 'l', arrow: '→', letter: 'E' }] })[1]).toMatchObject({
+      command: 'throw-at:l',
+      label: 'Throw →E',
+    });
+    expect(
+      map({
+        adjacent: [
+          { key: 'l', arrow: '→', letter: 'E' },
+          { key: 'j', arrow: '↓', letter: 'K' },
+        ],
+      })[1],
+    ).toMatchObject({ command: 'fight-at:j', label: 'Fight ↓K' });
+    // Hallucinating: the direction, not the letter.
+    expect(map({ adjacent: [{ key: 'h', arrow: '←', letter: '' }] })[1]).toMatchObject({
+      command: 'fight-at:h',
+      label: 'Fight ←',
+    });
+
+    // Something underfoot: pick it up (Search stays in the fan and the pad).
+    expect(map({ under: true })[0]).toMatchObject({ command: 'pickup', emphasis: 'primary' });
+    expect(map({ under: true })[0]?.alternates).toContain('search');
+    // Hungry: eat; Weak: eat first. An aquator in sight with armour on: take it off.
+    expect(map({ hunger: 1 })[2]).toMatchObject({ command: 'eat' });
+    expect(map({ hunger: 1 })[2]?.emphasis).toBeUndefined();
+    expect(map({ hunger: 2 })[2]).toMatchObject({ command: 'eat', emphasis: 'primary' });
+    expect(map({ hunger: 1, armor: true, aquator: true })[2]).toMatchObject({
+      command: 'take-off',
+      emphasis: 'primary',
+    });
+    expect(map({ aquator: true })[2]?.command).toBe('inventory');
+    // Stairs: on them, down; with the Amulet, up.
+    expect(map({ onStairs: true })[3]).toMatchObject({
+      command: 'downstairs',
+      label: 'Down >',
+      emphasis: 'primary',
+    });
+    expect(map({ amulet: true })[3]).toMatchObject({ command: 'upstairs', alternates: ['downstairs'] });
+    expect(map({ amulet: true })[3]?.emphasis).toBeUndefined();
+    expect(map({ amulet: true, onStairs: true })[3]?.emphasis).toBe('primary');
+
+    // A latched run shows as the first button.
+    expect(map({ run: 'run' })[0]).toMatchObject({ command: 'run', label: 'Run ⇧', active: true });
+    expect(map({ run: 'run-ctrl' })[0]).toMatchObject({ command: 'run-ctrl', label: 'Run ⌃', active: true });
+    expect(runKeys('run', 'y')).toEqual([89]);
+    expect(runKeys('run-ctrl', 'y')).toEqual([25]);
+    // Rogue reads no keys while busy: no Stop.
+    expect(actions(controlsFor('busy', { hp: 10, maxHp: 10, run: false }))).toEqual([]);
   });
 
   it('at --More--, the pad stays and a move continues first', () => {

@@ -468,7 +468,7 @@
         },
         {
           "keys": "Phone",
-          "action": "Context dock (long-press for related actions), thumb pad, lists and prompts as buttons, More lists every command"
+          "action": "Context dock (long-press for related actions; one tap fights the monster next to you, and it leads with stairs, eating, picking up when they apply), thumb pad, lists and prompts as buttons, More lists every command"
         },
         {
           "keys": "--More--",
@@ -497,7 +497,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Status band, thumb pad, dock, inventory sheet and direction prompt exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Status band, thumb pad, dock, inventory sheet, direction prompt, the Search fan (counts, careful run), one-gesture fight and item lists shown at once exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

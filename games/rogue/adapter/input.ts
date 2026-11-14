@@ -104,8 +104,33 @@ export const ROGUE_COMMANDS: readonly RogueCommand[] = [
     category: 'Movement',
     description: 'The next direction runs until something interesting happens.',
   },
+  {
+    id: 'run-ctrl',
+    label: 'Run, stopping beside anything',
+    shortLabel: 'Run ⌃',
+    shortcut: 'Ctrl+direction',
+    keys: [],
+    category: 'Movement',
+    description: 'The next direction runs, stopping next to doors, items and turnings (Ctrl+direction).',
+  },
   { id: 'rest', label: 'Rest a turn', shortLabel: 'Rest', shortcut: '.', keys: k('.'), category: 'Movement' },
+  {
+    id: 'rest-10',
+    label: 'Rest 10 turns',
+    shortLabel: 'Rest ×10',
+    shortcut: '10.',
+    keys: k('10.'),
+    category: 'Movement',
+  },
   { id: 'search', label: 'Search', shortLabel: 'Search', shortcut: 's', keys: k('s'), category: 'Movement' },
+  {
+    id: 'search-10',
+    label: 'Search 10 turns',
+    shortLabel: 'Search ×10',
+    shortcut: '10s',
+    keys: k('10s'),
+    category: 'Movement',
+  },
   {
     id: 'downstairs',
     label: 'Go down stairs',
@@ -370,6 +395,29 @@ export const PAD = {
 
 const PAD_COMMANDS = new Set<string>(Object.values(PAD));
 
+/** The two run toggles: the next direction runs (Shift), or runs and stops beside things (Ctrl). */
+export type RunMode = 'run' | 'run-ctrl';
+
+/** The keys for a direction letter (hjklyubn) when a run toggle is latched. */
+export function runKeys(mode: RunMode, letter: string): number[] {
+  return mode === 'run' ? [letter.toUpperCase().charCodeAt(0)] : [ctrl(letter)];
+}
+
+/**
+ * One-gesture commands at a neighbouring monster: "fight-at:y" sends `f` then
+ * `y` (fight up-left), "throw-at:y" sends `t` then `y` (Rogue then asks what to
+ * throw). The direction is one of Rogue's letters hjklyubn.
+ */
+export const FIGHT_AT = 'fight-at:';
+export const THROW_AT = 'throw-at:';
+
+/** The keys for a fight-at:/throw-at: command id, or null if it is not one. */
+export function directedKeys(commandId: string): number[] | null {
+  const match = /^(fight|throw)-at:([hjklyubn])$/.exec(commandId);
+  if (!match) return null;
+  return [...findCommand(match[1]!)!.keys, match[2]!.charCodeAt(0)];
+}
+
 /** A direction key: Rogue's letters (capitals run), the arrows or the keypad. */
 export function isDirectionKey(input: Extract<GameInput, { type: 'key' }>): boolean {
   if (input.modifiers.meta || input.modifiers.ctrl) return false;
@@ -406,6 +454,50 @@ export const ROGUE_TOUCH_LAYOUT: TouchControlLayout = {
 export type RogueContext =
   'start' | 'map' | 'more' | 'enter' | 'yesno' | 'direction' | 'item' | 'menu' | 'text' | 'busy';
 
+/** What the dock leads with on the map (from the state snapshot and the screen). */
+export interface DockState {
+  hp: number;
+  maxHp: number;
+  /** A latched run toggle, if any. */
+  run: RunMode | false;
+  onStairs?: boolean;
+  amulet?: boolean;
+  /** 0 not hungry, 1 Hungry, 2 Weak, 3 Faint. */
+  hunger?: number;
+  /** An object lies under the hero. */
+  under?: boolean;
+  armor?: boolean;
+  /** Monsters next to the hero, in pad order (letter '' while hallucinating). */
+  adjacent?: readonly { key: string; arrow: string; letter: string }[];
+  /** An aquator (A) is in sight (never while hallucinating). */
+  aquator?: boolean;
+}
+
+const SEARCH_FAN = [
+  'rest',
+  'search-10',
+  'rest-10',
+  'run',
+  'run-ctrl',
+  'pickup',
+  'move-no-pickup',
+  'identify-trap',
+];
+const PACK_FAN = [
+  'eat',
+  'quaff',
+  'read',
+  'wield',
+  'wear',
+  'take-off',
+  'put-on',
+  'remove-ring',
+  'drop',
+  'call',
+  'inventory-one',
+  'repeat',
+];
+
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
 /** A lettered choice on screen, as a dock button (its key is sent). */
@@ -414,7 +506,7 @@ export const CHOOSE = 'choose:';
 /** The dock for each context. `choices` are lettered options shown on screen. */
 export function controlsFor(
   context: RogueContext,
-  state: { hp: number; maxHp: number; run: boolean },
+  state: DockState,
   choices: { key: string; label: string }[] = [],
 ): TouchControlLayout {
   const choiceButtons = choices
@@ -426,7 +518,8 @@ export function controlsFor(
     case 'start':
       return { actions: [], palette: [] };
     case 'busy':
-      return { actions: [a('cancel', { label: 'Stop' })], palette: PALETTE };
+      // Rogue reads no keys while it runs or rests: nothing to offer.
+      return { actions: [], palette: PALETTE };
     case 'more':
       // The pad stays: a move continues first (continueFirst).
       return {
@@ -475,32 +568,55 @@ export function controlsFor(
       };
     case 'map': {
       const wounded = state.maxHp > 0 && state.hp < state.maxHp * 0.5;
+      const primary = { emphasis: 'primary' as const };
+      // Search, or what the hero stands on: something to pick up.
+      const first = state.run
+        ? a(state.run, { label: state.run === 'run' ? 'Run ⇧' : 'Run ⌃', active: true })
+        : state.under
+          ? a('pickup', {
+              ...primary,
+              alternates: ['search', ...SEARCH_FAN.filter((id) => id !== 'pickup')],
+            })
+          : a('search', { ...(wounded ? primary : {}), alternates: SEARCH_FAN });
+      // Fight the monster next to the hero in one gesture (`f` + direction).
+      // A floating eye (E) paralyses whoever hits it: throw at it instead.
+      const adjacent = state.adjacent ?? [];
+      const target = adjacent.find((foe) => foe.letter !== 'E') ?? adjacent[0];
+      const fight = !target
+        ? a('fight', { alternates: ['fight-to-death', 'throw', 'zap', 'repeat'] })
+        : target.letter === 'E'
+          ? a(`${THROW_AT}${target.key}`, {
+              label: `Throw ${target.arrow}E`,
+              alternates: ['zap', 'throw', 'fight', 'fight-to-death', 'repeat'],
+            })
+          : a(`${FIGHT_AT}${target.key}`, {
+              label: `Fight ${target.arrow}${target.letter}`,
+              alternates: ['fight', 'fight-to-death', 'throw', 'zap', 'repeat'],
+            });
+      // An aquator in sight rusts worn armour: take it off. Hungry: eat.
+      const hunger = state.hunger ?? 0;
+      const packLead = state.armor && state.aquator ? 'take-off' : hunger > 0 ? 'eat' : null;
+      const pack = packLead
+        ? a(packLead, {
+            ...(packLead === 'take-off' || hunger >= 2 ? primary : {}),
+            alternates: ['inventory', ...PACK_FAN.filter((id) => id !== packLead)],
+          })
+        : a('inventory', { alternates: PACK_FAN });
+      // With the Amulet the way is up; on the stairs, take them.
+      const stairs = state.amulet
+        ? a('upstairs', { ...(state.onStairs ? primary : {}), alternates: ['downstairs'] })
+        : a('downstairs', {
+            label: state.onStairs ? 'Down >' : 'Stairs',
+            ...(state.onStairs ? primary : {}),
+            alternates: ['upstairs'],
+          });
       return {
         directionPad: PAD,
         actions: [
-          state.run
-            ? a('run', { label: 'Run ⇧', active: true })
-            : a('search', {
-                ...(wounded ? { emphasis: 'primary' as const } : {}),
-                alternates: ['rest', 'run', 'pickup', 'move-no-pickup', 'identify-trap', 'repeat'],
-              }),
-          a('fight', { alternates: ['fight-to-death', 'throw', 'zap'] }),
-          a('inventory', {
-            alternates: [
-              'eat',
-              'quaff',
-              'read',
-              'wield',
-              'wear',
-              'take-off',
-              'put-on',
-              'remove-ring',
-              'drop',
-              'call',
-              'inventory-one',
-            ],
-          }),
-          a('downstairs', { label: 'Stairs', alternates: ['upstairs'] }),
+          first,
+          fight,
+          pack,
+          stairs,
           a('identify', {
             label: 'Look',
             alternates: ['discoveries', 'last-message', 'weapon', 'armor', 'rings', 'help'],
