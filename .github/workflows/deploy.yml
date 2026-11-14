@@ -78,8 +78,14 @@ jobs:
         with:
           path: games/angband/dist
           key: runtime-angband-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/angband/upstream.env', 'games/angband/scripts/**', 'games/angband/port/**', 'games/angband/patches/**', 'games/angband/licenses/**', 'games/angband/tests/conformance/**', 'games/angband/adapter/input.ts', '!games/angband/**/*.md') }}
+      - name: Restore Cataclysm: DDA runtime
+        id: cdda
+        uses: actions/cache/restore@v4
+        with:
+          path: games/cataclysm-dda/dist
+          key: runtime-cataclysm-dda-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/cataclysm-dda/upstream.env', 'games/cataclysm-dda/scripts/**', 'games/cataclysm-dda/port/**', 'games/cataclysm-dda/patches/**', 'games/cataclysm-dda/tests/conformance/**', 'games/cataclysm-dda/adapter/input.ts', '!games/cataclysm-dda/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true' || steps.angband.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true' || steps.angband.outputs.cache-hit != 'true' || steps.cdda.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -124,6 +130,20 @@ jobs:
         run: pnpm build:angband
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
+      - name: Cache Cataclysm: DDA build tree
+        if: steps.cdda.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          # Source (sparse: no translations) and objects; about 550 MB.
+          path: |
+            ~/.cache/rogue-archive/cataclysm-dda
+            !~/.cache/rogue-archive/cataclysm-dda/stage-*
+          key: cataclysm-dda-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'games/cataclysm-dda/upstream.env', 'games/cataclysm-dda/scripts/build.sh', 'games/cataclysm-dda/scripts/ports.sh', 'games/cataclysm-dda/scripts/emcc-*.sh', 'games/cataclysm-dda/port/**') }}
+          # Upstream's Makefile rebuilds whatever a changed flag or source affects.
+          restore-keys: cataclysm-dda-${{ runner.os }}-
+      - name: Build Cataclysm: DDA runtime
+        if: steps.cdda.outputs.cache-hit != 'true'
+        run: pnpm build:cataclysm-dda
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

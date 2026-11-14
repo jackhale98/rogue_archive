@@ -16,6 +16,7 @@
     "@rogue-archive/game-angband": "workspace:*",
     "@rogue-archive/game-api": "workspace:*",
     "@rogue-archive/game-brogue-ce": "workspace:*",
+    "@rogue-archive/game-cataclysm-dda": "workspace:*",
     "@rogue-archive/game-dcss": "workspace:*",
     "@rogue-archive/game-hyperrogue": "workspace:*",
     "@rogue-archive/game-nethack": "workspace:*",

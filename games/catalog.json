@@ -946,17 +946,27 @@
         "website": "https://cataclysmdda.org/",
         "repository": "https://github.com/CleverRaven/Cataclysm-DDA"
       },
+      "version": "0.I-1",
+      "sourceRevision": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
       "license": {
         "code": "CC BY-SA 3.0 for project code and content; bundled third-party components carry their own notices",
         "assets": "Tilesets, fonts and sounds to be audited individually"
       },
       "interface": ["ascii", "tiles"],
+      "renderMode": "native-canvas",
       "input": {
         "keyboard": true,
         "mouse": true,
         "touch": false
       },
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
       "tags": ["Survival", "Open world", "Crafting"],
+      "adapter": "cataclysm-dda",
+      "runtimeManifest": "runtime/cataclysm-dda/runtime-manifest.json",
       "glyph": "C",
       "about": [
         "Cataclysm was created by Whales, who released its source in 2010 and stopped working on it around 2012. Its players forked it in early 2013 as Dark Days Ahead and have developed it in the open since, as CleverRaven on GitHub. You wake “with hazy memories of violence and terror from when the world suddenly unravelled around you” in a large, persistent, procedurally generated world. First come food, water and shelter; staying alive after that means learning skills and fighting or avoiding zombies, giant insects, killer robots and much stranger things."
