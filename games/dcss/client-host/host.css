@@ -103,7 +103,9 @@ html.compact #message_pane {
 }
 
 /* Popups (menus, descriptions, the character sheet, character creation)
-   use the whole frame and scroll. */
+   use the whole frame. The inner box keeps upstream's height limit, sized to
+   the frame, so upstream's own scrollers scroll (and Page up/down move them a
+   screen at a time); the outer box scrolls only what still doesn't fit. */
 html.compact .ui-popup-outer {
   margin: 6px;
   padding: 10px;
@@ -116,7 +118,35 @@ html.compact .ui-popup-outer {
 }
 
 html.compact .ui-popup-inner {
+  max-width: 100%;
+  max-height: calc(100dvh - 34px);
+}
+
+/* Character creation scrolls as a whole (see below). */
+html.compact .ui-popup-inner:has(.newgame-choice) {
   max-height: none;
+}
+
+/* Descriptions and the god screen are laid out 80 characters wide upstream:
+   on a phone they take the frame's width and their text wraps, instead of
+   panning sideways. (Text pages, such as help and the character dump, keep
+   their columns.) */
+html.compact .ui-popup-inner [class^='describe-'],
+html.compact .ui-popup-inner [class*=' describe-'],
+html.compact .describe-god > .body .pane {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* (Upstream's scroller hides its own scroll bar by being a little wider.) */
+html.compact .ui-popup-outer:has(.ui-popup-inner > [class^='describe-']) {
+  overflow-x: hidden;
+}
+
+html.compact .describe-god .body .tbl {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 html.compact .ui-popup + .ui-popup {
