@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export interface DcssMapContext {
   hostiles: number;
@@ -82,4 +82,27 @@ export async function startCharacter(page: Page, name: string): Promise<void> {
   await launcher.getByRole('button', { name: 'Start' }).click();
   // The first launch also builds DCSS's level and description caches.
   await waitForContext(page, 'start', 180_000);
+}
+
+/**
+ * Phones: choose an option in character creation. A first tap shows what it
+ * is (its description), a second chooses it (client-host/host.js).
+ */
+export async function chooseInCreation(page: Page, option: Locator): Promise<void> {
+  await option.tap();
+  await page.waitForTimeout(250);
+  await option.tap();
+}
+
+/** Phones: through character creation by taking the first option of each step, to the map. */
+export async function createByTaps(page: Page): Promise<void> {
+  const frame = page.frameLocator('iframe.dcss-client');
+  const option = frame.locator('.ui-popup .newgame-choice .button').first();
+  for (let i = 0; i < 12 && (await dcssContext(page)) !== 'map'; i++) {
+    // (The context can still read "start" for a moment after the last choice.)
+    if ((await dcssContext(page)) === 'start' && (await option.isVisible()))
+      await chooseInCreation(page, option);
+    await page.waitForTimeout(1000);
+  }
+  await waitForContext(page, 'map');
 }

@@ -115,6 +115,10 @@ export interface ScreenHints {
   aim?: 'throw' | 'zap' | 'look';
   /** The newest message says the level has nothing left to explore. */
   explored?: boolean;
+  /** "You die...": the pack can be looked at ('i') before going on. */
+  died?: boolean;
+  /** After a game: "Save recording as (<esc> to cancel):" with a suggested name. */
+  saveRecording?: boolean;
 }
 
 /** Reads hints from Brogue's message lines (rows 0-2; the newest message is the lowest). */
@@ -131,6 +135,8 @@ export function readHints(cells: Uint8Array): ScreenHints {
   else if (/\bZapping your\b/.test(messages)) hints.aim = 'zap';
   else if (!messages.includes('<tab>') || /Examine what\?/.test(messages)) hints.aim = 'look';
   if (newest.includes('I see no path for further exploration')) hints.explored = true;
+  if (messages.includes('You die...')) hints.died = true;
+  if (screenRows(cells, 0, 34).includes('Save recording as')) hints.saveRecording = true;
   return hints;
 }
 
@@ -140,7 +146,10 @@ export function readHints(cells: Uint8Array): ScreenHints {
  * animations don't flicker the controls.
  */
 export function detectContext(inGame: boolean, state: BrogueState, cells: Uint8Array): BrogueContext {
-  if (!inGame) return 'title';
+  // The end of a game (the gravestone's --MORE--, then the high scores' "Press space to
+  // continue."): outside a game, but waiting for Space (Enter does nothing there).
+  if (!inGame)
+    return hasMore(cells) || /Press space to continue/.test(screenRows(cells, 0, 34)) ? 'more' : 'title';
   // A recording plays back: its own controls, whether running (busy) or paused.
   if (state.playback && (!state.waiting || (!state.textInput && !hasMore(cells)))) return 'playback';
   if (!state.waiting) return 'busy';
@@ -318,8 +327,18 @@ export function controlsFor(
   const shiftAction = (label: string) => a('shift', { label, active: shift });
   switch (context) {
     case 'title':
+      // After a game, Brogue offers to keep its recording under a suggested name.
+      if (hints.saveRecording)
+        return {
+          actions: [
+            a('confirm', { label: 'Save recording', emphasis: 'primary' }),
+            a('cancel', { label: "Don't save" }),
+            a(SHELL_COMMAND.keyboard, { label: 'Rename' }),
+          ],
+          palette,
+        };
       // Phones show the title menu as large buttons (title.ts); other title
-      // screens (high scores, the seed prompt) get Back, OK and typing.
+      // screens (the seed prompt) get Back, OK and typing.
       return {
         actions: [
           a('cancel', { label: 'Back' }),
@@ -331,7 +350,14 @@ export function controlsFor(
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop', emphasis: 'primary' })], palette };
     case 'more':
-      return { actions: [a('acknowledge', { label: 'Continue', emphasis: 'primary', wide: true })], palette };
+      return {
+        actions: [
+          a('acknowledge', { label: 'Continue', emphasis: 'primary', wide: true }),
+          // "You die... (press 'i' to view your inventory)".
+          ...(hints.died ? [a('inventory', { label: 'Inventory' })] : []),
+        ],
+        palette,
+      };
     case 'yesno':
       return {
         actions: [a('confirm', { label: 'Yes', emphasis: 'primary' }), a('cancel', { label: 'No' })],

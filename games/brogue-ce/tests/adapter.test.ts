@@ -329,6 +329,20 @@ describe('latching Shift', () => {
     expect(commandToBrogue('shift')).toBeNull();
   });
 
+  it('the end of a game: Continue (and the pack after dying); keep or skip the recording', () => {
+    const labels = (actions: (string | TouchAction)[]) =>
+      actions.map((action) => (typeof action === 'string' ? action : (action.label ?? action.command)));
+    expect(labels(controlsFor('more', state, [], false, [], { died: true }).actions)).toEqual([
+      'Continue',
+      'Inventory',
+    ]);
+    expect(labels(controlsFor('title', state, [], false, [], { saveRecording: true }).actions)).toEqual([
+      'Save recording',
+      "Don't save",
+      'Rename',
+    ]);
+  });
+
   it('offers Shift in menus and shows whether it is latched', () => {
     const off = shiftOf(controlsFor('menu', state, [], false).actions);
     const on = shiftOf(controlsFor('menu', state, [], true).actions);

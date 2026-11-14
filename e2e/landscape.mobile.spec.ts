@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { createByTaps } from './angband-helpers.ts';
 import { openBrogue, waitInGame } from './helpers.ts';
-import { dcssContext, startCharacter, waitForContext as dcssWait } from './dcss-helpers.ts';
+import { createByTaps as createDcssByTaps, startCharacter } from './dcss-helpers.ts';
 import { openHyperRogue } from './hyperrogue-helpers.ts';
 import { lineAt, startNetHack, toMap, waitForContext as netHackWait } from './nethack-helpers.ts';
 import { startRogue } from './rogue-helpers.ts';
@@ -20,12 +20,7 @@ const toGame: Record<string, (page: Page) => Promise<void>> = {
   },
   dcss: async (page) => {
     await startCharacter(page, 'Thumbs');
-    const frame = page.frameLocator('iframe.dcss-client');
-    for (let i = 0; i < 3 && (await dcssContext(page)) === 'start'; i++) {
-      await frame.locator('.ui-popup .newgame-choice .button').first().tap();
-      await page.waitForTimeout(1000);
-    }
-    await dcssWait(page, 'map');
+    await createDcssByTaps(page);
   },
   'sil-q': async (page) => {
     await openSil(page);

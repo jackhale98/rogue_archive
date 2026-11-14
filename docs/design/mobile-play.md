@@ -26,7 +26,7 @@ All pieces show Brogue's own cells (glyphs, tiles, colours) rendered from the sa
 
 **Item details** (`games/brogue-ce/adapter/camera.ts` `findItemDetails`, `itemActions`): when an item is chosen in the inventory, Brogue draws its details panel beside the list. The sheet then shows only that panel (found from the list's `a)`, `b)` labels and Brogue's placement rule), so the text stays large. The dock offers the panel's own buttons, with the likely one emphasized: Apply, Equip or Remove, then Throw and Drop, with Relabel and Call on a long-press. It also has ▲/▼ Item to step through the pack, and Back.
 
-**Title screen** (`games/brogue-ce/adapter/title.ts`): Brogue's title menu is a few small text buttons on the full screen. On phones it is replaced by large buttons below Brogue's own animated title art, drawn large at the top (the renderer's `titleArtView`), over a fade into its flames (New game, Load saved game, Seeded game, Recordings, High scores, Stats, Variant, Mode) that send Brogue's own hotkeys, opening the right flyout first. The file picker ("Open saved game:", "View recording:") becomes a list of saves with dates, plus Newer, Older and Back. Other title screens (high scores, the seed prompt) show Brogue's screen with Back, OK and Type in the dock. Brogue's own flags still say "in game" after saving and returning to the title, so the adapter treats the title menu on screen as the end of the game until the dungeon's depth line returns.
+**Title screen** (`games/brogue-ce/adapter/title.ts`): Brogue's title menu is a few small text buttons on the full screen. On phones it is replaced by large buttons below Brogue's own animated title art, drawn large at the top (the renderer's `titleArtView`), over a fade into its flames (New game, Load saved game, Seeded game, Recordings, High scores, Stats, Variant, Mode) that send Brogue's own hotkeys, opening the right flyout first. The file picker ("Open saved game:", "View recording:") becomes a list of saves with dates, plus Newer, Older and Back. The end of a game (the gravestone's `--MORE--`, then the high scores' "Press space to continue.") gets one wide Continue (Space: Enter does nothing there), and "You die…" also Inventory (Brogue's `i`); then "Save recording as" offers Save recording, Don't save and Rename. Other title screens (the seed prompt) show Brogue's screen with Back, OK and Type in the dock. Brogue's own flags still say "in game" after saving and returning to the title, so the adapter treats the title menu on screen as the end of the game until the dungeon's depth line returns.
 
 ## Context-aware controls (`games/brogue-ce/adapter/state.ts`)
 
@@ -109,7 +109,7 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
    | Context | Dock |
    |---|---|
    | Start screen | (none: the start screen's own buttons and name field) |
-   | Character creation, game menu | OK, Back, Type |
+   | Character creation, game menu | OK, the step's own extra keys (Recommended and Random species, background or weapon), Back; Type when there are none. "Do you want to play this combination? [Y/n/q]" (a random or recommended character): Yes, No, Cancel |
    | Menu or popup (inventory, descriptions, character sheet) | Close, Page ▲ (Up), Page ▼ (Down), Select, Type |
    | Travel menu (`G`, tag `travel`) | Down `>`, Up `<`, Repeat `Tab` (last destination), Altars `_`, Close, Type; the branches are the menu's own items |
    | Pick up and other multi-select menus (tag `pickup`, or the multi-select flag) | Accept, All `,`, Page ▼ (▲, lines), Close, Type |
@@ -163,6 +163,7 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 ### DCSS start-up and character creation on phones
 
 - From Start until DCSS shows its first screen, the start screen shows "Preparing the dungeon for *name*…" with a spinner and the seconds elapsed. DCSS's caches ship prebuilt, so this takes a second or two; the dock stays empty meanwhile.
+- Character creation takes the screen's full width on every step. A first tap on a species, background or weapon shows what it is (upstream's description, which desktop shows on hover, pinned at the bottom of the screen); a second tap, or OK, chooses it (`client-host/host.js`).
 - Character creation's species and background columns are flowed into one scrolling column on phones, column by column with each group's heading (`client-host/host.css`; `host.js` orders the items from upstream's grid placement). The status band reads "New character" until the character exists.
 
 ## Rogue

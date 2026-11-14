@@ -7,6 +7,7 @@ import {
   startCharacter,
   waitForContext,
   type DcssMapContext,
+  createByTaps,
 } from './dcss-helpers.ts';
 
 test.describe.configure({ timeout: 300_000 });
@@ -54,13 +55,9 @@ test('DCSS phone: tap through character creation, status band, contextual dock a
   page,
 }) => {
   await startCharacter(page, 'Thumbs');
-  // Upstream's character creation buttons are tappable.
+  // Upstream's character creation buttons are tappable (a first tap shows the option, a second chooses).
   const frame = page.frameLocator('iframe.dcss-client');
-  for (let i = 0; i < 3 && (await dcssContext(page)) === 'start'; i++) {
-    await frame.locator('.ui-popup .newgame-choice .button').first().tap();
-    await page.waitForTimeout(1000);
-  }
-  await waitForContext(page, 'map');
+  await createByTaps(page);
 
   // The status band replaces the stats column; tapping it opens the full panel.
   const status = page.locator('.dcss-hud__status');
@@ -160,4 +157,28 @@ test('DCSS phone: tap through character creation, status band, contextual dock a
       ? `checked with ${fighting} hostile(s) in view`
       : 'not checked: no monster came into view',
   });
+});
+
+test('DCSS phone: in character creation a tap shows an option, a second chooses it; questions are buttons', async ({
+  page,
+}) => {
+  await startCharacter(page, 'Chooser');
+  const frame = page.frameLocator('iframe.dcss-client');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  // The step's own extra keys are buttons.
+  await expect(dock.getByRole('button', { name: /^Random species/ })).toBeVisible();
+  const minotaur = frame.locator('.ui-popup .newgame-choice .main-items .button', { hasText: 'Minotaur' });
+  await minotaur.tap();
+  // Still choosing a species, with the Minotaur's description in view.
+  await expect(frame.locator('.ui-popup .newgame-choice .descriptions')).toContainText('Minotaurs');
+  await expect(dock.getByRole('button', { name: /^Random species/ })).toBeVisible();
+  await minotaur.tap();
+  await expect(dock.getByRole('button', { name: /^Random background/ })).toBeVisible();
+  // "! - Random character" asks "Do you want to play this combination? [Y/n/q]": its answers are buttons.
+  await page.keyboard.press('!');
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  // (Some combinations still ask for a weapon.)
+  await page.waitForTimeout(1500);
+  await createByTaps(page);
 });

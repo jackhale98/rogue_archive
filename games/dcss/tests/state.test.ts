@@ -7,6 +7,39 @@ const apply = (tracker: GameTracker, messages: object[]) => {
     tracker.apply(message);
 };
 
+describe('DCSS character creation', () => {
+  it("reads the step's extra keys and asks the random combination as a question", () => {
+    const tracker = new GameTracker();
+    apply(tracker, [
+      {
+        msg: 'ui-push',
+        type: 'newgame-choice',
+        'sub-items': {
+          buttons: [
+            { label: '<white>+ - Recommended species</white>', hotkey: 43 },
+            { label: '* - Random species', hotkey: 42 },
+            { label: 'Tab - Same as last', hotkey: 9 },
+          ],
+        },
+      },
+    ]);
+    expect(tracker.startKeys).toEqual([
+      { label: 'Recommended species', key: '+' },
+      { label: 'Random species', key: '*' },
+      { label: 'Same as last', key: 'Tab' },
+    ]);
+    const dock = controlsFor('start', {
+      hp: 0,
+      hpMax: 0,
+      run: false,
+      startKeys: tracker.startKeys,
+    }).actions.map((action) => (typeof action === 'string' ? action : action.label));
+    expect(dock).toEqual(['OK', 'Recommended species', 'Random species', 'Back']);
+    apply(tracker, [{ msg: 'ui-push', type: 'newgame-random-combo' }]);
+    expect(tracker.context()).toBe('yesno');
+  });
+});
+
 describe('DCSS context from WebTiles messages', () => {
   it('follows character creation, the map and the main prompts', () => {
     const tracker = new GameTracker();

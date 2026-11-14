@@ -403,3 +403,21 @@ test('recording playback has its own dock: pause, speed, seek and omniscience', 
   await expect(dock.getByRole('button', { name: 'Play (Space)' })).toBeVisible();
   await expect(dock.getByRole('button', { name: 'Turn → (l)' })).toBeVisible();
 });
+
+test('the end of a game by touch: Continue past the scores, then keep or skip the recording', async ({
+  page,
+}) => {
+  await newGame(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  // Quitting goes through the same screens as dying (after the gravestone's --MORE--).
+  await page.keyboard.press('Shift+Q');
+  await expect.poll(() => gameContext(page)).toBe('yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForScreenText(page, 'HIGH SCORES');
+  // Brogue waits for Space here (Enter does nothing): Continue sends it.
+  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await waitForScreenText(page, 'Save recording as');
+  await expect(dock.getByRole('button', { name: /^Don't save/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^Save recording/ }).tap();
+  await expect(page.locator('.brogue-title').getByRole('button', { name: 'New game' })).toBeVisible();
+});

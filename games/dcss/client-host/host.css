@@ -193,3 +193,28 @@ html.compact .newgame-choice .grid .button {
   white-space: normal;
   min-height: 36px;
 }
+
+/* The whole width on every step (species, background, weapon), not each list's own width. */
+html.compact .ui-popup-inner:has(.newgame-choice),
+html.compact .newgame-choice {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* What the tapped option is (a first tap shows it, a second chooses: host.js),
+   kept in view at the bottom of the screen rather than after the long list. */
+html.compact .newgame-choice .descriptions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  max-height: 34dvh;
+  overflow-y: auto;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid rgb(224 170 74 / 0.6);
+  background: #0b0a08;
+  white-space: normal;
+}
+html.compact .newgame-choice .descriptions:empty {
+  display: none;
+}

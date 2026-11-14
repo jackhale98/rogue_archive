@@ -162,6 +162,27 @@ export function parseLines(lines: readonly string[]): WebTilesMessage[] {
   return out;
 }
 
+const KEY_NAMES: Record<number, string> = { 9: 'Tab', 13: 'Enter', 27: 'Escape', 32: ' ' };
+
+/** The extra keys of a character creation popup ("+ - Recommended", "* - Random"...). */
+export function newgameKeys(message: Record<string, unknown>): { label: string; key: string }[] {
+  const sub = message['sub-items'] as
+    { buttons?: { label?: unknown; labels?: unknown[]; hotkey?: unknown }[] } | undefined;
+  const keys: { label: string; key: string }[] = [];
+  for (const button of sub?.buttons ?? []) {
+    const raw = typeof button.label === 'string' ? button.label : (button.labels ?? []).map(String).join(' ');
+    const hotkey = typeof button.hotkey === 'number' ? button.hotkey : Number(button.hotkey);
+    if (!Number.isFinite(hotkey) || hotkey <= 0) continue;
+    const key = KEY_NAMES[hotkey] ?? String.fromCodePoint(hotkey);
+    // "+ - Recommended character" → "Recommended character".
+    const label = plainText(raw)
+      .replace(/^\s*\S+\s+-\s+/, '')
+      .trim();
+    if (label) keys.push({ label, key });
+  }
+  return keys;
+}
+
 export class GameTracker {
   player: Partial<PlayerState> = {};
   inputMode: number = InputMode.NORMAL;
@@ -169,6 +190,11 @@ export class GameTracker {
   layer = '';
   /** Open popups (ui-push), by type, innermost last. */
   popups: string[] = [];
+  /**
+   * Character creation's extra keys (the popup's "sub-items": Recommended,
+   * Random, list aptitudes...), as buttons: label and key.
+   */
+  startKeys: { label: string; key: string }[] = [];
   /** Open menus (menu / close_menu), innermost last. */
   menuStack: MenuInfo[] = [];
   /** A text field the game asked for (init_input / close_input). */
@@ -218,6 +244,7 @@ export class GameTracker {
     this.uiState = UiState.NORMAL;
     this.layer = '';
     this.popups = [];
+    this.startKeys = [];
     this.menuStack = [];
     this.textInput = false;
     this.more = false;
@@ -254,6 +281,7 @@ export class GameTracker {
         return false;
       case 'ui-push':
         this.popups.push(String(message.type ?? 'popup'));
+        if (message.type === 'newgame-choice') this.startKeys = newgameKeys(message);
         return true;
       case 'ui-pop':
         this.popups.pop();
@@ -311,6 +339,8 @@ export class GameTracker {
   context(): DcssContext {
     const top = this.popups[this.popups.length - 1];
     if (top === 'newgame-choice' || top === 'game-menu' || top === 'seed-selection') return 'start';
+    // "Do you want to play this combination? [Y/n/q]" (a recommended or random character).
+    if (top === 'newgame-random-combo') return 'yesno';
     if (top === 'msgwin-get-line') return 'text';
     if (top) return 'popup';
     // Yes/no questions are small menus tagged "prompt" (prompt.cc yesno()).

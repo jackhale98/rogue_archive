@@ -479,6 +479,41 @@
     }).observe(document.body, { childList: true, subtree: true });
   }
 
+  /**
+   * Phones: in character creation a tap first shows what an option is (its
+   * description, as hovering does on desktop: ui-layouts.js focus_button,
+   * which also tells the server, so Enter takes it), and a second tap on it
+   * chooses it. Upstream chooses on the first click, and a phone has no hover.
+   */
+  function preview_newgame_choices($) {
+    function choice(event) {
+      if (!document.documentElement.classList.contains('compact')) return null;
+      var target = event.target;
+      return (target && target.closest && target.closest('.newgame-choice .main-items .button')) || null;
+    }
+    // The option the last tap showed: a tap on it again chooses it. (DCSS's own
+    // focus can't tell: a tap's emulated mouseover moves it before the click.)
+    var previewed = null;
+    document.addEventListener(
+      'click',
+      function (event) {
+        var button = choice(event);
+        if (!button) return;
+        if (button === previewed && document.contains(button)) {
+          previewed = null;
+          return;
+        }
+        previewed = button;
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        $(button).triggerHandler('hover');
+        $(button).triggerHandler('mouseenter');
+      },
+      true,
+    );
+  }
+
   function attach_long_press() {
     var LONG_PRESS_MS = 450;
     var SLOP_PX = 12;
@@ -675,6 +710,7 @@
         ], function (game, minimap, enums, display, map_knowledge, player, dngn, feat) {
           attach_long_press();
           order_newgame_choices();
+          preview_newgame_choices($);
           var read_map_context = map_context_reader(map_knowledge, player, enums, dngn, feat);
           var last_map_context = '';
           client.on_map_change(function () {

@@ -31,6 +31,7 @@ import {
   DCSS_TOUCH_LAYOUT,
   controlsFor,
   findCommand,
+  KEY,
   keyInput,
   latchedMove,
   type ControlState,
@@ -326,6 +327,10 @@ class DcssAdapter implements GameAdapter {
       const latch = input.commandId;
       this.#latch = this.#latch === latch ? null : latch;
       this.#publishContext(true);
+      return;
+    }
+    if (input.commandId.startsWith(KEY)) {
+      this.#press(keyInput({ key: input.commandId.slice(KEY.length) }));
       return;
     }
     const command = findCommand(input.commandId);
@@ -637,6 +642,7 @@ class DcssAdapter implements GameAdapter {
       caster: tracker.caster,
       menu: tracker.menu,
       statPrompt: tracker.statPrompt,
+      startKeys: tracker.startKeys,
     };
   }
 

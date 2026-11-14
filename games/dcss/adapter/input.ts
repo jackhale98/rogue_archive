@@ -795,7 +795,12 @@ export interface ControlState {
   menu?: MenuInfo | null;
   /** The stat increase prompt. */
   statPrompt?: boolean;
+  /** Character creation's extra keys (Recommended, Random...). */
+  startKeys?: readonly { label: string; key: string }[];
 }
+
+/** A key of the game's own, by name (`key:+`, `key:Tab`): character creation's extra keys. */
+export const KEY = 'key:';
 
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
@@ -999,11 +1004,20 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
     case 'busy':
       return { actions: [a('cancel', { label: 'Stop' })], palette: PALETTE };
     case 'start':
+      // OK takes the option shown (a first tap on one shows what it is), then the
+      // screen's own extra keys (Recommended, Random...), Back.
       return {
         actions: [
           a('confirm', { label: 'OK', emphasis: 'primary' }),
+          // (This step's two, "Recommended species" and "Random species": the whole-character
+          // ones stay at the bottom of the list, leaving room on screen for it.)
+          ...(state.startKeys ?? []).slice(0, 2).map((entry) =>
+            a(`${KEY}${entry.key}`, {
+              label: entry.label.length > 22 ? `${entry.label.slice(0, 21)}…` : entry.label,
+            }),
+          ),
           a('cancel', { label: 'Back' }),
-          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ...((state.startKeys ?? []).length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
         palette: PALETTE,
       };

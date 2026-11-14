@@ -1,5 +1,5 @@
 import { expect, test, type Frame, type Page } from '@playwright/test';
-import { dcssContext, startCharacter, waitForContext } from './dcss-helpers.ts';
+import { chooseInCreation, createByTaps, startCharacter, waitForContext } from './dcss-helpers.ts';
 
 test.describe.configure({ timeout: 300_000 });
 
@@ -34,17 +34,16 @@ test('DCSS phone: descriptions fit the width, Page down scrolls a screen, item m
   await startCharacter(page, 'Reader');
   const frame = page.frameLocator('iframe.dcss-client');
   // A Berserker, who starts with a god (Trog) and so has a god screen.
-  await frame.locator('.ui-popup .newgame-choice .button').first().tap();
+  await chooseInCreation(page, frame.locator('.ui-popup .newgame-choice .button').first());
   await expect
     .poll(() => frame.locator('.ui-popup .newgame-choice .button', { hasText: 'Berserker' }).count())
     .toBeGreaterThan(0);
-  await frame.locator('.ui-popup .newgame-choice .button', { hasText: 'Berserker' }).first().tap();
-  for (let i = 0; i < 3 && (await dcssContext(page)) === 'start'; i++) {
-    await page.waitForTimeout(1000);
-    if ((await dcssContext(page)) === 'start')
-      await frame.locator('.ui-popup .newgame-choice .button').first().tap();
-  }
-  await waitForContext(page, 'map');
+  await chooseInCreation(
+    page,
+    frame.locator('.ui-popup .newgame-choice .button', { hasText: 'Berserker' }).first(),
+  );
+  await page.waitForTimeout(1000);
+  await createByTaps(page);
   const client = clientFrame(page);
 
   // The god screen (80 characters wide upstream) wraps to the phone's width.
