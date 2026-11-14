@@ -15,6 +15,8 @@ Never update automatically because upstream has new commits. An update is one re
 
 Brogue is the reference for how updates are made safe.
 
+**New releases.** `.github/workflows/upstream-releases.yml` runs daily (and on demand): `tools/upstream-status.sh` compares each game's pin with upstream's latest release, as the game's own `scripts/upstream.sh` resolves `latest-release`. For each game that is behind it keeps one open issue labelled `upstream-release` ("[upstream] NetHack: 5.0.1 is out (we pin 5.0.0)"), which notifies the repository's watchers; a newer release retitles it, and updating the pin closes it. Run `tools/upstream-status.sh` locally to see the same comparison.
+
 **Early warning.** `.github/workflows/upstream-canary.yml` runs weekly (and on demand) against Brogue's latest release and its development branch. It builds the port, runs engine conformance, the upstream-drift check and every e2e test, and never deploys anything. Run it locally with:
 
 ```sh

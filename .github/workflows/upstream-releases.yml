@@ -1,0 +1,83 @@
+name: Upstream releases
+
+# Daily: is any game's pinned upstream version behind its latest release?
+# For each game that is, one open issue (label `upstream-release`) says so,
+# which notifies the repository's watchers; a newer release retitles it, and
+# updating the pin closes it. The weekly canary (upstream-canary.yml) shows
+# whether the port already builds and passes against that release. Updating
+# the pin stays a deliberate change: docs/contributing/updating-a-game.md.
+on:
+  schedule:
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: upstream-releases
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Compare pins with upstream releases
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve each game's latest release
+        run: tools/upstream-status.sh | tee status.txt
+      - name: Open, update or close one issue per game
+        run: |
+          set -euo pipefail
+          label=upstream-release
+          gh label create "$label" --color 1d76db \
+            --description "A game's upstream has a release newer than our pin" --force > /dev/null
+          canary="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/upstream-canary.yml"
+          guide="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${GITHUB_REF_NAME}/docs/contributing/updating-a-game.md"
+          {
+            echo "### Upstream releases"
+            echo
+            echo "| Game | Status | Pinned | Latest release |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          while read -r game status pinned latest commit repo; do
+            title_of() { node -e 'const c=require("./games/catalog.json");const g=c.games.find(g=>g.id===process.argv[1]);console.log(g?g.title:process.argv[1])' "$1"; }
+            name="$(title_of "$game")"
+            echo "| $name | $status | $pinned | $latest |" >> "$GITHUB_STEP_SUMMARY"
+            prefix="[upstream] $name:"
+            existing="$(gh issue list --label "$label" --state open --limit 100 --json number,title \
+              --jq ".[] | select(.title | startswith(\"$prefix\")) | \"\(.number)\t\(.title)\"" | head -n 1)"
+            number="${existing%%$'\t'*}"
+            current_title="${existing#*$'\t'}"
+            case "$status" in
+              behind)
+                title="$prefix $latest is out (we pin $pinned)"
+                body="$(printf '%s\n' \
+                  "**$name** has a newer upstream release than the version this archive builds." \
+                  "" \
+                  "- Pinned: \`$pinned\` (games/$game/upstream.env)" \
+                  "- Latest release: [\`$latest\`]($repo/releases/tag/$latest) (\`$commit\`)" \
+                  "" \
+                  "The [weekly upstream canary]($canary) builds and tests the port against the latest release, so its last run for $game shows whether the update is likely to be easy." \
+                  "To update, follow [updating a game]($guide). This issue closes itself once the pin matches the latest release.")"
+                if [ -z "$existing" ]; then
+                  gh issue create --label "$label" --title "$title" --body "$body"
+                elif [ "$current_title" != "$title" ]; then
+                  gh issue edit "$number" --title "$title" --body "$body"
+                  gh issue comment "$number" --body "Upstream has released \`$latest\` since this issue was opened."
+                fi
+                ;;
+              current)
+                if [ -n "$existing" ]; then
+                  gh issue close "$number" --comment "The pin now matches upstream's latest release (\`$latest\`)."
+                fi
+                ;;
+              *)
+                echo "::warning title=$name::Could not resolve upstream's latest release ($repo)"
+                ;;
+            esac
+          done < status.txt
