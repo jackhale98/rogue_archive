@@ -4,7 +4,10 @@ Decided with the project owner: on phones, **split Brogue's screen into native-f
 
 ## When the phone layout applies
 
-The shell is in *compact* mode when touch controls are shown and the viewport's shorter side is under 600 CSS px. It overlays its controls on the game, hides the header bar (back, keyboard, full screen and menu float top-right) and tells the adapter through `setPresentation({ compact, insets, topRightReserve })`. The adapter decides how to use the space; the title screen always shows Brogue's original screen.
+The shell is in *compact* mode when touch controls are shown and the viewport's shorter side is under 600 CSS px. It hides the header bar and tells the adapter through `setPresentation({ compact, insets, topRightReserve })`. The adapter decides how to use the space; the title screen always shows Brogue's original screen.
+
+- **Portrait:** the controls float over the game: the dock and the thumb pad along the bottom, the tools (back, keyboard, full screen, log, menu) top-right. `insets.bottom` is the height from the bottom edge to the top of the higher of the two (their margin and the safe area included); `topRightReserve` is the tools' width, and adapters put their status band below the tools.
+- **Landscape:** the dock and the thumb pad sit in **rails** beside the game (the dock on the left, the pad on the right under the tools; swapped with Settings → Direction pad side → Left hand), so nothing the game draws is under a control. The rails keep their width whatever the context shows, so the game is not resized when the pad comes and goes; a dock too long for the rail gives its buttons less height (labels wrap to two lines rather than widening it); the outer edges clear the safe area (a side notch). The game gets the column between them, with zero insets and no `topRightReserve` (its band uses the column's full width). `e2e/landscape.mobile.spec.ts` checks this for every game at 844×390 and 667×375.
 
 ## Brogue's phone layout (`games/brogue-ce/adapter/views.ts`, `hud.ts`)
 
@@ -185,7 +188,7 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 
 ## HyperRogue
 
-HyperRogue draws its own interface with WebGL (upstream's web build), so the phone layout keeps it whole: the canvas fills the area between the shell's floating tools and the dock, at up to twice the CSS resolution, and the game lays out its own HUD (kills, score, messages) for that size. Touch follows upstream's mobile version (`mobile.cpp`) on top of the web build's click handling: the finger shows what is under it (the game's hover), lifting it acts there (move towards the cell, attack, use a ranged orb on it, choose a menu line), and holding still for half a second asks for help about it (the desktop's right-click). Upstream's Android interface itself (`mobile.cpp`, its on-screen compass) is built around the Android app's own platform code, so it is not compiled in.
+HyperRogue draws its own interface with WebGL (upstream's web build), so the phone layout keeps it whole: the canvas fills the area the shell's controls leave (upright: below the floating tools and above the dock; sideways: the column between the rails), at up to twice the CSS resolution, and the game lays out its own HUD (kills, score, messages) for that size. Touch follows upstream's mobile version (`mobile.cpp`) on top of the web build's click handling: the finger shows what is under it (the game's hover), lifting it acts there (move towards the cell, attack, use a ranged orb on it, choose a menu line), and holding still for half a second asks for help about it (the desktop's right-click). Upstream's Android interface itself (`mobile.cpp`, its on-screen compass) is built around the Android app's own platform code, so it is not compiled in.
 
 | Context | Dock |
 |---|---|

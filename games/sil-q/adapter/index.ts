@@ -789,11 +789,12 @@ class SilAdapter implements GameAdapter {
       mount.append(band);
       this.#band = band;
     }
-    const portrait = mount.clientHeight > mount.clientWidth;
-    this.#band.style.paddingTop = portrait ? 'max(50px, env(safe-area-inset-top))' : '';
-    this.#band.style.paddingRight = portrait
-      ? '10px'
-      : `${(this.#presentation?.topRightReserve ?? 0) + 10}px`;
+    // The shell's tools over the top-right corner (none when a phone held
+    // sideways has them in a rail): above the band on a narrow screen, else beside it.
+    const reserve = this.#presentation?.topRightReserve ?? 0;
+    const toolsAbove = reserve > 0 && mount.clientHeight > mount.clientWidth;
+    this.#band.style.paddingTop = toolsAbove ? 'max(50px, env(safe-area-inset-top))' : '';
+    this.#band.style.paddingRight = toolsAbove ? '10px' : `${reserve + 10}px`;
     const message = this.#grid ? rowText(this.#grid, 0).trim() : '';
     const hpFraction = state.maxHp > 0 ? Math.max(0, Math.min(1, state.hp / state.maxHp)) : 1;
     const status = `${state.hp}/${state.maxHp} health · ${state.voice}/${state.maxVoice} voice · ${state.depth * 50} ft`;

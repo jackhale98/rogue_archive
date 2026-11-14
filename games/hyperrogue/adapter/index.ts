@@ -52,6 +52,8 @@ const LONG_PRESS_MS = 500;
 const TAP_SLOP_PX = 12;
 /** Rendering resolution cap: legacy GL emulation at 3x on a phone is slow. */
 const MAX_PIXEL_RATIO = 2;
+/** CSS px the shell's floating tools take at the top of an upright phone (as the other adapters' bands reserve). */
+const TOOLS_ROW_HEIGHT = 50;
 /** `m`: marks (or unmarks) a mine on the cell under the pointer. */
 const MARK_KEY = strokeFor('m')!;
 /** The adapter's own touch commands (the tap modes). */
@@ -405,9 +407,13 @@ class HyperRogueAdapter implements GameAdapter {
     const sizer = this.#sizer;
     if (!root || !canvas || !sizer) return;
     const { insets, compact } = this.#presentation;
-    // On phones the shell's dock and tools cover the top and bottom; the
-    // thumb pad floats over the side of the game's disc.
-    const top = compact ? insets.top : 0;
+    // On upright phones the shell's dock and tools cover the bottom and the
+    // top-right corner, where the game draws its score: the canvas starts
+    // below the tools (the disc is as wide as the screen anyway). Held
+    // sideways, the controls are in rails beside the game.
+    const toolsAbove =
+      compact && (this.#presentation.topRightReserve ?? 0) > 0 && root.clientHeight > root.clientWidth;
+    const top = compact ? Math.max(insets.top, toolsAbove ? TOOLS_ROW_HEIGHT : 0) : 0;
     const bottom = compact ? insets.bottom : 0;
     const width = root.clientWidth;
     const height = Math.max(1, root.clientHeight - top - bottom);

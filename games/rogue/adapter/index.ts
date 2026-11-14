@@ -864,11 +864,12 @@ class RogueAdapter implements GameAdapter {
       mount.append(band);
       this.#band = band;
     }
-    const portrait = mount.clientHeight > mount.clientWidth;
-    this.#band.style.paddingTop = portrait ? 'max(50px, env(safe-area-inset-top))' : '';
-    this.#band.style.paddingRight = portrait
-      ? '10px'
-      : `${(this.#presentation?.topRightReserve ?? 0) + 10}px`;
+    // The shell's tools over the top-right corner (none when a phone held
+    // sideways has them in a rail): above the band on a narrow screen, else beside it.
+    const reserve = this.#presentation?.topRightReserve ?? 0;
+    const toolsAbove = reserve > 0 && mount.clientHeight > mount.clientWidth;
+    this.#band.style.paddingTop = toolsAbove ? 'max(50px, env(safe-area-inset-top))' : '';
+    this.#band.style.paddingRight = toolsAbove ? '10px' : `${reserve + 10}px`;
     const grid = this.#grid;
     const message = grid ? rowText(grid, MESSAGE_ROW).trim() : '';
     const statusLine = grid ? rowText(grid, STATUS_ROW).replace(/\s+/g, ' ').trim() : '';
