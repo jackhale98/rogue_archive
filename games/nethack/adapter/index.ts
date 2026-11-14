@@ -160,9 +160,9 @@ class NetHackAdapter implements GameAdapter {
       key: 'shortcuts',
       label: 'Strategy shortcuts',
       description:
-        'Adds an Elbereth button to the fighting and trouble buttons and to the command list, and suggests Elbereth when you engrave. Engraving Elbereth is a well-known way to scare most monsters away, but the game never tells you about it directly, so this is off unless you want it. You can always engrave it yourself with E.',
+        'Adds buttons for a well-known survival trick that NetHack leaves you to discover on your own. Off, the buttons only offer what the game itself tells you about.',
       options: [
-        { value: 'off', label: 'Off (discover it yourself)' },
+        { value: 'off', label: 'Off (discover things yourself)' },
         { value: 'on', label: 'On' },
       ],
       default: 'off',

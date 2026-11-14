@@ -738,7 +738,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Character creation by taps, the status band, menus as sheets, the dock, travel by tapping the map, tapping the hero, long-presses, item buttons, travel by position, the Elbereth button and tiles exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Character creation by taps, the status band, menus as sheets, the dock, travel by tapping the map, tapping the hero, long-presses, item buttons, travel by position, the strategy shortcuts and tiles exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",
