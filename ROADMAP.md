@@ -88,6 +88,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] WASM build of v1.5.0 with no patches: a browser display module for Sil's term interface, selected through upstream's unchanged `main.c`
 - [x] Shared terminal renderer for text-grid games (`packages/term-view`, MIT): views, follow-the-player map, hit-testing, tap/long-press/pan/pinch
 - [x] Saves in IndexedDB (lib/save, apex, user), export/import; savefiles interchangeable with desktop Sil-Q 1.5
+- [x] Tiles: Sil-Q's own MicroChasm tileset (Display setting), drawn as upstream's X11 build composes it
 - [x] Phone layout: status band, map around the player with pinch zoom, lists as tappable sheets
 - [x] Context docks: title and creation choices as buttons, saved characters as Continue buttons, item prompts (letters, then named items), -more-, yes/no, direction, look/target, text, menus
 - [x] Message log (Sil's repeated messages merged, not duplicated)

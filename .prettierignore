@@ -4,3 +4,4 @@ coverage/
 apps/web/public/runtime/
 games/*/dist/
 *.md
+.claude/

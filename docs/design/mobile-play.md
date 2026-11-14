@@ -129,7 +129,7 @@ The palette also has the commands no dock leads with: cycle the quiver `(` `)`, 
 
 ## Sil-Q
 
-Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `packages/term-view`).
+Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `packages/term-view`), or with Display set to Tiles, the map with Sil-Q's own tiles by MicroChasm in square cells (on desktop between the text sidebar, message line and status line; on phones the whole map view), the rest staying text.
 
 - **Layout on phones:** a status band replaces Sil's sidebar: health, voice and depth; a row with what Sil's sidebar and status line show about the character (stealth mode, the song and minor theme, hunger, Entranced, Blind, Confused, Afraid, Poisoned, Bleeding, Stun, Slow/Fast, a light about to go out), with Sil's own wording and thresholds; and the newest message. Tapping it opens the message log. The map is drawn at a readable cell size following the player; pinch to zoom, drag to look around (it recentres when the player moves). The title screen and character creation are fitted whole.
 - **Text over the map** (inventory, item lists, menus, the character sheet) opens as a sheet over the dimmed map; tap a line to choose it, tap outside to close (Escape).

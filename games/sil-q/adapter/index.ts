@@ -20,12 +20,14 @@ import {
   type InitializeOptions,
   type LogEntry,
   type Presentation,
+  type GameSettingDescriptor,
   type RuntimeFile,
   type SaveFile,
 } from '@rogue-archive/game-api';
 import {
   TermRenderer,
   attachGestures,
+  fitCell,
   fittedView,
   followView,
   rowText,
@@ -50,6 +52,7 @@ import {
 } from './input.ts';
 import type { FromWorker, ToWorker } from './protocol.ts';
 import {
+  COL_MAP,
   detectContext,
   itemPrompt,
   mapOverlay,
@@ -88,6 +91,23 @@ function findFile(files: RuntimeFile[], path: string): RuntimeFile {
   return file;
 }
 
+/** MicroChasm's tile sheet: 16×16 tiles, row `attr & 0x3F`, column `char & 0x3F`. */
+const TILE = 16;
+/** The tiles' background, the colour Sil's X11 and Windows builds treat as transparent (pixel 0,0). */
+const TILE_BLANK = 'rgb(20,20,20)';
+
+async function verifiedImage(url: string, file: RuntimeFile): Promise<ImageBitmap> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Could not download ${file.path} (HTTP ${response.status}).`);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const hex = Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
+  if (hex !== file.sha256) throw new Error(`${file.path} failed its integrity check.`);
+  return createImageBitmap(new Blob([bytes], { type: 'image/png' }));
+}
+
+type Display = 'text' | 'tiles';
+
 class SilAdapter implements GameAdapter {
   readonly apiVersion = GAME_API_VERSION;
   readonly gameId = GAME_ID;
@@ -102,6 +122,20 @@ class SilAdapter implements GameAdapter {
   };
   readonly commands = SIL_COMMANDS;
   readonly touchLayout = SIL_TOUCH_LAYOUT;
+  readonly settings: GameSettingDescriptor[] = [
+    {
+      key: 'display',
+      label: 'Display',
+      description:
+        "Text is Sil's classic ASCII screen. Tiles draws the map with Sil-Q's own tiles by MicroChasm, as the desktop game does by default; the sidebar, messages and menus stay text. Takes effect the next time the game starts.",
+      options: [
+        { value: 'text', label: 'Text (classic ASCII)' },
+        { value: 'tiles', label: 'Tiles by MicroChasm' },
+      ],
+      default: 'text',
+      appliesOn: 'next-launch',
+    },
+  ];
   readonly resumeHint =
     'Sil-Q saves when you change level and with Ctrl-S. Your character loads when you start the game.';
 
@@ -118,6 +152,14 @@ class SilAdapter implements GameAdapter {
   #presentation: Presentation | null = null;
   #band: HTMLDivElement | null = null;
   #mapCellCss = DEFAULT_MAP_CELL_CSS;
+  /** The Display setting when the game started (it applies from the start). */
+  #display: Display = 'text';
+  #runtimeFiles: RuntimeFile[] = [];
+  #runtimeBaseUrl = '';
+  #sheet: ImageBitmap | null = null;
+  #tileImages = new Map<string, CanvasImageSource>();
+  /** Tiles mode: the terrain under each tile cell (attr, char), from the latest frame. */
+  #terrain: Uint8Array | null = null;
   #pan = { x: 0, y: 0 };
   #lastPlayer: { x: number; y: number } | null = null;
   #run = false;
@@ -159,6 +201,9 @@ class SilAdapter implements GameAdapter {
     };
     const stored = Number(options.settings.mapCellCss);
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
+    this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.#runtimeFiles = runtime.files;
+    this.#runtimeBaseUrl = runtimeBaseUrl;
 
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'sil-q' });
     this.#worker = worker;
@@ -192,7 +237,9 @@ class SilAdapter implements GameAdapter {
     await ready;
     if (signal.aborted) return;
 
-    const renderer = new TermRenderer(options.mount);
+    const renderer = new TermRenderer(options.mount, {
+      tile: (code, x, y) => this.#tileAt(code, x, y),
+    });
     renderer.canvas.classList.add('sil-canvas');
     renderer.canvas.setAttribute('role', 'img');
     renderer.canvas.setAttribute('aria-label', 'Sil-Q game screen');
@@ -214,7 +261,9 @@ class SilAdapter implements GameAdapter {
     if (this.#started) return;
     this.#started = true;
     // Upstream main.c's "gcu" entry is our display module (see port/main-web.c).
-    this.#post({ type: 'start', args: ['-mgcu'] });
+    // Tiles: the sheet first (if it can't be loaded, the game starts in text).
+    if (this.#display === 'tiles') await this.#loadTiles();
+    this.#post({ type: 'start', args: this.#sheet ? ['-mgcu', '--', '-g'] : ['-mgcu'] });
     this.#renderer?.canvas.focus({ preventScroll: true });
   }
 
@@ -415,6 +464,7 @@ class SilAdapter implements GameAdapter {
           cursor: message.cursor,
         };
         this.#grid = grid;
+        this.#terrain = message.terrain ?? null;
         this.#state = parseState(message.state);
         this.debug.state = this.#state;
         this.debug.inDungeon = this.#state.inDungeon;
@@ -544,6 +594,104 @@ class SilAdapter implements GameAdapter {
     });
   }
 
+  /** MicroChasm's tile sheet (tiles.png), downloaded and verified when tiles are chosen. */
+  async #loadTiles(): Promise<void> {
+    try {
+      const file = findFile(this.#runtimeFiles, 'tiles.png');
+      this.#sheet = await verifiedImage(new URL(file.path, this.#runtimeBaseUrl).href, file);
+    } catch (error) {
+      this.#sheet = null;
+      this.#host?.logger.warn('Could not load the tiles; showing text', error);
+    }
+  }
+
+  /** One tile of the sheet (row, column), cut out once; `fill` paints the tiles' background first. */
+  #tileImage(row: number, col: number, fill = false): CanvasImageSource | null {
+    const sheet = this.#sheet;
+    if (!sheet) return null;
+    const key = `${row},${col},${fill ? 1 : 0}`;
+    let image = this.#tileImages.get(key);
+    if (!image) {
+      const canvas = new OffscreenCanvas(TILE, TILE);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      if (fill) {
+        ctx.fillStyle = TILE_BLANK;
+        ctx.fillRect(0, 0, TILE, TILE);
+      }
+      ctx.drawImage(sheet, col * TILE, row * TILE, TILE, TILE, 0, 0, TILE, TILE);
+      image = canvas;
+      this.#tileImages.set(key, image);
+    }
+    return image;
+  }
+
+  /**
+   * A cell the game drew as a tile (attr and char with the high bit set), as
+   * main-x11.c's Term_pict_x11 draws it: the tile alone, or, over terrain,
+   * the terrain, the glow icon (a glowing weapon), the tile and the alert
+   * icon (a monster that has noticed you), each through the others'
+   * transparent pixels.
+   */
+  #tileAt(code: number, x: number, y: number): readonly CanvasImageSource[] | null {
+    const grid = this.#grid;
+    const state = this.#state;
+    if (!grid || !state?.graphics || !this.#sheet || code < 0x80) return null;
+    const at = (y * grid.cols + x) * 2;
+    const attr = grid.cells[at + 1]!;
+    if (attr < 0x80) return null;
+    const row = attr & 0x3f;
+    const col = code & 0x3f;
+    const tc = this.#terrain?.[at] ?? 0;
+    const ta = this.#terrain?.[at + 1] ?? 0;
+    const layered = ta >= 0x80 && tc >= 0x80 && ((ta & 0x3f) !== row || (tc & 0x3f) !== col);
+    if (!layered) {
+      const image = this.#tileImage(row, col, true);
+      return image ? [image] : null;
+    }
+    const layers = [this.#tileImage(ta & 0x3f, tc & 0x3f, true)];
+    if (attr & 0x40) layers.push(this.#tileImage(state.iconGlow.attr & 0x3f, state.iconGlow.char & 0x3f));
+    layers.push(this.#tileImage(row, col));
+    if (code & 0x40) layers.push(this.#tileImage(state.iconAlert.attr & 0x3f, state.iconAlert.char & 0x3f));
+    return layers.filter((image): image is CanvasImageSource => !!image);
+  }
+
+  /** The map is drawn in square tile cells: in tiles mode, with tiles on screen (not a full-screen text page). */
+  #tiled(): boolean {
+    const grid = this.#grid;
+    if (!grid || !this.#sheet || !this.#state?.graphics || !this.#state.inDungeon) return false;
+    for (let i = 1; i < grid.cells.length; i += 2) if (grid.cells[i]! >= 0x80) return true;
+    return false;
+  }
+
+  /** Text drawn over the map (a menu, a list), lifted into a sheet over the dimmed map. */
+  #sheetOver(map: View, area: Rect, grid: Grid, dpr: number, views: View[]): void {
+    const overlay = mapOverlay(grid);
+    if (!overlay || this.#context === 'map') return;
+    const margin = Math.round(8 * dpr);
+    map.dim = 0.62;
+    const src = {
+      x: Math.max(0, overlay.x - 1),
+      y: overlay.y,
+      width: Math.min(grid.cols, overlay.width + 2),
+      height: overlay.height,
+    };
+    views.push(
+      fittedView(
+        'sheet',
+        src,
+        {
+          x: area.x + margin,
+          y: area.y + margin,
+          width: area.width - 2 * margin,
+          height: area.height - 2 * margin,
+        },
+        28 * dpr,
+        { modal: true, frame: true },
+      ),
+    );
+  }
+
   /** Views for the current presentation and screen. */
   #layout(): void {
     const renderer = this.#renderer;
@@ -553,9 +701,44 @@ class SilAdapter implements GameAdapter {
     const dpr = renderer.dpr;
     const whole: Rect = { x: 0, y: 0, width: grid.cols, height: grid.rows };
     const presentation = this.#presentation;
+    const tiled = this.#tiled();
     if (!presentation?.compact) {
       this.#setBand(null);
-      renderer.setViews([fittedView('screen', whole, { x: 0, y: 0, width, height })]);
+      if (!tiled) {
+        renderer.setViews([fittedView('screen', whole, { x: 0, y: 0, width, height })]);
+        return;
+      }
+      // Tiles: the message line, sidebar and status line as text; the map between them in square cells.
+      const text = fitCell(whole, width, height);
+      const side = COL_MAP * text.cellWidth;
+      const map = fittedView(
+        'map',
+        mapRect(grid),
+        { x: side, y: text.cellHeight, width: width - side, height: height - 2 * text.cellHeight },
+        Infinity,
+        {},
+        1,
+      );
+      const views: View[] = [
+        fittedView(
+          'top',
+          { x: 0, y: 0, width: grid.cols, height: 1 },
+          { x: 0, y: 0, width, height: text.cellHeight },
+        ),
+        fittedView(
+          'side',
+          { x: 0, y: 1, width: COL_MAP, height: grid.rows - 2 },
+          { x: 0, y: text.cellHeight, width: side, height: (grid.rows - 2) * text.cellHeight },
+        ),
+        map,
+        fittedView(
+          'bottom',
+          { x: 0, y: grid.rows - 1, width: grid.cols, height: 1 },
+          { x: 0, y: height - text.cellHeight, width, height: text.cellHeight },
+        ),
+      ];
+      this.#sheetOver(map, { x: 0, y: 0, width, height }, grid, dpr, views);
+      renderer.setViews(views);
       return;
     }
     const state = this.#state;
@@ -573,33 +756,17 @@ class SilAdapter implements GameAdapter {
       renderer.setViews([fittedView('screen', whole, area)]);
       return;
     }
-    const map = followView('map', mapRect(grid), area, this.#mapCellCss * dpr, playerCell(state), this.#pan);
+    const map = followView(
+      'map',
+      mapRect(grid),
+      area,
+      this.#mapCellCss * dpr,
+      playerCell(state),
+      this.#pan,
+      tiled ? 1 : undefined,
+    );
     const views: View[] = [map];
-    const overlay = mapOverlay(grid);
-    if (overlay && this.#context !== 'map') {
-      const margin = Math.round(8 * dpr);
-      map.dim = 0.62;
-      const src = {
-        x: Math.max(0, overlay.x - 1),
-        y: overlay.y,
-        width: Math.min(grid.cols, overlay.width + 2),
-        height: overlay.height,
-      };
-      views.push(
-        fittedView(
-          'sheet',
-          src,
-          {
-            x: area.x + margin,
-            y: area.y + margin,
-            width: area.width - 2 * margin,
-            height: area.height - 2 * margin,
-          },
-          28 * dpr,
-          { modal: true, frame: true },
-        ),
-      );
-    }
+    this.#sheetOver(map, area, grid, dpr, views);
     renderer.setViews(views);
   }
 

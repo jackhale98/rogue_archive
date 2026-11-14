@@ -276,10 +276,10 @@
       },
       "license": {
         "code": "GPL-2.0-only (Sil-Q is dual-licensed: GPL-2.0 or the Angband licence; distributed here under GPL-2.0)",
-        "assets": "No graphics, sounds or fonts are shipped: the game is drawn as text with the browser's monospace font",
+        "assets": "MicroChasm's 16×16 tile sheet, part of Sil-Q under the same licence (GPL-2.0 here); no sounds or fonts are shipped",
         "report": "games/sil-q/LICENSES.md"
       },
-      "interface": ["ascii"],
+      "interface": ["ascii", "tiles"],
       "input": {
         "keyboard": true,
         "mouse": false,
@@ -300,7 +300,7 @@
       "about": [
         "Toby Ord and Owen Cotton-Barratt released Sil in 2012. Its manual calls it “a role-playing game with a strong emphasis on discovery and tactical combat” that stays true to Tolkien: there are no wizards or priests, no plate mail or magical scrolls, and magic comes from songs. There is no town, and experience comes mostly from seeing new things rather than from killing them.",
         "Sil-Q forked from Sil in 2018 to improve what its manual calls the weaker parts of the original. It drops junk items, reworks skills and, since version 1.5.0, has tiles. The task is still the same: go down into Angband, take a Silmaril from Morgoth's crown and get out.",
-        "This port compiles the official Sil-Q source to WebAssembly without changing any game code; only a browser display module is added, as upstream has for curses, X11, Windows and macOS. It runs entirely in your browser: no server and no account."
+        "This port compiles the official Sil-Q source to WebAssembly without changing any game code; only a browser display module is added, as upstream has for curses, X11, Windows and macOS. The map can be drawn in text or with Sil-Q's own tiles by MicroChasm. It runs entirely in your browser: no server and no account."
       ],
       "controlsSummary": [
         {
@@ -354,7 +354,7 @@
       ],
       "knownLimitations": [
         "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
-        "Text only: Sil's optional tile graphics are not included.",
+        "Changing Display (text or tiles) takes effect the next time the game starts, as Sil loads its graphics at start-up.",
         "No sound (upstream's sounds have no clear licence and are not shipped).",
         "The 80×24 screen is shown whole on desktop; on phones the map is zoomed around the player and the sidebar is replaced by a status band."
       ],
@@ -362,12 +362,12 @@
         {
           "environment": "Chromium desktop (automated, Playwright)",
           "result": "pass",
-          "notes": "New character, item prompts, message log, save, reload and continue verified by end-to-end tests."
+          "notes": "New character, item prompts, message log, save, reload and continue verified by end-to-end tests. Tiles (MicroChasm) on desktop verified by an end-to-end test."
         },
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Title buttons, character creation by tap, status band (song shown), item prompt dock, context leads (pick up, abilities), song buttons, direction prompts without a target, long-press to look at a cell and continuing a saved character exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Title buttons, character creation by tap, status band (song shown), item prompt dock, context leads (pick up, abilities), song buttons, direction prompts without a target, long-press to look at a cell and continuing a saved character, and the tiled map exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

@@ -38,6 +38,10 @@ static int cols = WEB_COLS_MIN;
 static int rows = WEB_ROWS_MIN;
 /* Two bytes per cell: character, attribute. */
 static byte screen[WEB_COLS_MAX * WEB_ROWS_MAX * 2];
+/* Tiles mode: what lies under each cell drawn as a tile (terrain attr,
+ * char), as Term_pict hands it over; 0, 0 for cells drawn as text. */
+static byte terrain[WEB_COLS_MAX * WEB_ROWS_MAX * 2];
+static bool graphics = FALSE;
 static int cursor_x = 0, cursor_y = 0;
 static bool cursor_visible = FALSE;
 
@@ -98,6 +102,15 @@ enum
     /* The first flask of oil in the pack: its slot + 1 (the throw prompt's
      * letter is 'a' + slot), 0 if none. */
     ST_FLASK,
+    /* Tiles: 1 when the game draws with MicroChasm's tiles (-g). The alert
+     * and glow icons' tiles (row, column: attr & 0x3F, char & 0x3F), which
+     * the display draws over a monster that has noticed you and under a
+     * glowing weapon, as main-x11.c's composite_image does. */
+    ST_GRAPHICS,
+    ST_ICON_ALERT_ATTR,
+    ST_ICON_ALERT_CHAR,
+    ST_ICON_GLOW_ATTR,
+    ST_ICON_GLOW_CHAR,
     ST_FIELDS
 };
 static int state[ST_FIELDS];
@@ -130,6 +143,11 @@ EM_ASYNC_JS(void, ra_sleep, (int ms), { await Module.raSleep(ms); });
 
 /* Persists the save directory if the host asked; called while waiting for input. */
 EM_ASYNC_JS(void, ra_service, (void), { await Module.raService(); });
+
+/* Tiles mode: the terrain layer of the next frame (two bytes per cell). */
+EM_JS(void, ra_terrain, (const byte *layer, int cols, int rows), {
+    Module.raTerrain(HEAPU8.slice(layer, layer + cols * rows * 2));
+});
 
 EM_JS(void, ra_palette, (const byte *table, int count), {
     Module.raPalette(HEAPU8.slice(table, table + count * 4));
@@ -349,6 +367,15 @@ static void present(void)
     read_context();
     if (character_generated)
         send_messages();
+    state[ST_GRAPHICS] = graphics ? 1 : 0;
+    state[ST_ICON_ALERT_ATTR] = (byte)misc_to_attr[ICON_ALERT];
+    state[ST_ICON_ALERT_CHAR] = (byte)misc_to_char[ICON_ALERT];
+    state[ST_ICON_GLOW_ATTR] = (byte)misc_to_attr[ICON_GLOW];
+    state[ST_ICON_GLOW_CHAR] = (byte)misc_to_char[ICON_GLOW];
+#ifndef RA_REPLAY
+    if (graphics)
+        ra_terrain(terrain, cols, rows);
+#endif
     ra_present(screen, cols, rows, cursor_x, cursor_y, cursor_visible ? 1 : 0, state, ST_FIELDS);
 }
 
@@ -372,6 +399,18 @@ static bool take_keys(void)
 
 static errr Term_xtra_web(int n, int v)
 {
+    /*
+     * Tiles: read the graphics preferences as upstream's X11 build does
+     * (graf.prf -> graf-x11.prf -> graf-new.prf, MicroChasm's tile mapping),
+     * not the curses build's ACS remapping (graf-gcu.prf). main.c names the
+     * system after the module ("gcu", the slot this module takes) once
+     * init_web returns (after this hook has already been called from
+     * Term_activate), so the name is put back on every call: the
+     * introduction screen calls here before init_angband reads any
+     * preference file.
+     */
+    if (graphics && strcmp(ANGBAND_SYS, "x11") != 0)
+        ANGBAND_SYS = "x11";
     switch (n)
     {
     case TERM_XTRA_EVENT:
@@ -447,6 +486,7 @@ static errr Term_wipe_web(int x, int y, int n)
         int at = (y * cols + x + i) * 2;
         screen[at] = ' ';
         screen[at + 1] = TERM_WHITE;
+        terrain[at] = terrain[at + 1] = 0;
     }
     return 0;
 }
@@ -458,6 +498,26 @@ static errr Term_text_web(int x, int y, int n, byte a, cptr cp)
         int at = (y * cols + x + i) * 2;
         screen[at] = (byte)cp[i];
         screen[at + 1] = a;
+        terrain[at] = terrain[at + 1] = 0;
+    }
+    return 0;
+}
+
+/*
+ * Tiles (higher_pict): each cell's tile (attr, char with the high bit set:
+ * row attr & 0x3F, column char & 0x3F of the sheet) and the terrain under
+ * it, for the page to draw as main-x11.c's Term_pict_x11 does.
+ */
+static errr Term_pict_web(int x, int y, int n, const byte *ap, const char *cp, const byte *tap,
+                          const char *tcp)
+{
+    for (int i = 0; i < n && x + i < cols; i++)
+    {
+        int at = (y * cols + x + i) * 2;
+        screen[at] = (byte)cp[i];
+        screen[at + 1] = ap[i];
+        terrain[at] = (byte)tcp[i];
+        terrain[at + 1] = tap[i];
     }
     return 0;
 }
@@ -505,7 +565,7 @@ int setreuid(uid_t ruid, uid_t euid)
     return 0;
 }
 
-const char help_web[] = "Rogue Archive (browser), subopts -w<cols> -h<rows>";
+const char help_web[] = "Rogue Archive (browser), subopts -w<cols> -h<rows> -g (tiles)";
 
 errr init_web(int argc, char **argv)
 {
@@ -518,6 +578,8 @@ errr init_web(int argc, char **argv)
             cols = atoi(argv[i] + 2);
         else if (strncmp(argv[i], "-h", 2) == 0)
             rows = atoi(argv[i] + 2);
+        else if (strcmp(argv[i], "-g") == 0)
+            graphics = TRUE;
     }
     if (cols < WEB_COLS_MIN)
         cols = WEB_COLS_MIN;
@@ -539,6 +601,15 @@ errr init_web(int argc, char **argv)
     t->curs_hook = Term_curs_web;
     t->wipe_hook = Term_wipe_web;
     t->text_hook = Term_text_web;
+    if (graphics)
+    {
+        /* MicroChasm's tiles, as upstream's X11 build sets them up (-g). */
+        use_graphics = GRAPHICS_MICROCHASM;
+        use_transparency = TRUE;
+        ANGBAND_GRAF = "new";
+        t->higher_pict = TRUE;
+        t->pict_hook = Term_pict_web;
+    }
     t->data = &data;
     Term_activate(t);
     angband_term[0] = t;

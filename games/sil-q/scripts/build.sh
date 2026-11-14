@@ -114,6 +114,12 @@ emcc "${objects[@]}" "${COMMON_LDFLAGS[@]}" \
 mkdir -p "$OUT/licenses"
 cp "$SRC/LICENSE.md" "$OUT/licenses/Sil-Q-LICENSE.md"
 
+# MicroChasm's 16x16 tiles, as upstream's macOS build ships them (the PNG with
+# transparency; the same art as lib/xtra/graf/16x16.bmp, which the X11 and
+# Windows builds read with pixel 0,0 as the transparent colour). Fetched by
+# the page only when the Display setting is Tiles. See LICENSES.md.
+cp "$SRC/lib/xtra/graf/16x16_microchasm.png" "$OUT/tiles.png"
+
 # Conformance harness: the same game objects for Node, with the display
 # module's host bridge written in C (tests/conformance/replay-platform.c)
 # instead of JavaScript, and the game data mounted from a directory

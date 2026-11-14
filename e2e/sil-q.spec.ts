@@ -68,3 +68,38 @@ test('Sil-Q: new character, prompts, message log, save and continue after reload
   await waitForContext(page, 'map', 30_000);
   await expect.poll(() => screenText(page)).toContain('nameless');
 });
+
+test('Sil-Q: tiles by MicroChasm, chosen before the game starts', async ({ page }) => {
+  await page.goto('?debug=1#/games/sil-q');
+  await page.getByLabel('Display').selectOption('tiles');
+  await openSil(page);
+  await page.locator('canvas').first().click();
+  await page.keyboard.press('b');
+  for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(300);
+  }
+  await waitForContext(page, 'map');
+  // The game draws with tiles; the map is in square cells between the text sidebar and lines.
+  const shown = await page.evaluate(() => {
+    const d = (
+      window as unknown as {
+        __rogueArchive: { adapter: { debug: { state: { graphics: boolean }; views(): string[] } } };
+      }
+    ).__rogueArchive.adapter.debug;
+    return { graphics: d.state.graphics, views: d.views() };
+  });
+  console.log(
+    'DBG',
+    await page.evaluate(() => {
+      const d = (
+        window as unknown as { __rogueArchive: { adapter: { debug: { rowText(y: number): string } } } }
+      ).__rogueArchive.adapter.debug;
+      return [5, 10, 12].map((y) => [...d.rowText(y)].map((c) => c.charCodeAt(0).toString(16)).join(' '));
+    }),
+  );
+  await page.screenshot({ path: test.info().outputPath('sil-tiles.png') });
+  expect(shown).toEqual({ graphics: true, views: ['top', 'side', 'map', 'bottom'] });
+  await expect.poll(() => screenText(page)).toContain('50 ft');
+  await page.screenshot({ path: test.info().outputPath('sil-tiles.png') });
+});
