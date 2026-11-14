@@ -342,7 +342,7 @@
         },
         {
           "keys": "Phone",
-          "action": "Context dock (long-press for related actions), thumb pad, lists and item prompts as buttons, More lists every command"
+          "action": "Dock that follows the situation (what is underfoot, monsters in view or adjacent, low health; long-press for related actions), thumb pad, songs, lists and item prompts as buttons, long-press the map to look at a cell, status band with stealth, song, hunger and conditions, More lists every command"
         },
         {
           "keys": "Menu → Save files for desktop",
@@ -364,7 +364,7 @@
         {
           "environment": "Chromium with touch emulation (automated)",
           "result": "partial",
-          "notes": "Title buttons, character creation by tap, status band, item prompt dock and continuing a saved character exercised by end-to-end tests; not a substitute for a real device."
+          "notes": "Title buttons, character creation by tap, status band (song shown), item prompt dock, context leads (pick up, abilities), song buttons, direction prompts without a target, long-press to look at a cell and continuing a saved character exercised by end-to-end tests; not a substitute for a real device."
         },
         {
           "environment": "Firefox desktop",

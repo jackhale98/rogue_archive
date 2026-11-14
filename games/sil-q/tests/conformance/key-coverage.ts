@@ -47,6 +47,7 @@ const EXPECTED: Record<string, string> = {
   examine: 'do_cmd_observe(',
   inscribe: 'do_cmd_inscribe(',
   destroy: 'do_cmd_destroy(',
+  prise: 'do_cmd_destroy(',
   fletchery: 'do_cmd_fletchery(',
   look: 'do_cmd_look(',
   map: 'do_cmd_view_map(',
@@ -113,6 +114,14 @@ if (!blocks.get(';'.charCodeAt(0))?.includes('do_cmd_walk(')) {
 
 const problems: string[] = [];
 let checked = 0;
+
+// With another keyset, the adapter sends map commands after '\\', which
+// request_command reads as "bypass keymaps" (util.c).
+const util = readFileSync(join(root, 'src/util.c'), 'utf8');
+const request = util.slice(util.indexOf('void request_command(void)'));
+if (!/if \(ch == '\\\\'\)\s*\{[^}]*bypass keymaps/.test(request.slice(0, request.indexOf('\n}\n')))) {
+  problems.push("request_command no longer bypasses keymaps after '\\\\'");
+}
 for (const command of SIL_COMMANDS) {
   if (command.category === 'Keys' || command.id === 'run') continue;
   const move = /^move-/.test(command.id);

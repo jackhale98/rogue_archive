@@ -42,7 +42,8 @@ static int cursor_x = 0, cursor_y = 0;
 static bool cursor_visible = FALSE;
 
 /* Read-only state for the shell (status band, context). Field order is
- * mirrored in adapter/state.ts. */
+ * mirrored in adapter/state.ts; new fields go at the end. Everything here is
+ * read from the game, never written. */
 enum
 {
     ST_IN_DUNGEON,
@@ -57,6 +58,43 @@ enum
     ST_MAP_Y,
     ST_MSG_COUNT,
     ST_WAITING,
+    /* The keyset request_command applies (KEYMAP_MODE_*, from the
+     * hjkl_movement and angband_keyset options). */
+    ST_KEYSET,
+    ST_STEALTH_MODE,
+    /* Current song and minor theme (SNG_*, SNG_NOTHING if none). */
+    ST_SONG1,
+    ST_SONG2,
+    ST_FOOD,
+    ST_BLIND,
+    ST_CONFUSED,
+    ST_AFRAID,
+    ST_POISONED,
+    ST_CUT,
+    ST_STUN,
+    ST_ENTRANCED,
+    /* Speed (2 is normal; the sidebar shows Slow below, Fast above). */
+    ST_SPEED,
+    /* Turns of light left in the light source, or -1 if it does not burn out. */
+    ST_LIGHT_TURNS,
+    /* Underfoot: 1 down stairs, 2 up stairs, 3 a forge (else 0). */
+    ST_UNDER_FEATURE,
+    /* Underfoot: 1 an object, 2 the Iron Crown with Silmarils (else 0). */
+    ST_UNDER_OBJECT,
+    ST_ON_THE_RUN,
+    /* Unspent experience, and the price of the cheapest ability whose
+     * prerequisites are met (-1 if none), as the abilities screen computes it. */
+    ST_NEW_EXP,
+    ST_ABILITY_COST,
+    /* Visible monsters in line of sight, and those adjacent to the player. */
+    ST_MONSTERS_IN_VIEW,
+    ST_MONSTERS_ADJACENT,
+    /* A bow wielded; arrows in the first and second quivers. */
+    ST_BOW,
+    ST_QUIVER1,
+    ST_QUIVER2,
+    /* Known closed doors next to the player. */
+    ST_DOORS_ADJACENT,
     ST_FIELDS
 };
 static int state[ST_FIELDS];
@@ -170,6 +208,117 @@ static void send_messages(void)
         ra_message(0, message_str(age), message_color(age));
 }
 
+/* Upstream functions (cmd4.c) that the abilities screen uses; not in externs.h. */
+extern int abilities_in_skill(int skilltype);
+extern bool prereqs(int skilltype, int abilitynum);
+
+/* The cheapest ability the player could buy now, priced as cmd4.c's
+ * abilities screen does; -1 if none is available. Reads only. */
+static int cheapest_ability(void)
+{
+    int cost[S_MAX];
+    int best = -1;
+
+    for (int s = 0; s < S_MAX; s++)
+    {
+        cost[s] = (abilities_in_skill(s) + 1) * 500 - 500 * affinity_level(s);
+        if (cost[s] < 0)
+            cost[s] = 0;
+    }
+    for (int i = 0; i < z_info->b_max; i++)
+    {
+        ability_type *b_ptr = &b_info[i];
+        if (!b_ptr->name || b_ptr->skilltype >= S_MAX)
+            continue;
+        if (p_ptr->innate_ability[b_ptr->skilltype][b_ptr->abilitynum])
+            continue;
+        if (!prereqs(b_ptr->skilltype, b_ptr->abilitynum))
+            continue;
+        if (best < 0 || cost[b_ptr->skilltype] < best)
+            best = cost[b_ptr->skilltype];
+    }
+    return best;
+}
+
+/* What the shell's docks and status band use; reads only. */
+static void read_context(void)
+{
+    int py = p_ptr->py, px = p_ptr->px;
+    bool on_map = state[ST_IN_DUNGEON] && cave_feat && in_bounds(py, px);
+    /* The inventory is allocated during start-up, after the first screens. */
+    object_type *light = inventory ? &inventory[INVEN_LITE] : NULL;
+
+    if (!hjkl_movement && !angband_keyset)
+        state[ST_KEYSET] = KEYMAP_MODE_SIL;
+    else if (hjkl_movement && !angband_keyset)
+        state[ST_KEYSET] = KEYMAP_MODE_SIL_HJKL;
+    else if (!hjkl_movement && angband_keyset)
+        state[ST_KEYSET] = KEYMAP_MODE_ANGBAND;
+    else
+        state[ST_KEYSET] = KEYMAP_MODE_ANGBAND_HJKL;
+    state[ST_STEALTH_MODE] = p_ptr->stealth_mode;
+    state[ST_SONG1] = p_ptr->song1;
+    state[ST_SONG2] = p_ptr->song2;
+    state[ST_FOOD] = p_ptr->food;
+    state[ST_BLIND] = p_ptr->blind;
+    state[ST_CONFUSED] = p_ptr->confused;
+    state[ST_AFRAID] = p_ptr->afraid;
+    state[ST_POISONED] = p_ptr->poisoned;
+    state[ST_CUT] = p_ptr->cut;
+    state[ST_STUN] = p_ptr->stun;
+    state[ST_ENTRANCED] = p_ptr->entranced;
+    state[ST_SPEED] = p_ptr->pspeed;
+    state[ST_LIGHT_TURNS] = (light && light->tval == TV_LIGHT && light->timeout > 0) ? light->timeout : -1;
+    state[ST_ON_THE_RUN] = p_ptr->on_the_run;
+    state[ST_NEW_EXP] = p_ptr->new_exp;
+    state[ST_BOW] = (inventory && inventory[INVEN_BOW].k_idx) ? 1 : 0;
+    state[ST_QUIVER1] = (inventory && inventory[INVEN_QUIVER1].k_idx) ? inventory[INVEN_QUIVER1].number : 0;
+    state[ST_QUIVER2] = (inventory && inventory[INVEN_QUIVER2].k_idx) ? inventory[INVEN_QUIVER2].number : 0;
+
+    state[ST_UNDER_FEATURE] = 0;
+    state[ST_UNDER_OBJECT] = 0;
+    state[ST_MONSTERS_IN_VIEW] = 0;
+    state[ST_MONSTERS_ADJACENT] = 0;
+    state[ST_DOORS_ADJACENT] = 0;
+    state[ST_ABILITY_COST] = -1;
+    if (!on_map)
+        return;
+
+    state[ST_ABILITY_COST] = cheapest_ability();
+    if (cave_down_stairs_bold(py, px))
+        state[ST_UNDER_FEATURE] = 1;
+    else if (cave_up_stairs_bold(py, px))
+        state[ST_UNDER_FEATURE] = 2;
+    else if (cave_forge_bold(py, px))
+        state[ST_UNDER_FEATURE] = 3;
+    if (cave_o_idx[py][px] > 0)
+    {
+        object_type *o_ptr = &o_list[cave_o_idx[py][px]];
+        /* As do_cmd_destroy tells the crown apart. */
+        state[ST_UNDER_OBJECT]
+            = (o_ptr->name1 >= ART_MORGOTH_1 && o_ptr->name1 <= ART_MORGOTH_3) ? 2 : 1;
+    }
+    for (int i = 1; i < mon_max; i++)
+    {
+        monster_type *m_ptr = &mon_list[i];
+        if (!m_ptr->r_idx || !m_ptr->ml || !in_bounds(m_ptr->fy, m_ptr->fx))
+            continue;
+        /* As the monster list ('[') counts monsters in view. */
+        if (player_has_los_bold(m_ptr->fy, m_ptr->fx))
+            state[ST_MONSTERS_IN_VIEW]++;
+        if (ABS(m_ptr->fy - py) <= 1 && ABS(m_ptr->fx - px) <= 1)
+            state[ST_MONSTERS_ADJACENT]++;
+    }
+    for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int y = py + dy, x = px + dx;
+            if ((dy || dx) && in_bounds(y, x) && (cave_info[y][x] & CAVE_MARK)
+                && cave_known_closed_door_bold(y, x))
+                state[ST_DOORS_ADJACENT]++;
+        }
+}
+
 static void present(void)
 {
     /* character_dungeon stays set at the title menu after a game ends. */
@@ -185,6 +334,7 @@ static void present(void)
     state[ST_MAP_Y] = p_ptr->wy;
     state[ST_MSG_COUNT] = message_num();
     state[ST_WAITING] = waiting ? 1 : 0;
+    read_context();
     if (character_generated)
         send_messages();
     ra_present(screen, cols, rows, cursor_x, cursor_y, cursor_visible ? 1 : 0, state, ST_FIELDS);

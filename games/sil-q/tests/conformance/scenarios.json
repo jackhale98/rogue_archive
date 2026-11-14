@@ -35,6 +35,12 @@
       "name": "save-and-continue",
       "keys": ["b{CR}{CR}{CR}{CR}{CR}{CR}{CR}{CR}66", "{^X}{SPACE}{SPACE}", "cnameless{CR}", "44n4488"],
       "expect": ["Saving game... done.", "Names of the Fallen"]
+    },
+    {
+      "$comment": "Keys as the touch controls send them: a command after Sil's keymap bypass (\\), a look at a map cell (l, p, then one step per cell), a song from the song prompt.",
+      "name": "touch-commands",
+      "keys": ["a{SPACE}{SPACE}{SPACE}", "2", "\\@{ESC}", "lp996{ESC}", "sf", "{ESC}l{ESC}", "\\s{ESC}"],
+      "expect": ["increase skills", "You see a Note", "Staunching"]
     }
   ]
 }

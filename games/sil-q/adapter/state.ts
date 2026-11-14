@@ -5,7 +5,7 @@
  * the prompts Sil prints on the top line).
  */
 import { findText, rowText, type Grid, type Rect } from '@rogue-archive/term-view';
-import type { SilContext } from './input.ts';
+import { SONG_NAMES, type SilContext } from './input.ts';
 
 /** Screen layout (defines.h): message line, sidebar, map, status line. */
 export const ROW_MAP = 1;
@@ -25,7 +25,47 @@ export interface SilState {
   panelY: number;
   messageCount: number;
   waiting: boolean;
+  /** The keyset Sil applies to commands: 0 original, 1 original with hjkl, 2 Angband-like, 3 Angband-like with hjkl. */
+  keyset: number;
+  stealthMode: boolean;
+  /** Current song and minor theme (SNG_* index; SONG_NONE if none). */
+  song1: number;
+  song2: number;
+  food: number;
+  blind: number;
+  confused: number;
+  afraid: number;
+  poisoned: number;
+  cut: number;
+  stun: number;
+  entranced: number;
+  /** 2 is normal speed. */
+  speed: number;
+  /** Turns of light left, or -1 if the light does not burn out (or there is none). */
+  lightTurns: number;
+  underFeature: 'none' | 'down' | 'up' | 'forge';
+  underObject: 'none' | 'object' | 'crown';
+  onTheRun: boolean;
+  newExp: number;
+  /** Price of the cheapest ability whose prerequisites are met, or -1. */
+  abilityCost: number;
+  monstersInView: number;
+  monstersAdjacent: number;
+  bow: boolean;
+  quiver1: number;
+  quiver2: number;
+  doorsAdjacent: number;
 }
+
+/** SNG_NOTHING: no song. */
+export const SONG_NONE = 100;
+
+export function songName(song: number): string | null {
+  return SONG_NAMES[song] ?? null;
+}
+
+const UNDER_FEATURE = ['none', 'down', 'up', 'forge'] as const;
+const UNDER_OBJECT = ['none', 'object', 'crown'] as const;
 
 /** Mirrors the ST_* order in port/main-web.c. */
 export function parseState(raw: Int32Array): SilState {
@@ -42,7 +82,104 @@ export function parseState(raw: Int32Array): SilState {
     panelY: raw[9] ?? 0,
     messageCount: raw[10] ?? 0,
     waiting: raw[11] === 1,
+    keyset: raw[12] ?? 0,
+    stealthMode: (raw[13] ?? 0) !== 0,
+    song1: raw[14] ?? SONG_NONE,
+    song2: raw[15] ?? SONG_NONE,
+    food: raw[16] ?? 0,
+    blind: raw[17] ?? 0,
+    confused: raw[18] ?? 0,
+    afraid: raw[19] ?? 0,
+    poisoned: raw[20] ?? 0,
+    cut: raw[21] ?? 0,
+    stun: raw[22] ?? 0,
+    entranced: raw[23] ?? 0,
+    speed: raw[24] ?? 2,
+    lightTurns: raw[25] ?? -1,
+    underFeature: UNDER_FEATURE[raw[26] ?? 0] ?? 'none',
+    underObject: UNDER_OBJECT[raw[27] ?? 0] ?? 'none',
+    onTheRun: (raw[28] ?? 0) !== 0,
+    newExp: raw[29] ?? 0,
+    abilityCost: raw[30] ?? -1,
+    monstersInView: raw[31] ?? 0,
+    monstersAdjacent: raw[32] ?? 0,
+    bow: (raw[33] ?? 0) !== 0,
+    quiver1: raw[34] ?? 0,
+    quiver2: raw[35] ?? 0,
+    doorsAdjacent: raw[36] ?? 0,
   };
+}
+
+/** Food thresholds (defines.h PY_FOOD_*). */
+const FOOD_STARVE = 1;
+const FOOD_WEAK = 1000;
+const FOOD_ALERT = 2000;
+const FOOD_FULL = 5000;
+
+export type StatusTone = 'good' | 'info' | 'warn' | 'bad';
+export interface StatusTag {
+  text: string;
+  tone: StatusTone;
+}
+
+/**
+ * What Sil's sidebar and status line show about the player's condition, for
+ * the phone status band: stealth mode, songs, hunger, timed conditions, speed,
+ * a fading light. Wording and thresholds follow xtra1.c (prt_hunger, prt_cut...).
+ */
+export function statusTags(state: SilState): StatusTag[] {
+  const tags: StatusTag[] = [];
+  if (state.stealthMode) tags.push({ text: 'Stealth', tone: 'info' });
+  const song1 = songName(state.song1);
+  const song2 = songName(state.song2);
+  if (song1) tags.push({ text: `♪ ${song1}${song2 ? ` + ${song2}` : ''}`, tone: 'info' });
+  if (state.food < FOOD_STARVE) tags.push({ text: 'Starving', tone: 'bad' });
+  else if (state.food < FOOD_WEAK) tags.push({ text: 'Weak', tone: 'bad' });
+  else if (state.food < FOOD_ALERT) tags.push({ text: 'Hungry', tone: 'warn' });
+  else if (state.food >= FOOD_FULL) tags.push({ text: 'Full', tone: 'good' });
+  if (state.entranced) tags.push({ text: 'Entranced', tone: 'bad' });
+  if (state.blind) tags.push({ text: 'Blind', tone: 'warn' });
+  if (state.confused) tags.push({ text: 'Confused', tone: 'warn' });
+  if (state.afraid) tags.push({ text: 'Afraid', tone: 'warn' });
+  if (state.poisoned) tags.push({ text: `Poisoned ${state.poisoned}`, tone: 'warn' });
+  if (state.cut > 100) tags.push({ text: 'Mortal wound', tone: 'bad' });
+  else if (state.cut > 0) tags.push({ text: `Bleeding ${state.cut}`, tone: state.cut > 20 ? 'bad' : 'warn' });
+  if (state.stun > 100) tags.push({ text: 'Knocked out', tone: 'bad' });
+  else if (state.stun > 50) tags.push({ text: 'Heavy stun', tone: 'bad' });
+  else if (state.stun > 0) tags.push({ text: 'Stun', tone: 'warn' });
+  if (state.speed < 2) tags.push({ text: 'Slow', tone: 'warn' });
+  else if (state.speed > 2) tags.push({ text: 'Fast', tone: 'good' });
+  if (state.lightTurns >= 0 && state.lightTurns <= 100)
+    tags.push({ text: `Light ${state.lightTurns}`, tone: state.lightTurns <= 20 ? 'bad' : 'warn' });
+  return tags;
+}
+
+/** The song prompt: "(Songs: s,a,f,x, * to see) Sing which song: ". */
+export interface SongPrompt {
+  /** Song letters that can be chosen ('a' + SNG_* index). */
+  songs: string[];
+  /** 'x' exchanges the song and the minor theme (woven themes). */
+  exchange: boolean;
+}
+
+export function songPrompt(top: string): SongPrompt | null {
+  const match = /^\(Songs: ([^)]*)\) Sing which song:/.exec(top.trimStart());
+  if (!match) return null;
+  const options = match[1]!.split(',').map((option) => option.trim());
+  return {
+    songs: options.filter((option) => /^[a-l]$/.test(option)),
+    exchange: options.includes('x'),
+  };
+}
+
+/**
+ * An aim prompt (xtra2.c get_aim_dir): "Direction ('f' for closest, '*' to choose a target, ...)?"
+ * or, with a target set, "('f' for target, '*' to re-target, ...)". Plain direction
+ * prompts (get_rep_dir: open, close, bash, tunnel, disarm) take no target.
+ */
+export function aimPrompt(top: string): 'closest' | 'target' | null {
+  const match = /^\s*Direction \('f' for (closest|target)/.exec(top);
+  return (match?.[1] as 'closest' | 'target' | undefined) ?? null;
 }
 
 /** The map area of the screen. */
@@ -132,10 +269,13 @@ const TARGETING = /\[[^\]]*(<dir>|\(t\)arget|\(m\)anual|ESC)[^\]]*\]\s*$/;
 export function detectContext(grid: Grid, state: SilState): SilContext {
   if (!state.waiting) return 'busy';
   const top = rowText(grid, 0);
+  // Look/target first: its prompt can carry a "-more-" of its own (Space shows more).
+  if (TARGETING.test(top.trimEnd())) return 'targeting';
   if (/-more-/.test(top)) return 'more';
   if (/\[y\/n\]/i.test(top)) return 'yesno';
+  if (aimPrompt(top)) return 'aim';
   if (/^\s*Direction\b/.test(top)) return 'direction';
-  if (TARGETING.test(top.trimEnd())) return 'targeting';
+  if (songPrompt(top)) return 'song';
   if (itemPrompt(top)) return 'item';
   if (!state.inDungeon) return isLoadPrompt(grid) ? 'load' : 'title';
   // A text field (inscriptions, notes, quantities): the cursor waits on the prompt line.

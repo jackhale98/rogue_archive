@@ -36,7 +36,7 @@ static int frame_count = 0;
 
 static byte last_cells[160 * 64 * 2];
 static int last_cols = 0, last_rows = 0, last_cx = 0, last_cy = 0, last_cursor = 0;
-static int last_state[32];
+static int last_state[64];
 static int last_state_len = 0;
 
 time_t time(time_t *t)
@@ -94,7 +94,7 @@ void ra_present(const byte *cells, int cols, int rows, int cx, int cy, int curso
     last_cx = cx;
     last_cy = cy;
     last_cursor = cursor;
-    last_state_len = stateLen < 32 ? stateLen : 32;
+    last_state_len = stateLen < 64 ? stateLen : 64;
     memcpy(last_state, state, sizeof(int) * last_state_len);
 }
 

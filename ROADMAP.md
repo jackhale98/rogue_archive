@@ -89,8 +89,9 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Phone layout: status band, map around the player with pinch zoom, lists as tappable sheets
 - [x] Context docks: title and creation choices as buttons, saved characters as Continue buttons, item prompts (letters, then named items), -more-, yes/no, direction, look/target, text, menus
 - [x] Message log (Sil's repeated messages merged, not duplicated)
+- [x] Touch controls from the controls audit: docks per situation (exploring, monsters in view, adjacent, low health) and context leads (stairs, forge, object or Iron Crown underfoot, fleeing with a Silmaril, an affordable ability) from new read-only snapshot fields; song prompt as song buttons; a target offered only at aim prompts; long-press looks at the pressed cell; status band shows stealth, song, hunger and conditions; buttons keep their meaning under the hjkl/Angband keysets (Sil's keymap bypass)
 - [x] Engine conformance: key coverage against `process_command` and the keymaps; native vs WebAssembly replay of seeded games (screens, messages and savefiles identical)
-- [x] e2e: desktop (new character, item prompt, log, save, reload, continue) and phone (title buttons, tap creation, item dock, palette, continue)
+- [x] e2e: desktop (new character, item prompt, log, save, reload, continue) and phone (title buttons, tap creation, item dock, palette, continue; tutorial: leads, song buttons, status band, direction dock, long-press look)
 - [x] CI build, deploy, weekly canary
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass

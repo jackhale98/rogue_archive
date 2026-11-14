@@ -36,9 +36,13 @@ import {
   SIL_TOUCH_LAYOUT,
   controlsFor,
   CHOOSE,
+  KEYMAP_BYPASS,
   LOAD,
+  SONG_NAMES,
   findCommand,
+  isMapCommand,
   keyToSil,
+  stepsTo,
   type SilContext,
 } from './input.ts';
 import type { FromWorker, ToWorker } from './protocol.ts';
@@ -50,7 +54,10 @@ import {
   parseState,
   playerCell,
   screenChoices,
+  songPrompt,
+  statusTags,
   type SilState,
+  type StatusTone,
 } from './state.ts';
 
 export const GAME_ID = 'sil-q';
@@ -68,6 +75,8 @@ export interface SilDebugState {
   rowText(y: number): string;
   views(): string[];
   cellToClient(x: number, y: number): { x: number; y: number } | null;
+  /** The game's cursor (look/target mode places it on the cell described), if shown. */
+  cursor(): { x: number; y: number } | null;
 }
 
 function findFile(files: RuntimeFile[], path: string): RuntimeFile {
@@ -130,6 +139,10 @@ class SilAdapter implements GameAdapter {
         this.#grid ? Array.from({ length: this.#grid.rows }, (_, y) => row(y)).join('\n') : '',
       views: () => this.#renderer?.views.map((view) => view.name) ?? [],
       cellToClient: (x, y) => this.#renderer?.cellToClient(x, y) ?? null,
+      cursor: () => {
+        const cursor = this.#grid?.cursor;
+        return cursor?.visible ? { x: cursor.x, y: cursor.y } : null;
+      },
     };
   }
 
@@ -246,7 +259,16 @@ class SilAdapter implements GameAdapter {
       this.#publishContext(true);
       return;
     }
-    this.#send(command.keys);
+    this.#send(isMapCommand(command) ? this.#commandKeys(command.keys) : command.keys);
+  }
+
+  /**
+   * A command typed at Sil's command prompt. With another keyset than the
+   * original (the hjkl_movement or angband_keyset option), the key goes after
+   * Sil's keymap bypass, so it means the underlying command the button names.
+   */
+  #commandKeys(keys: number[]): number[] {
+    return this.#context === 'map' && (this.#state?.keyset ?? 0) !== 0 ? [KEYMAP_BYPASS, ...keys] : keys;
   }
 
   #send(keys: number[]): void {
@@ -444,7 +466,16 @@ class SilAdapter implements GameAdapter {
       grid && (context === 'title' || context === 'menu' || context === 'item')
         ? screenChoices(grid, overlay ?? undefined)
         : [];
-    const item = grid && context === 'item' ? itemPrompt(rowText(grid, 0)) : null;
+    const top = grid ? rowText(grid, 0) : '';
+    const item = grid && context === 'item' ? itemPrompt(top) : null;
+    // The song prompt names only letters: the songs' names are Sil's.
+    const songs = context === 'song' ? songPrompt(top) : null;
+    if (songs)
+      choices = [
+        ...songs.songs.map((key) => ({ key, label: SONG_NAMES[key.charCodeAt(0) - 97] ?? key })),
+        { key: 's', label: 'Stop singing' },
+        ...(songs.exchange ? [{ key: 'x', label: 'Exchange themes' }] : []),
+      ];
     // Before the list is shown, an item prompt only names its letters.
     if (item) {
       const named = new Map(choices.map((choice) => [choice.key, choice.label]));
@@ -452,7 +483,7 @@ class SilAdapter implements GameAdapter {
     }
     const layout = controlsFor(
       context,
-      { hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run },
+      { ...state, hp: state?.hp ?? 0, maxHp: state?.maxHp ?? 0, run: this.#run, prompt: top },
       choices,
       item,
       this.#saves,
@@ -553,7 +584,9 @@ class SilAdapter implements GameAdapter {
     const message = this.#grid ? rowText(this.#grid, 0).trim() : '';
     const hpFraction = state.maxHp > 0 ? Math.max(0, Math.min(1, state.hp / state.maxHp)) : 1;
     const status = `${state.hp}/${state.maxHp} health · ${state.voice}/${state.maxVoice} voice · ${state.depth * 50} ft`;
-    const signature = `${status}|${message}`;
+    // Stealth mode, songs, hunger and conditions (Sil's sidebar and status line, hidden on phones).
+    const tags = statusTags(state);
+    const signature = `${status}|${message}|${tags.map((tag) => `${tag.tone}:${tag.text}`).join(',')}`;
     if (this.#band.dataset.signature !== signature) {
       this.#band.dataset.signature = signature;
       this.#band.replaceChildren();
@@ -569,8 +602,22 @@ class SilAdapter implements GameAdapter {
       line.style.cssText =
         'font:12px/16px ui-monospace,Menlo,Consolas,monospace;color:#babdb6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:16px';
       line.textContent = message;
-      this.#band.append(top, line);
-      this.#band.setAttribute('aria-label', `${status}. ${message}. Open the message log`);
+      this.#band.append(top);
+      if (tags.length) {
+        const row = document.createElement('div');
+        row.className = 'sil-band__status';
+        row.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;font-weight:600';
+        for (const tag of tags) {
+          const chip = document.createElement('span');
+          chip.textContent = tag.text;
+          chip.style.color = TONE_COLORS[tag.tone];
+          row.append(chip);
+        }
+        this.#band.append(row);
+      }
+      this.#band.append(line);
+      const conditions = tags.length ? ` ${tags.map((tag) => tag.text).join(', ')}.` : '';
+      this.#band.setAttribute('aria-label', `${status}.${conditions} ${message}. Open the message log`);
     }
     return this.#band.getBoundingClientRect().height;
   }
@@ -593,9 +640,21 @@ class SilAdapter implements GameAdapter {
     if (letter && (hit.view === 'sheet' || hit.view === 'screen')) this.#send([letter.charCodeAt(0)]);
   }
 
+  /**
+   * Long-press on the map looks at that cell: Sil's look command, 'p' (back to
+   * the player, in free-cursor mode), then one step per cell to the one pressed.
+   * The description shows in the targeting prompt, as when looking by keyboard.
+   */
   #longPress(clientX: number, clientY: number): void {
     const hit = this.#renderer?.hitTest(clientX, clientY);
-    if (hit?.kind === 'cell' && hit.view === 'map') this.#send(['l'.charCodeAt(0)]);
+    const player = this.#state ? playerCell(this.#state) : null;
+    if (hit?.kind !== 'cell' || hit.view !== 'map' || !player || this.#context !== 'map') return;
+    const look = findCommand('look')!;
+    this.#send([
+      ...this.#commandKeys(look.keys),
+      'p'.charCodeAt(0),
+      ...stepsTo(hit.x - player.x, hit.y - player.y),
+    ]);
   }
 
   #panBy(dx: number, dy: number): void {
@@ -611,6 +670,13 @@ class SilAdapter implements GameAdapter {
     this.#layout();
   }
 }
+
+const TONE_COLORS: Record<StatusTone, string> = {
+  good: '#8ae234',
+  info: '#8cc8ff',
+  warn: '#fcaf3e',
+  bad: '#ff6b5e',
+};
 
 /** Where to look for a row's "x) " label: from the start of the text block the tap is in. */
 function COL_SAFE(x: number, line: string): number {

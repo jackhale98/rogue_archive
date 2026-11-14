@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { Grid } from '@rogue-archive/term-view';
 import type { TouchAction } from '@rogue-archive/game-api';
-import { CHOOSE, controlsFor, keyToSil, LOAD, SIL_COMMANDS } from '../adapter/input.ts';
 import {
+  CHOOSE,
+  controlsFor,
+  isMapCommand,
+  keyToSil,
+  LOAD,
+  mapLead,
+  SIL_COMMANDS,
+  stepsTo,
+  type DockState,
+} from '../adapter/input.ts';
+import {
+  aimPrompt,
   detectContext,
   isLoadPrompt,
   itemPrompt,
@@ -10,6 +21,8 @@ import {
   parseState,
   playerCell,
   screenChoices,
+  songPrompt,
+  statusTags,
 } from '../adapter/state.ts';
 
 const actions = (layout: { actions: (string | TouchAction)[] }): TouchAction[] =>
@@ -28,7 +41,13 @@ function grid(lines: string[], cursor?: Grid['cursor']): Grid {
 }
 
 const state = (fields: Partial<Record<number, number>>) => {
-  const raw = new Int32Array(12);
+  // Defaults as the port sends them for an ordinary character: no song, fed, light that does not burn out.
+  const raw = new Int32Array(37);
+  raw[14] = raw[15] = 100;
+  raw[16] = 3000;
+  raw[24] = 2;
+  raw[25] = -1;
+  raw[30] = -1;
   for (const [i, v] of Object.entries(fields)) raw[Number(i)] = v!;
   return parseState(raw);
 };
@@ -60,6 +79,72 @@ describe('Sil-Q state', () => {
     expect(playerCell(state({}))).toBeNull();
   });
 
+  it('parses the read-only context fields', () => {
+    const fields = state({
+      12: 2,
+      13: 1,
+      14: 5,
+      26: 1,
+      27: 2,
+      28: 1,
+      29: 2000,
+      30: 500,
+      31: 3,
+      32: 1,
+      33: 1,
+      34: 24,
+    });
+    expect(fields).toMatchObject({
+      keyset: 2,
+      stealthMode: true,
+      song1: 5,
+      song2: 100,
+      underFeature: 'down',
+      underObject: 'crown',
+      onTheRun: true,
+      newExp: 2000,
+      abilityCost: 500,
+      monstersInView: 3,
+      monstersAdjacent: 1,
+      bow: true,
+      quiver1: 24,
+    });
+  });
+
+  it('shows the sidebar status in tags', () => {
+    expect(statusTags(inDungeon)).toEqual([]);
+    const texts = (fields: Partial<Record<number, number>>) =>
+      statusTags(state(fields)).map((tag) => tag.text);
+    expect(texts({ 13: 1, 14: 0, 15: 7 })).toEqual(['Stealth', '♪ Elbereth + the Trees']);
+    expect(texts({ 16: 1500 })).toEqual(['Hungry']);
+    expect(texts({ 16: 500 })).toEqual(['Weak']);
+    expect(texts({ 16: 0 })).toEqual(['Starving']);
+    expect(texts({ 16: 6000 })).toEqual(['Full']);
+    expect(texts({ 17: 3, 18: 2, 19: 4, 20: 12, 21: 30, 22: 60, 23: 1 })).toEqual([
+      'Entranced',
+      'Blind',
+      'Confused',
+      'Afraid',
+      'Poisoned 12',
+      'Bleeding 30',
+      'Heavy stun',
+    ]);
+    expect(texts({ 24: 1, 25: 80 })).toEqual(['Slow', 'Light 80']);
+    expect(texts({ 25: 1500 })).toEqual([]);
+  });
+
+  it('reads song and aim prompts', () => {
+    expect(songPrompt('(Songs: s,f,h, * to see) Sing which song: ')).toEqual({
+      songs: ['f', 'h'],
+      exchange: false,
+    });
+    expect(songPrompt('(Songs: s,a,c,x) Sing which song: ')).toEqual({ songs: ['a', 'c'], exchange: true });
+    expect(songPrompt('Drop which item?')).toBeNull();
+    expect(aimPrompt("Direction ('f' for closest, '*' to choose a target, ESC to cancel)? ")).toBe('closest');
+    expect(aimPrompt("Direction ('f' for target, '*' to re-target, ESC to cancel)? ")).toBe('target');
+    expect(aimPrompt('Direction (Escape to cancel)? ')).toBeNull();
+  });
+
   it('reads lettered choices', () => {
     expect(screenChoices(TITLE)).toEqual([
       { key: 'a', label: 'Tutorial' },
@@ -88,8 +173,12 @@ describe('Sil-Q state', () => {
       detectContext(grid([text, ...MAP.slice(1)], cursor), inDungeon);
     expect(top('The Orc skirmisher hits you. -more-')).toBe('more');
     expect(top('Are you sure you want to step on the trap? [y/n]')).toBe('yesno');
-    expect(top("Direction ('f' for closest, '*' to choose a target, ESC to cancel)? ")).toBe('direction');
+    expect(top("Direction ('f' for closest, '*' to choose a target, ESC to cancel)? ")).toBe('aim');
+    expect(top('Direction (Escape to cancel)? ')).toBe('direction');
+    expect(top('(Songs: s,f,h, * to see) Sing which song: ')).toBe('song');
     expect(top('You are on an open floor  [(t)arget, (m)anual, <dir>]')).toBe('targeting');
+    // A look prompt with more to show is still look mode (Space shows the rest).
+    expect(top('You see an Orc archer -more- [(r)ecall, (t)arget, (m)anual, <dir>]')).toBe('targeting');
     expect(top('(Inven: a-a, * to see, ESC) Eat which item?')).toBe('item');
     expect(top('Inscription: ', { x: 13, y: 0, visible: true })).toBe('text');
     const list = grid([
@@ -128,6 +217,8 @@ describe('Sil-Q keys and docks', () => {
       'more',
       'yesno',
       'direction',
+      'aim',
+      'song',
       'targeting',
       'item',
       'menu',
@@ -204,5 +295,109 @@ describe('Sil-Q keys and docks', () => {
     });
     expect(isLoadPrompt(prompt)).toBe(true);
     expect(detectContext(prompt, state({ 11: 1 }))).toBe('load');
+  });
+});
+
+describe('Sil-Q situational docks', () => {
+  const base: DockState = { hp: 28, maxHp: 28, run: false };
+  const labels = (layout: { actions: (string | TouchAction)[] }) =>
+    actions(layout).map((action) => action.label ?? action.command);
+  const commands = (layout: { actions: (string | TouchAction)[] }) =>
+    actions(layout).map((action) => action.command);
+
+  it('offers a target only at aim prompts', () => {
+    expect(commands(controlsFor('direction', base))).toEqual(['cancel']);
+    const aim = controlsFor('aim', {
+      ...base,
+      prompt: "Direction ('f' for closest, '*' to choose a target)? ",
+    });
+    expect(labels(aim)).toEqual(['Nearest', 'Choose target', 'Cancel']);
+    expect(commands(aim)).toEqual(['aim-nearest', 'choose-target', 'cancel']);
+    const targeted = controlsFor('aim', {
+      ...base,
+      prompt: "Direction ('f' for target, '*' to re-target)? ",
+    });
+    expect(labels(targeted)).toEqual(['Target', 'Re-target', 'Cancel']);
+  });
+
+  it('offers what the look prompt takes', () => {
+    const monster = controlsFor('targeting', {
+      ...base,
+      prompt: 'You see an Orc archer (unhurt) [(r)ecall, (t)arget, (m)anual, <dir>]',
+    });
+    expect(commands(monster)).toEqual(['select-target', 'next-target', 'recall', 'cancel']);
+    const manual = controlsFor('targeting', { ...base, prompt: 'You see a wall  [(a)uto, <dir>]' });
+    expect(commands(manual)).toEqual(['cancel']);
+  });
+
+  it('names songs at the song prompt and marks the one being sung', () => {
+    const layout = controlsFor('song', { ...base, song1: 7 }, [
+      { key: 'f', label: 'Staunching' },
+      { key: 'h', label: 'the Trees' },
+      { key: 's', label: 'Stop singing' },
+    ]);
+    expect(actions(layout)).toEqual([
+      { command: `${CHOOSE}f`, label: 'Staunching' },
+      { command: `${CHOOSE}h`, label: 'the Trees', active: true },
+      { command: `${CHOOSE}s`, label: 'Stop singing' },
+      { command: 'cancel', label: 'Cancel' },
+    ]);
+  });
+
+  it('leads with what is underfoot', () => {
+    expect(mapLead(base)).toBeNull();
+    expect(mapLead({ ...base, underFeature: 'down' })?.command).toBe('downstairs');
+    expect(mapLead({ ...base, underFeature: 'up' })?.command).toBe('upstairs');
+    expect(mapLead({ ...base, underFeature: 'forge' })).toMatchObject({
+      command: 'smithing',
+      label: 'Smith',
+    });
+    expect(mapLead({ ...base, underObject: 'object' })?.command).toBe('pickup');
+    expect(mapLead({ ...base, underObject: 'crown' })?.command).toBe('prise');
+    // Escaping with a Silmaril: Up, even on a down staircase.
+    expect(mapLead({ ...base, onTheRun: true, underFeature: 'down' })?.command).toBe('upstairs');
+    expect(mapLead({ ...base, newExp: 400, abilityCost: 500 })).toBeNull();
+    expect(mapLead({ ...base, newExp: 600, abilityCost: 500 })?.command).toBe('abilities');
+  });
+
+  it('changes the map dock with the situation', () => {
+    const exploring = controlsFor('map', { ...base, underObject: 'object', stealthMode: true });
+    expect(commands(exploring)).toEqual(['pickup', 'stealth', 'rest', 'inventory', 'look', 'shell:palette']);
+    expect(actions(exploring)[1]).toMatchObject({ active: true });
+    expect(commands(controlsFor('map', { ...base, doorsAdjacent: 1 }))[1]).toBe('alternate');
+    const inView = controlsFor('map', { ...base, monstersInView: 2, song1: 0 });
+    expect(labels(inView).slice(0, 3)).toEqual(['throw', 'Sing: Elbereth', 'stealth']);
+    const archer = controlsFor('map', { ...base, monstersInView: 1, bow: true, quiver1: 20 });
+    expect(commands(archer)[0]).toBe('fire');
+    const melee = controlsFor('map', { ...base, monstersInView: 1, monstersAdjacent: 1 });
+    expect(commands(melee).slice(0, 4)).toEqual(['hold', 'sing', 'throw', 'exchange']);
+    const hurt = controlsFor('map', { ...base, hp: 5, monstersInView: 1, monstersAdjacent: 1 });
+    expect(commands(hurt).slice(0, 2)).toEqual(['quaff', 'eat']);
+    const escape = controlsFor('map', { ...base, hp: 5, monstersInView: 1, underFeature: 'up' });
+    expect(commands(escape).slice(0, 2)).toEqual(['upstairs', 'quaff']);
+    // Wounded with no one about: rest.
+    expect(actions(controlsFor('map', { ...base, hp: 5 }))[1]).toMatchObject({
+      command: 'rest',
+      emphasis: 'primary',
+    });
+    // A latched Run is shown in every situation.
+    expect(commands(controlsFor('map', { ...base, run: true, monstersInView: 1 }))).toContain('run');
+  });
+
+  it('walks the look cursor to a cell', () => {
+    const keys = (dx: number, dy: number) => String.fromCharCode(...stepsTo(dx, dy));
+    expect(keys(3, -2)).toBe('996');
+    expect(keys(-1, 4)).toBe('1222');
+    expect(keys(-2, 0)).toBe('44');
+    expect(keys(0, 0)).toBe('');
+  });
+
+  it('marks the commands a keyset remaps', () => {
+    const map = SIL_COMMANDS.filter(isMapCommand).map((command) => command.id);
+    expect(map).toContain('rest');
+    expect(map).toContain('look');
+    expect(map).not.toContain('move-n');
+    expect(map).not.toContain('yes');
+    expect(map).not.toContain('run');
   });
 });

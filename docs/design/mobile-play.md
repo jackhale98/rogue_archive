@@ -128,20 +128,28 @@ The palette also has the commands no dock leads with: cycle the quiver `(` `)`, 
 
 Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `packages/term-view`).
 
-- **Layout on phones:** a status band (health, voice, depth, the newest message) replaces Sil's sidebar; tapping it opens the message log. The map is drawn at a readable cell size following the player; pinch to zoom, drag to look around (it recentres when the player moves). The title screen and character creation are fitted whole.
+- **Layout on phones:** a status band replaces Sil's sidebar: health, voice and depth; a row with what Sil's sidebar and status line show about the character (stealth mode, the song and minor theme, hunger, Entranced, Blind, Confused, Afraid, Poisoned, Bleeding, Stun, Slow/Fast, a light about to go out), with Sil's own wording and thresholds; and the newest message. Tapping it opens the message log. The map is drawn at a readable cell size following the player; pinch to zoom, drag to look around (it recentres when the player moves). The title screen and character creation are fitted whole.
 - **Text over the map** (inventory, item lists, menus, the character sheet) opens as a sheet over the dimmed map; tap a line to choose it, tap outside to close (Escape).
-- **Long-press on the map** looks around (`l`).
+- **Long-press on the map** looks at that cell: Sil's look command, `p` (back to the player, free cursor), then one step per cell, so the prompt line describes what is there (Target, Recall, Cancel in the dock).
+- **Situation** comes from read-only fields the port adds to its snapshot (`port/main-web.c`): what is underfoot (stairs, a forge, an object, the Iron Crown), `on_the_run`, unspent experience against the cheapest ability whose prerequisites are met (priced as the abilities screen does), visible monsters in line of sight and adjacent (from the monster list, as `[` counts them), a bow and arrows in the first quiver, known closed doors next to the player.
+- **Keysets:** buttons send Sil's original keys. If the player turns on `hjkl_movement` or `angband_keyset` (the snapshot carries the keyset in use), map commands are sent after Sil's keymap bypass `\`, so each button still does what it says; directions are digits, which every keyset maps to movement.
 
 | Context | Dock |
 |---|---|
 | Title menu and character creation | The screen's lettered choices as buttons; on the title menu, **Continue *name*** for each saved character; OK, Back, Type; the pad for Sil's arrow keys (up/down move, left/right lower or raise stats and skills), Enter in its centre |
 | "Open saved character" name prompt | The saved characters by name; Type a name, OK, Back |
-| Map | Rest (fan: hold, run, stealth, stairs, pick up) · Fire (fan: second quiver, throw, throw at nearest, sing) · Pack (fan: equipment, wear, take off, eat, drink, use, drop, staffs, instruments, examine) · Doors (fan: close, bash, disarm, tunnel, exchange places, alternate action) · Look (fan: monsters and objects in view, map, character, abilities, smithing, knowledge, messages) · More (every command), plus the pad with Hold in the centre |
+| Map, exploring | The context lead (below) · Stealth (toggle, lit while on; fan: sing, run) · Rest (fan: hold, run, exchange places, open, close, bash, disarm, tunnel, alternate action, stairs, pick up), or **Door** (`/`) when a closed door is next to the player · Pack (fan: equipment, wear, take off, eat, drink, use, drop, staffs, instruments, examine, fire, throw) · Look (fan: monsters and objects in view, map, character, abilities, smithing, knowledge, messages) · More (every command); the pad with Hold in the centre. Rest leads when wounded and nothing else does |
+| Map, monsters in view | Lead · **Fire** with a bow and arrows in the first quiver (fan: second quiver, throw, throw at nearest), else **Throw** · **Sing** showing the current song · Stealth · Look · Pack · More |
+| Map, monster adjacent | Lead · Hold (fan: rest) · Sing · Throw · Exchange places (fan: doors) · Pack · More (attack by moving into the monster with the pad) |
+| Map, below half health with monsters in view | Stairs if standing on them · **Quaff** (fan: use) · Eat herb · Sing · Pack · Look · More |
+| Context lead | The Iron Crown underfoot → **Prise** (`k`); fleeing with a Silmaril (`on_the_run`) → **Up** `<`; stairs underfoot → **Down** / **Up**; an object underfoot → **Pick up**; a forge → **Smith** (`0`); enough unspent experience for an ability → **Abilities** (Tab) |
 | Item prompt ("Drop which item?") | The item letters; **Show items** (`*`) names them; Worn/Pack (`/`), Floor (`-`) when offered; Cancel |
+| Song prompt ("Sing which song") | The songs offered, by name (the one being sung lit); Stop singing (`s`); Exchange themes (`x`) when weaving themes; Cancel |
 | Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type; the pad (abilities and smithing screens use arrow keys) |
 | `-more-` · yes/no | Continue, Skip · Yes, No, Cancel |
-| Direction | The pad; Nearest (`t`, fan: choose a target `*`), Cancel |
-| Look / target | The pad; Target, Next, Cancel |
+| Aim ("'f' for closest") | The pad; **Nearest** (`f`; **Target** once one is set), **Choose target** (`*`; Re-target), Cancel |
+| Direction (open, close, bash, tunnel, disarm) | The pad and Cancel only: these prompts take no target |
+| Look / target | The pad; what the prompt offers: Target (`t`), Next (Space; **More** when the prompt says `-more-`), Recall (`r`) for a monster; Cancel |
 | Text field | Type, OK, Cancel |
 
 `games/sil-q/tests/conformance/key-coverage.ts` checks that each command sends the key Sil's `process_command` binds to that action.

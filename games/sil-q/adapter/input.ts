@@ -9,8 +9,12 @@
  *
  * Commands are named shortcuts for Sil's default (original keyset) bindings
  * (dungeon.c process_command; tests/conformance/key-coverage.ts checks them).
- * The touch dock leads with the most common action per context and fans out
- * related ones on a long press; "More" lists every command.
+ * If the player turns on another keyset (the hjkl_movement or angband_keyset
+ * option), the adapter sends map commands after Sil's own keymap bypass (`\`),
+ * so each button still does what it says.
+ * The touch dock leads with the most useful action for the situation (what is
+ * underfoot, monsters in view or adjacent, low health) and fans out related
+ * ones on a long press; "More" lists every command.
  */
 import {
   SHELL_COMMAND,
@@ -259,6 +263,15 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
     keys: k('k'),
     category: 'Items',
   },
+  {
+    // Destroy on the Iron Crown underfoot asks to prise out a Silmaril (cmd3.c do_cmd_destroy).
+    id: 'prise',
+    label: 'Prise a Silmaril from the Iron Crown',
+    shortLabel: 'Prise',
+    shortcut: 'k',
+    keys: k('k'),
+    category: 'Items',
+  },
 
   {
     id: 'fletchery',
@@ -436,6 +449,31 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
     keys: k('*'),
     category: 'Keys',
   },
+  {
+    // Aim prompts (get_aim_dir) take 'f' (or 't', '5', 'z') for the target or the closest monster.
+    id: 'aim-nearest',
+    label: 'Aim at the target or the closest monster',
+    shortLabel: 'Nearest',
+    shortcut: 'f',
+    keys: k('f'),
+    category: 'Keys',
+  },
+  {
+    id: 'choose-target',
+    label: 'Choose a target',
+    shortLabel: 'Choose target',
+    shortcut: '*',
+    keys: k('*'),
+    category: 'Keys',
+  },
+  {
+    id: 'recall',
+    label: 'Recall what you know of this monster',
+    shortLabel: 'Recall',
+    shortcut: 'r',
+    keys: k('r'),
+    category: 'Keys',
+  },
 ];
 
 const BY_ID = new Map(SIL_COMMANDS.map((command) => [command.id, command]));
@@ -464,8 +502,29 @@ export const PAD = {
 export const MENU_PAD = { ...PAD, center: 'confirm' } as const;
 
 export const PALETTE = SIL_COMMANDS.filter(
-  (command) => !command.id.startsWith('move-') && command.category !== 'Keys',
+  (command) => !command.id.startsWith('move-') && command.category !== 'Keys' && command.id !== 'prise',
 ).map((command) => command.id);
+
+/** Commands that are typed at Sil's command prompt (not answers to a prompt), which keysets remap. */
+export function isMapCommand(command: SilCommand): boolean {
+  return command.category !== 'Keys' && !command.id.startsWith('move-') && command.keys.length > 0;
+}
+
+/** Direction digits that move a cursor by (dx, dy) cells: diagonal steps first, then straight. */
+export function stepsTo(dx: number, dy: number): number[] {
+  const keys: number[] = [];
+  const diagonal = Math.min(Math.abs(dx), Math.abs(dy));
+  const digit = (sx: number, sy: number) => '789456123'.charCodeAt((sy + 1) * 3 + (sx + 1));
+  for (let i = 0; i < diagonal; i++) keys.push(digit(Math.sign(dx), Math.sign(dy)));
+  const restX = dx - diagonal * Math.sign(dx);
+  const restY = dy - diagonal * Math.sign(dy);
+  for (let i = 0; i < Math.abs(restX); i++) keys.push(digit(Math.sign(restX), 0));
+  for (let i = 0; i < Math.abs(restY); i++) keys.push(digit(0, Math.sign(restY)));
+  return keys;
+}
+
+/** Sil's keymap bypass (util.c request_command): the next key is the underlying command. */
+export const KEYMAP_BYPASS = '\\'.charCodeAt(0);
 
 export const SIL_TOUCH_LAYOUT: TouchControlLayout = {
   directionPad: PAD,
@@ -480,6 +539,8 @@ export type SilContext =
   | 'more'
   | 'yesno'
   | 'direction'
+  | 'aim'
+  | 'song'
   | 'targeting'
   | 'item'
   | 'menu'
@@ -494,10 +555,166 @@ export const CHOOSE = 'choose:';
 /** A saved character, as a dock button (its name is typed). */
 export const LOAD = 'load:';
 
+/**
+ * What the docks need to know: the snapshot's read-only fields (port/main-web.c)
+ * and the prompt line. Only hp, maxHp and run are required; the rest default to
+ * "nothing special" (no monsters, nothing underfoot).
+ */
+export interface DockState {
+  hp: number;
+  maxHp: number;
+  /** The Run modifier is latched (the next direction runs). */
+  run: boolean;
+  stealthMode?: boolean;
+  /** Current song (SNG_* index; 100 or absent for none). */
+  song1?: number;
+  underFeature?: 'none' | 'down' | 'up' | 'forge';
+  underObject?: 'none' | 'object' | 'crown';
+  onTheRun?: boolean;
+  newExp?: number;
+  abilityCost?: number;
+  monstersInView?: number;
+  monstersAdjacent?: number;
+  bow?: boolean;
+  quiver1?: number;
+  doorsAdjacent?: number;
+  /** The prompt line (aim, look/target and song prompts word their options there). */
+  prompt?: string;
+}
+
+/** Sil's song names by SNG_* index (lib/edit/ability.txt without "Song of "); the song prompt's letters are 'a' + index. */
+export const SONG_NAMES: readonly string[] = [
+  'Elbereth',
+  'Challenge',
+  'Delvings',
+  'Freedom',
+  'Silence',
+  'Staunching',
+  'Thresholds',
+  'the Trees',
+  'Slaying',
+  'Staying',
+  'Lorien',
+  'Mastery',
+];
+
+/** Below this share of health the danger dock leads with healing. */
+const LOW_HEALTH = 0.5;
+
+const PACK_ALTERNATES = [
+  'equipment',
+  'wear',
+  'remove',
+  'eat',
+  'quaff',
+  'use',
+  'drop',
+  'activate',
+  'play',
+  'examine',
+];
+const LOOK_ALTERNATES = [
+  'monsters',
+  'objects',
+  'map',
+  'character',
+  'abilities',
+  'smithing',
+  'knowledge',
+  'messages',
+];
+const DOOR_ALTERNATES = ['open', 'close', 'bash', 'disarm', 'tunnel', 'alternate'];
+
+/**
+ * The context lead on the map: what is underfoot, the flight from Angband,
+ * an ability the player can afford. Null when nothing stands out.
+ */
+export function mapLead(state: DockState): TouchAction | null {
+  const under = state.underFeature ?? 'none';
+  const primary = { emphasis: 'primary' as const };
+  if (state.underObject === 'crown') return a('prise', { ...primary, alternates: ['pickup'] });
+  if (state.onTheRun)
+    // Escaping with a Silmaril: up is the way out.
+    return a('upstairs', { ...(under === 'up' ? primary : {}), alternates: ['downstairs'] });
+  if (under === 'down') return a('downstairs', { ...primary, alternates: ['upstairs'] });
+  if (under === 'up') return a('upstairs', { ...primary, alternates: ['downstairs'] });
+  if (state.underObject === 'object') return a('pickup', primary);
+  if (under === 'forge') return a('smithing', { label: 'Smith', ...primary });
+  const cost = state.abilityCost ?? -1;
+  if (cost >= 0 && (state.newExp ?? 0) >= cost)
+    return a('abilities', { label: 'Abilities', alternates: ['character'] });
+  return null;
+}
+
+/** The map dock for the situation: exploring, monsters in view, adjacent, low health. */
+function mapControls(state: DockState): TouchControlLayout {
+  const lead = mapLead(state);
+  const leading = lead ? [lead] : [];
+  const inView = state.monstersInView ?? 0;
+  const adjacent = state.monstersAdjacent ?? 0;
+  const wounded = state.maxHp > 0 && state.hp < state.maxHp * LOW_HEALTH;
+  const song = SONG_NAMES[state.song1 ?? -1];
+  const sing = a('sing', { label: song ? `Sing: ${song}` : 'Sing', ...(song ? { active: true } : {}) });
+  const stealth = a('stealth', {
+    ...(state.stealthMode ? { active: true } : {}),
+    alternates: ['sing', 'run'],
+  });
+  const canFire = !!state.bow && (state.quiver1 ?? 0) > 0;
+  const throwing = a('throw', { alternates: ['throw-nearest', 'fire', 'fire-2'] });
+  const shoot = canFire ? a('fire', { alternates: ['fire-2', 'throw', 'throw-nearest'] }) : throwing;
+  const pack = a('inventory', { alternates: [...PACK_ALTERNATES, 'fire', 'throw'] });
+  const look = a('look', { alternates: LOOK_ALTERNATES });
+  const more = a(SHELL_COMMAND.palette, { label: 'More' });
+  const run = state.run ? a('run', { label: 'Run ⇧', active: true }) : null;
+  let actions: TouchAction[];
+  if (wounded && inView > 0) {
+    // Low health with enemies about: heal, or leave by the stairs underfoot.
+    const stairs = state.underFeature === 'down' || state.underFeature === 'up' ? leading : [];
+    actions = [
+      ...stairs,
+      a('quaff', { ...(stairs.length ? {} : { emphasis: 'primary' as const }), alternates: ['use'] }),
+      a('eat', { label: 'Eat herb' }),
+      sing,
+      pack,
+      look,
+      more,
+    ];
+  } else if (adjacent > 0) {
+    // In melee (attack by moving into the monster with the pad): hold, sing, throw, swap places.
+    actions = [
+      ...leading,
+      a('hold', { alternates: ['rest'] }),
+      sing,
+      throwing,
+      a('exchange', { alternates: DOOR_ALTERNATES }),
+      pack,
+      more,
+    ];
+  } else if (inView > 0) {
+    actions = [...leading, shoot, sing, stealth, look, pack, more];
+  } else {
+    // Exploring: a door next to the player turns Rest into the door's alternate action.
+    const rest =
+      (state.doorsAdjacent ?? 0) > 0
+        ? a('alternate', {
+            label: 'Door',
+            alternates: [...DOOR_ALTERNATES.filter((id) => id !== 'alternate'), 'rest', 'hold', 'run'],
+          })
+        : a('rest', {
+            ...(wounded && !lead ? { emphasis: 'primary' as const } : {}),
+            alternates: ['hold', 'run', 'exchange', ...DOOR_ALTERNATES, 'downstairs', 'upstairs', 'pickup'],
+          });
+    actions = [...leading, stealth, run ?? rest, pack, look, more];
+  }
+  // A latched Run stays visible whatever the situation.
+  if (run && !actions.includes(run)) actions.splice(leading.length, 0, run);
+  return { directionPad: PAD, actions, palette: PALETTE };
+}
+
 /** The dock for each context. `choices` are lettered options shown on screen. */
 export function controlsFor(
   context: SilContext,
-  state: { hp: number; maxHp: number; run: boolean },
+  state: DockState,
   choices: { key: string; label: string }[] = [],
   item: { canShow: boolean; switchTo: string | null; floor: boolean } | null = null,
   saves: readonly string[] = [],
@@ -509,6 +726,7 @@ export function controlsFor(
     .map((choice) =>
       a(`${CHOOSE}${choice.key}`, { label: choice.label ? `${choice.key}) ${choice.label}` : choice.key }),
     );
+  const prompt = state.prompt ?? '';
   switch (context) {
     case 'title':
       // Title and character creation: the screen's choices as large buttons;
@@ -559,24 +777,48 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'direction':
+      // Open, close, bash, tunnel, disarm (get_rep_dir): a direction, nothing else.
+      return { directionPad: PAD, actions: [a('cancel', { label: 'Cancel' })], palette: PALETTE };
+    case 'aim': {
+      // Fire, throw, songs, staffs (get_aim_dir): the target or the closest monster, or choose one.
+      const targeted = /'f' for target/.test(prompt);
       return {
         directionPad: PAD,
         actions: [
-          a('select-target', { label: 'Nearest', emphasis: 'primary', alternates: ['list'] }),
+          a('aim-nearest', { label: targeted ? 'Target' : 'Nearest', emphasis: 'primary' }),
+          a('choose-target', { label: targeted ? 'Re-target' : 'Choose target' }),
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
       };
-    case 'targeting':
+    }
+    case 'song':
+      // "Sing which song": the songs by name (the one being sung marked), stop, exchange themes.
       return {
-        directionPad: PAD,
         actions: [
-          a('select-target', { emphasis: 'primary' }),
-          a('next-target'),
+          ...choices.map((choice) => {
+            const index = choice.key.charCodeAt(0) - 'a'.charCodeAt(0);
+            const current = /^[a-l]$/.test(choice.key) && index === state.song1;
+            return a(`${CHOOSE}${choice.key}`, { label: choice.label, ...(current ? { active: true } : {}) });
+          }),
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
       };
+    case 'targeting': {
+      // Look/target mode; its prompt lists what it takes: "[(r)ecall, (t)arget, (m)anual, <dir>]".
+      const more = /-more-/.test(prompt);
+      return {
+        directionPad: PAD,
+        actions: [
+          ...(/\(t\)arget/.test(prompt) ? [a('select-target', { emphasis: 'primary' as const })] : []),
+          ...(more || /\(m\)anual/.test(prompt) ? [a('next-target', { label: more ? 'More' : 'Next' })] : []),
+          ...(/\(r\)ecall/.test(prompt) ? [a('recall')] : []),
+          a('cancel', { label: 'Cancel' }),
+        ],
+        palette: PALETTE,
+      };
+    }
     case 'item':
       // "Drop which item?": the items as buttons (named once the list is shown).
       return {
@@ -606,52 +848,7 @@ export function controlsFor(
         ],
         palette: PALETTE,
       };
-    case 'map': {
-      const wounded = state.maxHp > 0 && state.hp < state.maxHp * 0.5;
-      return {
-        directionPad: PAD,
-        actions: [
-          state.run
-            ? a('run', { label: 'Run ⇧', active: true })
-            : a('rest', {
-                ...(wounded ? { emphasis: 'primary' as const } : {}),
-                alternates: ['hold', 'run', 'stealth', 'downstairs', 'upstairs', 'pickup'],
-              }),
-          a('fire', { alternates: ['fire-2', 'throw', 'throw-nearest', 'sing'] }),
-          a('inventory', {
-            alternates: [
-              'equipment',
-              'wear',
-              'remove',
-              'eat',
-              'quaff',
-              'use',
-              'drop',
-              'activate',
-              'play',
-              'examine',
-            ],
-          }),
-          a('open', {
-            label: 'Doors',
-            alternates: ['close', 'bash', 'disarm', 'tunnel', 'exchange', 'alternate'],
-          }),
-          a('look', {
-            alternates: [
-              'monsters',
-              'objects',
-              'map',
-              'character',
-              'abilities',
-              'smithing',
-              'knowledge',
-              'messages',
-            ],
-          }),
-          a(SHELL_COMMAND.palette, { label: 'More' }),
-        ],
-        palette: PALETTE,
-      };
-    }
+    case 'map':
+      return mapControls(state);
   }
 }
