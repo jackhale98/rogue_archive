@@ -23,6 +23,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Versioned game API (`GAME_API_VERSION = 1`), lifecycle state machine
 - [x] Session host: manifest loading, integrity checks, status and errors, input routing, persist on hide/exit
 - [x] Touch control primitives (pad with hold-to-repeat, action buttons, command list, on-screen keyboard)
+- [x] Phones held sideways: the dock and the thumb pad in rails beside the game (the game never under a control, the side notch cleared), checked for every game by `e2e/landscape.mobile.spec.ts`
 - [x] IndexedDB settings and recent games; `.roguearchive` save export/import format
 - [x] Ask for persistent storage once a game runs; Settings → Keeping your saves (status, space used, Safari's 7-day rule and the Home Screen app)
 - [ ] Optional cloud sync of saves to the player's own Dropbox or OneDrive (browser-only OAuth with PKCE, app folder; see docs/architecture/storage.md)

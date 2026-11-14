@@ -237,7 +237,11 @@ export interface GameCapabilities {
 export interface Presentation {
   compact: boolean;
   insets: { top: number; right: number; bottom: number; left: number };
-  /** Width (CSS px) of the shell's floating tools in the top-right corner, in compact mode. */
+  /**
+   * Width (CSS px) of the shell's floating tools in the top-right corner, in
+   * compact mode; absent or 0 when no tools are over the game (phones held
+   * sideways have them in a rail beside it).
+   */
   topRightReserve?: number;
 }
 
@@ -295,9 +299,10 @@ export interface GameAdapter {
   setVisible?(visible: boolean): void;
   /**
    * Tells the adapter how it is being presented. `compact` means a small touch
-   * screen where the shell overlays its controls on the game; the adapter may
-   * then use a layout designed for phones. `insets` are CSS pixels on each
-   * edge covered by shell controls, so important content can avoid them.
+   * screen (a phone); the adapter may then use a layout designed for phones.
+   * Upright, the shell overlays its controls on the game; held sideways, it
+   * puts them in rails beside the game. `insets` are CSS pixels on each edge
+   * covered by shell controls, so important content can avoid them.
    */
   setPresentation?(presentation: Presentation): void;
   applySetting?(key: string, value: string | number): void;

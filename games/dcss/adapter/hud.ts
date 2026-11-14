@@ -72,8 +72,9 @@ export class DcssHud {
 
   setReserve(px: number, portrait: boolean): void {
     this.element.style.setProperty('--reserve', `${portrait ? 0 : px}px`);
-    // In portrait the shell's tools sit above the status row.
-    this.element.style.paddingTop = portrait ? `max(${44 + 6}px, env(safe-area-inset-top))` : '';
+    // In portrait the shell's tools sit above the status row (when they are over
+    // the game at all: phones held sideways have them in a rail).
+    this.element.style.paddingTop = portrait && px > 0 ? `max(${44 + 6}px, env(safe-area-inset-top))` : '';
   }
 
   setMapOpen(open: boolean): void {

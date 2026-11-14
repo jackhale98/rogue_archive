@@ -38,7 +38,7 @@ export function PlayPage({ gameId }: { gameId: string }) {
   return <GameShell gameId={gameId} />;
 }
 
-/** Phones: small screens where the shell overlays its controls and the game may use a compact layout. */
+/** Phones: small screens where the shell places its controls over or beside the game and the game may use a compact layout. */
 function useCompactViewport(enabled: boolean): boolean {
   const check = () => enabled && Math.min(window.innerWidth, window.innerHeight) < 600;
   const [compact, setCompact] = useState(check);
@@ -94,7 +94,8 @@ function GameShell({ gameId }: { gameId: string }) {
   const running = phase === 'running' && adapter !== null;
   const layout = session.touchLayout;
   const hapticsEnabled = settings.haptics === 'on';
-  const leftHanded = settings.handedness === 'left';
+  /** Phones held sideways: the dock, and the pad under the tools, in rails beside the game. */
+  const rails = compact && !portrait;
 
   useEffect(() => {
     document.title = `${game.title} · Rogue Archive`;
@@ -106,6 +107,9 @@ function GameShell({ gameId }: { gameId: string }) {
   }, [running]);
 
   // Tell the adapter how it is presented, and which edges our controls cover.
+  // Phones held sideways put the controls in rails beside the game, so there
+  // is nothing to avoid; upright, they float over the bottom of the game and
+  // the tools over its top-right corner.
   useEffect(() => {
     if (!running || !adapter.setPresentation) return;
     const stage = stageRef.current;
@@ -114,21 +118,25 @@ function GameShell({ gameId }: { gameId: string }) {
         adapter.setPresentation!({ compact: false, insets: { top: 0, right: 0, bottom: 0, left: 0 } });
         return;
       }
-      const dock = stage.querySelector('.play__dock')?.getBoundingClientRect();
-      const pad = stage.querySelector('.play__pad')?.getBoundingClientRect();
-      const dockWidth = dock?.width ?? 0;
-      const padWidth = pad?.width ?? 0;
-      // Landscape: controls sit at the sides. Portrait: along the bottom.
+      if (rails) {
+        adapter.setPresentation!({ compact: true, insets: { top: 0, right: 0, bottom: 0, left: 0 } });
+        return;
+      }
+      // From the stage's bottom edge to the highest control: the controls'
+      // margin and the safe area below them are covered too.
+      const bottom = stage.getBoundingClientRect().bottom;
+      const tops = ['.play__dock', '.play__pad']
+        .map((selector) => stage.querySelector(selector)?.getBoundingClientRect())
+        .filter((rect): rect is DOMRect => !!rect && rect.height > 0)
+        .map((rect) => rect.top);
       adapter.setPresentation!({
         compact: true,
-        insets: portrait
-          ? { top: 0, right: 0, bottom: Math.max(dock?.height ?? 0, pad?.height ?? 0), left: 0 }
-          : {
-              top: 0,
-              right: leftHanded ? dockWidth : padWidth,
-              bottom: 0,
-              left: leftHanded ? padWidth : dockWidth,
-            },
+        insets: {
+          top: 0,
+          right: 0,
+          bottom: tops.length > 0 ? Math.max(0, Math.ceil(bottom - Math.min(...tops))) : 0,
+          left: 0,
+        },
         topRightReserve: COMPACT_TOOLS_WIDTH,
       });
     };
@@ -136,7 +144,7 @@ function GameShell({ gameId }: { gameId: string }) {
     const observer = new ResizeObserver(measure);
     if (stage) observer.observe(stage);
     return () => observer.disconnect();
-  }, [running, adapter, compact, leftHanded, layout, portrait]);
+  }, [running, adapter, compact, rails, layout]);
 
   const leave = useCallback(async () => {
     if (leaving) return;
@@ -354,7 +362,7 @@ function GameShell({ gameId }: { gameId: string }) {
 
   return (
     <div
-      className={`play${compact ? ' play--compact' : ''}`}
+      className={`play${compact ? ' play--compact' : ''}${rails ? ' play--rails' : ''}`}
       data-touch={showTouch ? 'on' : 'off'}
       data-hand={settings.handedness}
       data-context={session.touchContext}
@@ -368,15 +376,25 @@ function GameShell({ gameId }: { gameId: string }) {
       )}
 
       <div className="play__stage" ref={stageRef}>
-        {!compact && showTouch && running ? (
+        {(!compact && showTouch && running) || rails ? (
           <div className="play__rail play__rail--actions">{dock}</div>
         ) : null}
         <div className="play__screen" ref={mountRef} />
-        {!compact && showTouch && running ? <div className="play__rail play__rail--pad">{pad}</div> : null}
+        {(!compact && showTouch && running) || rails ? (
+          <div className="play__rail play__rail--pad">
+            {rails ? (
+              <div className="play__rail-tools">
+                {backLink}
+                {tools}
+              </div>
+            ) : null}
+            {pad}
+          </div>
+        ) : null}
 
-        {compact ? (
+        {compact ? <h1 className="visually-hidden">{game.title}</h1> : null}
+        {compact && !rails ? (
           <>
-            <h1 className="visually-hidden">{game.title}</h1>
             <div className="play__float play__float--tools">
               {backLink}
               {tools}
