@@ -18,12 +18,18 @@ body {
   overscroll-behavior: none;
 }
 
-/* Long-pressing the map describes a square (host.js); no text selection
-   or callout menu on the way. */
-#dungeon {
+/* Long-pressing the map describes a square (host.js); a long press anywhere
+   (messages, the status panel, menus) starts no text selection or callout
+   menu either. Text fields stay editable. */
+body {
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
+}
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* The shell provides its own text entry button. */
