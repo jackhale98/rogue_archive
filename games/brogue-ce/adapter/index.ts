@@ -139,17 +139,6 @@ class BrogueAdapter implements GameAdapter {
   readonly touchLayout = BROGUE_TOUCH_LAYOUT;
   readonly settings: readonly GameSettingDescriptor[] = [
     {
-      key: 'tapMode',
-      label: 'Tapping the map',
-      description: 'Preview shows the path and what is there first; tap the same spot again to go.',
-      options: [
-        { value: 'preview', label: 'Preview, then confirm' },
-        { value: 'immediate', label: 'Act immediately' },
-      ],
-      default: 'preview',
-      appliesOn: 'immediately',
-    },
-    {
       key: 'graphicsMode',
       label: 'Starting display',
       description: 'Brogue can also switch at any time with the G key.',
@@ -160,6 +149,17 @@ class BrogueAdapter implements GameAdapter {
       ],
       default: GraphicsMode.TEXT,
       appliesOn: 'next-launch',
+    },
+    {
+      key: 'tapMode',
+      label: 'Tapping the map',
+      description: 'Preview shows the path and what is there first; tap the same spot again to go.',
+      options: [
+        { value: 'preview', label: 'Preview, then confirm' },
+        { value: 'immediate', label: 'Act immediately' },
+      ],
+      default: 'preview',
+      appliesOn: 'immediately',
     },
   ];
   /** Brogue saves and recordings are plain files that desktop Brogue CE 1.15.1 opens directly. */
