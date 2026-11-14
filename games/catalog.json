@@ -646,10 +646,10 @@
       "title": "NetHack",
       "subtitle": "5.0.0",
       "description": "The genre-defining dungeon adventure, famous for how much it anticipates: almost anything you try has been thought of.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 5,
       "effort": "medium-high",
-      "rationale": "Genre-defining game; substantial interface and integration work.",
+      "rationale": "Genre-defining game; upstream maintains a WebAssembly build and a window interface the port answers.",
       "firstReleased": 1987,
       "authors": "The NetHack DevTeam",
       "upstream": {
@@ -658,17 +658,106 @@
         "repository": "https://github.com/NetHack/NetHack"
       },
       "license": {
-        "code": "NetHack General Public License",
-        "assets": "Text-only core; tiles to be audited separately"
+        "code": "NetHack General Public License (Lua: MIT)",
+        "assets": "NetHack's own tiles (by Warwick Allison and others; NetHack General Public License); otherwise text in the browser's monospace font",
+        "report": "games/nethack/LICENSES.md"
       },
-      "interface": ["ascii"],
+      "interface": ["ascii", "tiles"],
       "input": {
         "keyboard": true,
-        "mouse": false,
-        "touch": false
+        "mouse": true,
+        "touch": true
       },
       "tags": ["Classic", "Turn-based", "Permadeath"],
-      "glyph": "@"
+      "glyph": "@",
+      "version": "5.0.0",
+      "sourceRevision": "16ff59115315917b93185d026aeefea06db9b0f4",
+      "renderMode": "terminal-fit",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "nethack",
+      "runtimeManifest": "runtime/nethack/runtime-manifest.json",
+      "about": [
+        "NetHack is the dungeon adventure famous for how much it anticipates: descend through the Dungeons of Doom, survive Gehennom, retrieve the Amulet of Yendor and ascend. Almost anything you try has been thought of, and every death is final.",
+        "This port builds NetHack 5.0.0 with upstream's own WebAssembly build and its window interface, answered in the browser the way NetHack's terminal version draws: the map in text or with NetHack's own tiles, menus and messages as on a terminal. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "hjklyubn · arrow keys · numpad",
+          "action": "Move or attack; Shift to run"
+        },
+        {
+          "keys": "s · . · _ · > · <",
+          "action": "Search, rest, travel, take stairs"
+        },
+        {
+          "keys": ", · i · d · e · q · r",
+          "action": "Pick up, inventory, drop, eat, quaff, read"
+        },
+        {
+          "keys": "w · W · T · P · R · a",
+          "action": "Wield, wear, take off, put on, remove, apply"
+        },
+        {
+          "keys": "t · f · z · Z · F",
+          "action": "Throw, fire, zap, cast, fight"
+        },
+        {
+          "keys": "; · : · Ctrl+P · Ctrl+X",
+          "action": "Look at something, look here, old messages, attributes"
+        },
+        {
+          "keys": "# · ?",
+          "action": "Extended commands (#pray, #loot, #enhance...), help"
+        },
+        {
+          "keys": "S",
+          "action": "Save and quit (continue as the same character)"
+        },
+        {
+          "keys": "Phone",
+          "action": "Thumb pad, a dock that follows the game (prompts, menus, directions), menus as large tappable sheets, tap the map to travel, long-press to look"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical phones; touch controls are verified in Chromium's mobile emulation only.",
+        "The touch dock is a first version; a full controls audit (as for the other games) is still to come.",
+        "Bones files (ghosts of earlier characters) are not kept between sessions.",
+        "Whether desktop NetHack 5.0.0 can open save files made here (32-bit WebAssembly) is untested."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "pass",
+          "notes": "Character creation, the map and status lines, the inventory menu, tiles, save and continue after a reload verified by end-to-end tests; a game played under Node with the port's window port (tests/conformance/play.ts)."
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "partial",
+          "notes": "Character creation by taps, the status band, menus as sheets, the dock, travel by tapping the map and tiles exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
+      ],
+      "cover": {
+        "src": "covers/nethack.webp",
+        "alt": "NetHack with its own tiles: a Valkyrie and her kitten in a lit room with gold, two doors and a lichen.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "angband",

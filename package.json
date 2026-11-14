@@ -21,6 +21,7 @@
     "build:sil": "bash games/sil-q/scripts/build.sh",
     "build:rogue": "bash games/rogue/scripts/build.sh",
     "build:nethack": "bash games/nethack/scripts/build.sh",
+    "test:engine:nethack": "bash games/nethack/scripts/test-engine.sh",
     "build:hyperrogue": "bash games/hyperrogue/scripts/build.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
     "validate:catalog": "node --experimental-strip-types tools/validate-catalog.ts",
@@ -36,7 +37,8 @@
     "canary:brogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/brogue-ce/scripts/build.sh && games/brogue-ce/scripts/test-engine.sh\"",
     "canary:sil": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/sil-q/scripts/build.sh && games/sil-q/scripts/test-engine.sh\"",
     "canary:rogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"games/rogue/scripts/build.sh && games/rogue/scripts/test-engine.sh\"",
-    "canary:hyperrogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/hyperrogue/scripts/build.sh && bash games/hyperrogue/scripts/test-engine.sh\""
+    "canary:hyperrogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/hyperrogue/scripts/build.sh && bash games/hyperrogue/scripts/test-engine.sh\"",
+    "canary:nethack": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/nethack/scripts/build.sh && bash games/nethack/scripts/test-engine.sh\""
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

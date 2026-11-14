@@ -19,8 +19,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue]
+        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue, nethack]
         ref: [latest-release, master]
+        # NetHack has no master branch: its development branch for 5.0 is NetHack-5.0.
+        exclude:
+          - game: nethack
+            ref: master
+        include:
+          - game: nethack
+            ref: NetHack-5.0
     env:
       ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
       ROGUE_ARCHIVE_BASE: /${{ github.event.repository.name }}/

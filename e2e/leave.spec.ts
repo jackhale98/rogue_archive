@@ -3,9 +3,25 @@ import { startCharacter as startDcss, waitForContext as waitDcss, dcssContext } 
 import { gameContext, openBrogue, screenText, waitForScreenText, waitInGame } from './helpers.ts';
 import { openHyperRogue, waitForContext as waitHyper } from './hyperrogue-helpers.ts';
 import { startRogue } from './rogue-helpers.ts';
+import { nethack, startNetHack, toMap, waitForContext as waitNetHack } from './nethack-helpers.ts';
 import { openSil, screenText as silScreen, silContext, waitForContext as waitSil } from './sil-q-helpers.ts';
 
 test.describe.configure({ timeout: 300_000 });
+
+/** A new NetHack character (NetHack picks it), as far as the map. */
+async function startNetHackGame(page: Page, name: string) {
+  await startNetHack(page, name);
+  await waitNetHack(page, 'yn');
+  await page.keyboard.press('y');
+  // NetHack shows its pick and asks "Is this ok?".
+  await expect.poll(async () => (await nethack(page))?.menu?.title ?? '').toMatch(/Is this ok/);
+  await page.keyboard.press('y');
+  await toMap(
+    page,
+    () => page.keyboard.press(' '),
+    () => page.keyboard.press('n'),
+  );
+}
 
 /** Back to the library: with a game in progress, the shell asks how to leave first. */
 async function leaveDialog(page: Page) {
@@ -96,4 +112,16 @@ test('Leaving HyperRogue says the game ends (no Orb of Safety)', async ({ page }
   await expect(dialog).toContainText('leaving ends this game');
   await dialog.getByRole('button', { name: 'End this game and leave' }).click();
   await expect(page).toHaveURL(/#\/games\/hyperrogue$/, { timeout: 30_000 });
+});
+
+test('Save and leave (NetHack): S, y, then the character continues', async ({ page }) => {
+  await startNetHackGame(page, 'Leaver');
+  const dialog = await leaveDialog(page);
+  await expect(dialog).toContainText('keeps no save while you play');
+  await dialog.getByRole('button', { name: 'Save and leave' }).click();
+  await expect(page).toHaveURL(/#\/games\/nethack$/, { timeout: 30_000 });
+  await page.goto('?debug=1#/play/nethack');
+  await expect(page.locator('.ra-start').getByRole('button', { name: /Continue Leaver/ })).toBeVisible({
+    timeout: 120_000,
+  });
 });

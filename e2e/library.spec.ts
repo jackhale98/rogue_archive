@@ -26,7 +26,7 @@ test('cards play directly; the full roadmap and watchlist fold away', async ({ p
     /#\/games\/rogue$/,
   );
   // The next three roadmap games are listed; the rest and the watchlist are folded.
-  await expect(page.getByRole('link', { name: /NetHack/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Angband/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeHidden();
   await page.getByText(/The full roadmap/).click();
   await expect(page.getByRole('heading', { name: 'Watchlist' })).toBeVisible();
@@ -52,10 +52,10 @@ test('game detail shows provenance, controls and limitations', async ({ page }) 
 });
 
 test('roadmap games are not launchable', async ({ page }) => {
-  await page.goto('#/games/nethack');
+  await page.goto('#/games/angband');
   await expect(page.getByText('This game is on the roadmap and is not playable yet.')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Play / })).toHaveCount(0);
-  await page.goto('#/play/nethack');
+  await page.goto('#/play/angband');
   await expect(page.getByRole('heading', { name: 'Nothing down here' })).toBeVisible();
 });
 

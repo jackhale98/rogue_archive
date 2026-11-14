@@ -133,6 +133,24 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Measure frame rate on physical phones; test on Firefox and Safari
 - [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
+## Phase 6d — NetHack 5.0.0 🟡 experimental
+
+- [x] Feasibility report: docs/games/nethack-feasibility.md
+- [x] License/provenance report (NetHack General Public License for the game, its data and its tiles; Lua MIT)
+- [x] WASM build: upstream's own web build (`make CROSS_TO_WASM=1`, the shim window port) from the pinned release; one patch so its web main file links at 5.0.0; `TILES_IN_GLYPHMAP` and upstream's generated `tile.c`, as its tile ports
+- [x] Window port in the worker, answering the shim's calls as tty draws them: map, message line, two status lines, menus and text windows (paged, tty's keys), prompts, typed lines and extended commands, map clicks
+- [x] Text or NetHack's own tiles (upstream's `tile2bmp` sheet)
+- [x] Phone layout: status band, map following the hero (pinch, drag), menus and text windows as large tappable sheets, tap the map to travel, long-press to look
+- [x] First touch dock: prompt answers as buttons, item prompts (Choose), directions (pad, up, down, self), menus (Accept, All, pages), map (Search, Pick up, Pack, Fight, Look, More with fans)
+- [x] Saves and scores in IndexedDB; save and continue as the same character; export/import; the leave dialog's Save and leave
+- [x] Engine checks: upstream drift (shim calls, formats, structures); a game played under Node with the port's window port (creation, map, status, inventory, save, continue)
+- [x] e2e: desktop (creation, map and status, inventory, tiles, save and continue after reload) and phone (creation by taps, band, sheets, dock, travel by tap, tiles)
+- [x] CI build, deploy, weekly canary (latest release and the NetHack-5.0 branch)
+- [ ] Controls audit (as for the other games): context-aware dock for a full run
+- [ ] Native vs WebAssembly comparison of seeded games; key coverage against `cmd.c`
+- [ ] Test on physical phones, Firefox and Safari
+- [ ] Promote to `playable` once the above pass
+
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
@@ -141,5 +159,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (experimental, Phase 6c) → NetHack 5.0.0 → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → Angband → DRL → Allure of the Stars → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

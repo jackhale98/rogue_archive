@@ -1,0 +1,16 @@
+{
+  "name": "@rogue-archive/game-nethack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rogue Archive adapter for NetHack 5.0.0.",
+  "license": "NGPL",
+  "type": "module",
+  "exports": {
+    ".": "./adapter/index.ts"
+  },
+  "dependencies": {
+    "@rogue-archive/game-api": "workspace:*",
+    "@rogue-archive/start-screen": "workspace:*",
+    "@rogue-archive/term-view": "workspace:*"
+  }
+}

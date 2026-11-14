@@ -66,8 +66,14 @@ jobs:
         with:
           path: games/hyperrogue/dist
           key: runtime-hyperrogue-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/hyperrogue/**', '!games/hyperrogue/dist/**', '!games/hyperrogue/node_modules/**', '!games/hyperrogue/**/*.md') }}
+      - name: Restore NetHack runtime
+        id: nethack
+        uses: actions/cache/restore@v4
+        with:
+          path: games/nethack/dist
+          key: runtime-nethack-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/nethack/**', '!games/nethack/dist/**', '!games/nethack/node_modules/**', '!games/nethack/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -104,6 +110,9 @@ jobs:
         run: pnpm build:hyperrogue
         env:
           ROGUE_ARCHIVE_HARNESS: '0'
+      - name: Build NetHack runtime
+        if: steps.nethack.outputs.cache-hit != 'true'
+        run: pnpm build:nethack
       - run: pnpm validate:catalog && node tools/stage-runtimes.mjs --strict && pnpm --filter @rogue-archive/web build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

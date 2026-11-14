@@ -9,7 +9,8 @@
 | [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Playable** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
 | [HyperRogue](games/hyperrogue/PORTING.md) 13.1p | **Playable** | Upstream's own web version with saving switched on; the hyperbolic plane drawn with WebGL; keyboard, mouse and touch modelled on its mobile version; score file export/import; offline. Played on a physical iPhone; Android not yet tested. |
 | [Rogue](games/rogue/PORTING.md) 5.4.4 | **Playable** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
-| HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
+| [NetHack](games/nethack/PORTING.md) 5.0.0 | **Experimental** | Upstream's own WebAssembly build; NetHack's terminal interface as tty draws it, the map in text or NetHack's own tiles; keyboard, mouse and touch with a phone layout (menus as sheets); local saves with export/import; offline. Touch controls are a first version. |
+| Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works
 

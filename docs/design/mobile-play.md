@@ -203,6 +203,24 @@ A small hint above the dock says which mode is on, and shows the Orb of Safety's
 
 `games/hyperrogue/tests/conformance/key-coverage.ts` checks each command against `control.cpp`, including the touch modes the dock switches.
 
+## NetHack
+
+NetHack's interface is its window port (`games/nethack/adapter/windowport.ts`), drawn as tty draws it on an 80×24 screen (see [games/nethack/PORTING.md](../../games/nethack/PORTING.md)).
+
+- **Layout on phones:** a band with NetHack's two status lines (hit points as a bar) and the message line (tap for the message log); the map at a readable size following the hero (pinch to zoom, drag to look around), in text or NetHack's own tiles; menus and text windows (the inventory, character creation, help, "Things that are here") lifted into a large sheet over the map, drawn without them, whose "a - item" lines can be tapped.
+- **Taps:** a menu line chooses it (its key, as tty); a text window, a menu only to read or `--More--` continues on a tap anywhere; a map cell travels there (a click, as NetHack's mouse support); a long press looks at a cell (`;`).
+- **Dock (first version; a controls audit is still to come):**
+
+| Context | Dock |
+|---|---|
+| Map | Search (fan: rest, search ×20, travel, stairs down and up, kick) · Pick up (fan: look here, loot, drop, drop several) · Pack (fan: eat, quaff, read, wield, wear, take off, put on, remove, apply) · Fight (fan: throw, fire, zap, cast, kick, pray) · Look (fan: look here, discoveries, equipment, attributes, overview, messages, help) · More; the pad with Search in the centre |
+| Question ("[ynq]") | Its answers as buttons (Yes, No, Quit, All; other letters as themselves), Cancel |
+| Item prompt ("What do you want to eat? [fg or ?*]") | Choose (`?`, NetHack's own list of candidates), All items (`*`), Cancel, Type |
+| Direction | The pad (Self in the centre), Down `>`, Up `<`, Cancel |
+| Menu | Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |
+| Text window, `--More--` | Next or Continue, Close |
+| Typed line, extended command | Type (the keyboard), OK, Cancel |
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad** (160–192 CSS px across, scaled to the screen): press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.

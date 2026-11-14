@@ -68,6 +68,9 @@ importers:
       '@rogue-archive/game-hyperrogue':
         specifier: workspace:*
         version: link:../../games/hyperrogue
+      '@rogue-archive/game-nethack':
+        specifier: workspace:*
+        version: link:../../games/nethack
       '@rogue-archive/game-rogue':
         specifier: workspace:*
         version: link:../../games/rogue
@@ -114,6 +117,18 @@ importers:
       '@rogue-archive/game-api':
         specifier: workspace:*
         version: link:../../packages/game-api
+
+  games/nethack:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+      '@rogue-archive/start-screen':
+        specifier: workspace:*
+        version: link:../../packages/start-screen
+      '@rogue-archive/term-view':
+        specifier: workspace:*
+        version: link:../../packages/term-view
 
   games/rogue:
     dependencies:

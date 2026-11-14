@@ -1,6 +1,6 @@
 # NetHack — feasibility report
 
-Status: **feasible; port in progress** (catalog status `planned` until the port passes its acceptance criteria).
+Status: **port implemented** (catalog status `experimental`). Licensing is reported in [`games/nethack/LICENSES.md`](../../games/nethack/LICENSES.md); how the port works is in [`games/nethack/PORTING.md`](../../games/nethack/PORTING.md).
 
 ## The three release-readiness questions
 

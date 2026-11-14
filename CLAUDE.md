@@ -19,6 +19,7 @@ pnpm test:engine                              # Brogue conformance: seed catalog
 pnpm build:dcss && pnpm test:engine:dcss      # DCSS: WASM build with upstream's Makefile (~15-20 min first time); native vs WASM replay
 pnpm build:sil && pnpm test:engine:sil        # Sil-Q: WASM build (<1 min); key coverage, native vs WASM replay
 pnpm build:rogue && pnpm test:engine:rogue    # Rogue: WASM build (<1 min); key coverage, native vs WASM replay
+pnpm build:nethack && pnpm test:engine:nethack     # NetHack: upstream's WASM build (~1.5 min); drift, a game played under Node
 pnpm build:hyperrogue && pnpm test:engine:hyperrogue  # HyperRogue: WASM build (~3 min first time); key coverage, drift, native vs WASM seeded games (needs libsdl1.2-dev libgl-dev zlib1g-dev)
 ROGUE_ARCHIVE_UPSTREAM_REF=master pnpm canary:brogue   # try the port against a newer upstream (never deployed)
 pnpm dev                                      # http://localhost:5173 (debug hook always on in dev)
@@ -33,6 +34,7 @@ ROGUE_ARCHIVE_BASE=/rogue_archive/ pnpm build && pnpm e2e
 - DCSS: its debug hook is `window.__rogueArchive.adapter.debug` with `context`, `inGame`, `player`, `popups`, `menus`, `text()`; the client is in `iframe.dcss-client` (same origin). DCSS's caches ship prebuilt (build.sh runs `-builddb`; data files are pinned to `DATA_MTIME`).
 - Sil-Q: its debug hook has `context`, `inDungeon`, `state`, `screenText()`, `rowText(y)`; Sil's `-more-` takes Space/Escape. `Ctrl+X` saves and shows the scores ("press any key") before the title menu.
 - HyperRogue runs on the page (WebGL canvas `canvas.hr-canvas`, no worker); debug hook `context` (map/dialog/over), `state` (treasure, kills, turns, canMove…), `land`, `hover()`, `messages()`, `files()`. Headless Chromium draws it in software at about one frame per second, so tests wait on `state.turns` rather than the screen; it saves only on leaving (the Android app's background save), and resumes a game only with an Orb of Safety or in casual mode, as upstream.
+- NetHack: debug hook `context` (map/menu/text/yn/item/direction/getlin/extcmd/more), `prompt`, `menu` (how, title, items), `state`, `tiled`, `screenText()`, `rowText(y)` (on phones, with a menu open, rows 24–47 hold the screen with the menu, rows 0–23 without it), `cellToClient(x, y)`. New characters meet NetHack's own questions (Shall I pick…, role and race menus), the intro text, the starting inventory and 5.0's tutorial question (`toMap` in `e2e/nethack-helpers.ts` gets past them). `S` then `y` saves and ends the session.
 - Rogue: debug hook `context`, `inGame`, `state`, `saves`, `screenText()`; the start screen is `.ra-start`. `S` then `y` saves and ends the game (back to the start screen); a restored save is deleted, as in the original.
 - Wait for Brogue to be waiting for input (`waitInGame` checks `debug.context === 'map'`): keys pressed during the level's fade-in only skip the fade.
 

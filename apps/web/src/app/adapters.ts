@@ -11,6 +11,7 @@ const ADAPTERS: Record<string, () => Promise<GameModule>> = {
   'sil-q': () => import('@rogue-archive/game-sil-q').then((m) => m.default),
   rogue: () => import('@rogue-archive/game-rogue').then((m) => m.default),
   hyperrogue: () => import('@rogue-archive/game-hyperrogue').then((m) => m.default),
+  nethack: () => import('@rogue-archive/game-nethack').then((m) => m.default),
 };
 
 export function loadAdapterModule(adapterId: string): Promise<GameModule> {
