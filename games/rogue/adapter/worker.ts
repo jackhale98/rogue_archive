@@ -18,6 +18,7 @@
  */
 import type { RuntimeFile, SaveFile } from '@rogue-archive/game-api';
 import type { FromWorker, SavedGame, ToWorker, VerifiedFile } from './protocol.ts';
+import { scoreList } from './state.ts';
 
 const HOME = '/rogue';
 const SAVE_SUFFIX = '.save';
@@ -57,6 +58,8 @@ let factory: ModuleFactory | null = null;
 let wasmBinary: Uint8Array | null = null;
 let mod: RogueModule | null = null;
 let running = false;
+/** What this run printed to standard output (the score list, after the game's screen closes). */
+let printed: string[] = [];
 let current = '';
 const keys: number[] = [];
 let wake: (() => void) | null = null;
@@ -167,7 +170,10 @@ async function instantiate(options = ''): Promise<void> {
       },
     ],
     locateFile: (path: string) => path,
-    print: (text: string) => post({ type: 'log', level: 'info', text }),
+    print: (text: string) => {
+      printed.push(text);
+      post({ type: 'log', level: 'info', text });
+    },
     printErr: (text: string) => post({ type: 'log', level: 'warn', text }),
     onAbort: (what: unknown) => reportFatal(new Error(`Rogue stopped unexpectedly: ${String(what)}`)),
     onExit: (status: number) => void exited(status),
@@ -257,6 +263,7 @@ async function init(message: Extract<ToWorker, { type: 'init' }>): Promise<void>
 async function start(name: string, restore: boolean): Promise<void> {
   if (!mod || running) return;
   running = true;
+  printed = [];
   current = name;
   post({ type: 'status', status: { stage: 'running' } });
   const file = `${HOME}/${name}${SAVE_SUFFIX}`;
@@ -288,7 +295,7 @@ async function exited(status: number): Promise<void> {
     reportFatal(error);
     return;
   }
-  post({ type: 'exit', status, saved, saves: listSaves() });
+  post({ type: 'exit', status, saved, saves: listSaves(), scores: scoreList(printed) });
 }
 
 function listFiles(): SaveFile[] {

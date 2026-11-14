@@ -32,6 +32,7 @@ Each shim call is answered as tty does; the module has no browser dependencies, 
 - **Menus** (`start_menu`/`add_menu`/`end_menu`/`select_menu`): drawn over the map as tty draws them (right-aligned, paged, "a - item" lines, letters assigned per page when the game gives none) with tty's keys: letters, group keys, counts, `.` `,` `-` `\` to select, `>` `<` `^` `|` for pages, Enter/Space to accept, Esc to cancel. Text windows and `display_file` page the same way.
 - **Prompts:** `yn_function` with tty's rules (Esc gives `q` or `n` when offered; Enter takes the default); `getlin` and extended commands (`#name`) are typed on the message line; `nh_poskey` returns keys or map clicks.
 - **Character creation** is NetHack's own (`genl_player_setup`, its menus).
+- **Windows up:** `init_nhwindows` sets NetHack's `iflags.window_inited` (libnh exposes it to the page) and `exit_nhwindows` clears it, as tty does. Without it the core wrote every message with `raw_print` and, at the end of a game, skipped the tombstone, the "Goodbye" summary and its own windows (`end.c` `really_done`: `have_windows`). What the game prints after closing its windows (`topten()`'s scores) is kept and shown on the start screen.
 
 ## The screen and input (`adapter/index.ts`, `adapter/input.ts`)
 

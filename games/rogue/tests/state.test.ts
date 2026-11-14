@@ -19,6 +19,7 @@ import {
   mapLeads,
   mapOverlay,
   parseState,
+  scoreList,
   screenChoices,
 } from '../adapter/state.ts';
 
@@ -301,5 +302,23 @@ describe('Rogue keys and docks', () => {
     expect(isDirectionKey(key('i', 'KeyI'))).toBe(false);
     expect(continueFirst('more', [h], { directionKey: true })).toEqual([32, h]);
     expect(continueFirst('more', [32], { directionKey: false })).toEqual([32]);
+  });
+});
+
+describe('the scores Rogue prints as it ends', () => {
+  it('keeps the top ten (rip.c score()) for the start screen', () => {
+    const printed = [
+      '',
+      'Top Ten Rogueists:',
+      '   Score Name',
+      ' 1   164 Thumbs: killed on level 3 by a kestrel.',
+      '[Press return to continue]',
+    ];
+    expect(scoreList(printed)).toBe(
+      'Top Ten Rogueists:\n   Score Name\n 1   164 Thumbs: killed on level 3 by a kestrel.',
+    );
+    // Nothing scored yet: no list.
+    expect(scoreList(['Top Ten Rogueists:', '   Score Name'])).toBe('');
+    expect(scoreList([])).toBe('');
   });
 });

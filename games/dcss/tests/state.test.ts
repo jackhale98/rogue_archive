@@ -136,3 +136,37 @@ describe('DCSS touch layouts', () => {
     }
   });
 });
+
+describe('the end of a game', () => {
+  it("turns the prompt's confirmation word into a button", () => {
+    const tracker = new GameTracker();
+    tracker.apply({ msg: 'map' });
+    tracker.apply({
+      msg: 'msgs',
+      messages: [
+        {
+          text: '<lightred>Are you sure you want to abandon this character and quit the game? (Confirm with "quit".) </lightred>',
+        },
+      ],
+    });
+    tracker.apply({ msg: 'init_input' });
+    expect(tracker.context()).toBe('text');
+    expect(tracker.confirmWord).toBe('quit');
+    tracker.apply({ msg: 'close_input' });
+    expect(tracker.confirmWord).toBeNull();
+  });
+
+  it('follows the inventory and "Goodbye" once the morgue file is written', () => {
+    const tracker = new GameTracker();
+    tracker.apply({ msg: 'map' });
+    tracker.apply({ msg: 'menu', tag: 'inventory' });
+    expect(tracker.context()).toBe('menu');
+    tracker.apply({ msg: 'dump' });
+    expect(tracker.context()).toBe('game-over');
+    tracker.apply({ msg: 'close_menu' });
+    tracker.apply({ msg: 'ui-push', type: 'game-over' });
+    expect(tracker.context()).toBe('game-over');
+    tracker.reset();
+    expect(tracker.gameOver).toBe(false);
+  });
+});

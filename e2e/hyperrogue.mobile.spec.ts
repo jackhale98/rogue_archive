@@ -106,3 +106,30 @@ test('HyperRogue phone: Inspect makes taps tell about a cell without moving', as
   await expect(dock.getByRole('button', { name: /^Inspect/ })).toHaveCount(0);
   await expect(page.locator('.hr-hint')).toBeHidden();
 });
+
+test('HyperRogue phone: the quest screen and a new game by touch', async ({ page }) => {
+  await openHyperRogue(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  // A turn passes (the pad's centre waits), so a new game can be told apart.
+  await page.getByRole('group', { name: 'Movement' }).getByRole('button', { name: /^Wait/ }).tap();
+  await expect.poll(() => turns(page), { timeout: 20_000 }).toBeGreaterThan(0);
+
+  // Quest: the game's own screen (score, its options), with Back in the dock.
+  await dock.getByRole('button', { name: /^Quest/ }).tap();
+  await waitForContext(page, 'dialog');
+  await dock.getByRole('button', { name: /^Back/ }).tap();
+  await waitForContext(page, 'map');
+
+  // New game is in Quest's fan.
+  const selector = '.dock-button[aria-label="Quest (Esc)"]';
+  const box = (await dock.getByRole('button', { name: 'Quest (Esc)' }).boundingBox())!;
+  const pointer = { pointerId: 5, pointerType: 'touch', isPrimary: true };
+  const at = { clientX: box.x + box.width / 2, clientY: box.y + box.height / 2 };
+  await page.dispatchEvent(selector, 'pointerdown', { ...pointer, ...at, button: 0, buttons: 1 });
+  const fan = page.getByRole('menu', { name: 'Quest options' });
+  await expect(fan).toBeVisible();
+  await page.dispatchEvent(selector, 'pointerup', { ...pointer, ...at, button: 0 });
+  await fan.getByRole('menuitem', { name: /^New game/ }).click();
+  await expect.poll(() => turns(page), { timeout: 30_000 }).toBe(0);
+  await waitForContext(page, 'map');
+});

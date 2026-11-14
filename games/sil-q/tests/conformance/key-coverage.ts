@@ -65,6 +65,7 @@ const EXPECTED: Record<string, string> = {
   'save-quit': 'p_ptr->playing = FALSE',
   options: 'do_cmd_options(',
   note: 'do_cmd_note(',
+  suicide: 'do_cmd_suicide(',
 };
 
 /** C case label → key code. */

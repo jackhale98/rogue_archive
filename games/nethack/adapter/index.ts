@@ -49,6 +49,7 @@ import {
   PAD,
   controlsFor,
   dynamicKeys,
+  endOfGame,
   findCommand,
   keyToNetHack,
 } from './input.ts';
@@ -214,9 +215,12 @@ class NetHackAdapter implements GameAdapter {
   #listedPrompt: string | null = null;
   /** "You feel more confident in your … skills": Enhance leads until it is used. */
   #enhance = false;
+  /** The game is over: its end-of-game questions and screens (end.c disclose(), the tombstone). */
+  #ending = false;
   /**
    * A short script answering a command's follow-up questions (Elbereth):
-   * each step answers one kind of prompt; done once the map is back.
+   * each step answers one kind of prompt; done once the map waits for a
+   * command again (the game redraws the map while it works, too).
    */
   #script: {
     steps: { context: NhContext; prompt?: RegExp; keys?: number[]; click?: { x: number; y: number } }[];
@@ -372,7 +376,7 @@ class NetHackAdapter implements GameAdapter {
     this.#showStart();
   }
 
-  #showStart(notice?: string): void {
+  #showStart(notice?: string, scores?: string): void {
     const mount = this.#mount;
     if (!mount) return;
     this.#playing = false;
@@ -384,7 +388,7 @@ class NetHackAdapter implements GameAdapter {
       onNew: (name) => this.#launch(name),
       onContinue: (name) => this.#launch(name),
     });
-    this.#start.show(this.#entries(), notice);
+    this.#start.show(this.#entries(), notice, scores);
     this.#emitContext('start');
   }
 
@@ -395,6 +399,7 @@ class NetHackAdapter implements GameAdapter {
   #launch(name: string): void {
     this.#start?.hide();
     this.#playing = true;
+    this.#ending = false;
     this.#name = name;
     this.#host?.emit({ type: 'setting-changed', key: 'lastName', value: name });
     this.#post({ type: 'start', name });
@@ -464,7 +469,10 @@ class NetHackAdapter implements GameAdapter {
   #runScript(context: NhContext): boolean {
     const script = this.#script;
     if (!script) return false;
-    if (Date.now() - script.started > 15_000 || context === 'map' || context === 'over') {
+    // (The game redraws the map while it works: only the map waiting for a
+    // command again ends the script.)
+    const waiting = this.#frame?.waiting ?? true;
+    if (Date.now() - script.started > 15_000 || (context === 'map' && waiting) || context === 'over') {
       this.#script = null;
       return false;
     }
@@ -661,6 +669,7 @@ class NetHackAdapter implements GameAdapter {
           message.saved
             ? `Game saved. Continue ${this.#name} below when you're ready.`
             : `${this.#name}'s game is over.`,
+          message.scores,
         );
         break;
       }
@@ -754,8 +763,10 @@ class NetHackAdapter implements GameAdapter {
     const context = this.#context;
     if (!context) return;
     const frame = this.#frame;
+    if (frame?.prompt && endOfGame(frame.prompt)) this.#ending = true;
     const layout = controlsFor(context, {
       state: this.#state,
+      ending: this.#ending,
       prompt: frame?.prompt ?? '',
       menu: frame?.menu ?? null,
       enhance: this.#enhance,

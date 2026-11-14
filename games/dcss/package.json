@@ -9,6 +9,7 @@
     ".": "./adapter/index.ts"
   },
   "dependencies": {
-    "@rogue-archive/game-api": "workspace:*"
+    "@rogue-archive/game-api": "workspace:*",
+    "@rogue-archive/start-screen": "workspace:*"
   }
 }

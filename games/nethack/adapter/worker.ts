@@ -309,10 +309,10 @@ async function start(name: string): Promise<void> {
       return;
     }
   }
-  await exited();
+  await exited(port.closingText);
 }
 
-async function exited(): Promise<void> {
+async function exited(scores = ''): Promise<void> {
   running = false;
   for (const file of SCORE_FILES) copy(`/${file}`, `${SCORES_DIR}/${file}`);
   try {
@@ -327,7 +327,7 @@ async function exited(): Promise<void> {
     reportFatal(error);
     return;
   }
-  post({ type: 'exit', saved, saves: listSaves() });
+  post({ type: 'exit', saved, saves: listSaves(), scores: saved ? '' : scores });
 }
 
 function listFiles(): SaveFile[] {

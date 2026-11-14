@@ -7,6 +7,7 @@
  * creation (species, background) in its own interface. Here the names are
  * the saved characters in this browser.
  */
+import { randomName } from '@rogue-archive/start-screen';
 import type { SavedCharacter } from './protocol.ts';
 
 const STYLE = `
@@ -32,6 +33,9 @@ const STYLE = `
 .dcss-launcher__start{min-height:48px;padding:0 20px;border-radius:12px;border:0;background:#e0aa4a;color:#1a1308;font:inherit;
   font-weight:700;cursor:pointer}
 .dcss-launcher__start:disabled{opacity:.5;cursor:default}
+.dcss-launcher__random{justify-self:start;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(236,227,207,.22);
+  background:transparent;color:inherit;font:inherit;font-size:14px;cursor:pointer}
+.dcss-launcher__random:hover,.dcss-launcher__random:focus-visible{border-color:#e0aa4a;outline:none}
 .dcss-launcher__hint{margin:0;color:#b3a88f;font-size:13px}
 .dcss-launcher__error{margin:0;color:#ef8a76;font-size:13px}
 .dcss-launcher__preparing{width:min(26rem,100%);display:grid;justify-items:center;gap:14px;text-align:center}
@@ -113,7 +117,7 @@ export class DcssLauncher {
     this.#input.spellcheck = false;
     this.#input.setAttribute('autocapitalize', 'words');
     this.#input.setAttribute('enterkeyhint', 'go');
-    this.#input.value = defaultName;
+    this.#input.value = defaultName || randomName();
     this.#button = document.createElement('button');
     this.#button.type = 'submit';
     this.#button.className = 'dcss-launcher__start';
@@ -125,7 +129,16 @@ export class DcssLauncher {
       'dcss-launcher__hint',
       'You choose species and background next. Characters are saved in this browser; Menu → Saves backs them up.',
     );
-    newSection.append(label, form, this.#error, hint);
+    // Another name without the keyboard.
+    const random = document.createElement('button');
+    random.type = 'button';
+    random.className = 'dcss-launcher__random';
+    random.textContent = 'Random name';
+    random.addEventListener('click', () => {
+      this.#input.value = randomName();
+      this.#validate();
+    });
+    newSection.append(label, form, this.#error, random, hint);
 
     this.#input.addEventListener('input', () => this.#validate());
     form.addEventListener('submit', (event) => {

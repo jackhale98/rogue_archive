@@ -268,6 +268,30 @@ export function itemPrompt(top: string): ItemPrompt | null {
   };
 }
 
+/**
+ * The menu after death (files.c final_menu): "a) View scores" to "h) Exit",
+ * under the tombstone.
+ */
+export function isDeathMenu(grid: Grid): boolean {
+  let scores = false;
+  let exit = false;
+  for (let y = 0; y < grid.rows; y++) {
+    const line = rowText(grid, y);
+    scores ||= /\ba\) View scores\b/.test(line);
+    exit ||= /\bh\) Exit\b/.test(line);
+  }
+  return scores && exit;
+}
+
+/** The character's name on the tombstone ("50 ft  Beren of Beor's House"), if shown. */
+export function tombstoneName(grid: Grid): string | null {
+  for (let y = 0; y < Math.min(grid.rows, 8); y++) {
+    const match = /\d+ ft\s+(\S+) of /.exec(rowText(grid, y));
+    if (match) return match[1]!;
+  }
+  return null;
+}
+
 /** The title menu asking for the name of the saved character to open. */
 export function isLoadPrompt(grid: Grid): boolean {
   const cursor = grid.cursor;
@@ -284,11 +308,13 @@ export function detectContext(grid: Grid, state: SilState): SilContext {
   if (TARGETING.test(top.trimEnd())) return 'targeting';
   if (/-more-/.test(top)) return 'more';
   if (/\[y\/n\]/i.test(top)) return 'yesno';
+  // Killing the character (do_cmd_suicide) asks for '@' after its yes/no question.
+  if (/by typing the '@' sign/.test(top)) return 'verify';
   if (aimPrompt(top)) return 'aim';
   if (/^\s*Direction\b/.test(top)) return 'direction';
   if (songPrompt(top)) return 'song';
   if (itemPrompt(top)) return 'item';
-  if (!state.inDungeon) return isLoadPrompt(grid) ? 'load' : 'title';
+  if (!state.inDungeon) return isLoadPrompt(grid) ? 'load' : isDeathMenu(grid) ? 'death' : 'title';
   // A text field (inscriptions, notes, quantities): the cursor waits on the prompt line.
   if (grid.cursor?.visible && grid.cursor.y === 0 && top.trim().length > 0) return 'text';
   if (mapOverlay(grid)) return 'menu';

@@ -773,7 +773,9 @@ export type DcssContext =
   /** A direction (TARGET_DIR). */
   | 'direction'
   | 'level-map'
-  | 'busy';
+  | 'busy'
+  /** After death or quitting: the inventory, then "Goodbye" with the scores. */
+  | 'game-over';
 
 /** What the docks follow besides the context. Everything but health and the latches is optional. */
 export interface ControlState {
@@ -797,7 +799,12 @@ export interface ControlState {
   statPrompt?: boolean;
   /** Character creation's extra keys (Recommended, Random...). */
   startKeys?: readonly { label: string; key: string }[];
+  /** The word a text prompt asks to be typed to confirm ("quit"), while it waits. */
+  confirmWord?: string | null;
 }
+
+/** Types a word, then Enter (`type:quit`): a prompt's confirmation word as one button. */
+export const TYPE = 'type:';
 
 /** A key of the game's own, by name (`key:+`, `key:Tab`): character creation's extra keys. */
 export const KEY = 'key:';
@@ -1063,6 +1070,18 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
         palette: PALETTE,
       };
     case 'text':
+      // "Are you sure you want to abandon this character? (Confirm with "quit".)": the word as a button.
+      if (state.confirmWord)
+        return {
+          actions: [
+            a(`${TYPE}${state.confirmWord}`, {
+              label: state.confirmWord === 'quit' ? 'Abandon character' : `Confirm (${state.confirmWord})`,
+              emphasis: 'primary',
+            }),
+            a('cancel', { label: 'Cancel' }),
+          ],
+          palette: PALETTE,
+        };
       return {
         actions: [
           a(SHELL_COMMAND.keyboard, { label: 'Type', emphasis: 'primary' }),
@@ -1070,6 +1089,15 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
           a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
+      };
+    case 'game-over':
+      // The inventory, then "Goodbye" (any key leaves each).
+      return {
+        actions: [
+          a('cancel', { label: 'Continue', emphasis: 'primary', wide: true }),
+          ...(state.menu ? [a('page-up'), a('page-down')] : []),
+        ],
+        palette: [],
       };
     case 'menu':
       return menuControls(state.menu);

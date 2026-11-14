@@ -312,7 +312,11 @@ export type AngbandContext =
   | 'item'
   | 'menu'
   | 'text'
-  | 'busy';
+  | 'busy'
+  /** The death menu beside the tombstone (ui-death.c). */
+  | 'death'
+  /** "Please verify RETIRING THIS CHARACTER by typing the '@' sign:". */
+  | 'verify';
 
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
@@ -487,21 +491,31 @@ export function controlsFor(
       );
   const prompt = state.prompt ?? '';
   switch (context) {
-    case 'select':
-      // Angband's savefile menu: each row as a button.
+    case 'select': {
+      // Angband's savefile menu: each row as a button. A dead character's
+      // savefile starts a new character from it (birth's quick start), so it
+      // says so; with no one alive to continue, New character leads.
+      const dead = (label: string) => /, dead\b/.test(label);
+      const alive = saves.some((save) => save.label !== 'New game' && !dead(save.label));
       return {
         directionPad: MENU_PAD,
         actions: [
           ...saves.slice(0, 6).map((save) =>
             a(`${SAVE_ROW}${save.row}`, {
-              label: save.label === 'New game' ? 'New character' : `Continue ${save.label}`,
+              label:
+                save.label === 'New game'
+                  ? 'New character'
+                  : dead(save.label)
+                    ? `New from ${save.label.split(':')[0]} (dead)`
+                    : `Continue ${save.label}`,
               wide: true,
-              ...(save.label === 'New game' && saves.length === 1 ? { emphasis: 'primary' as const } : {}),
+              ...(save.label === 'New game' && !alive ? { emphasis: 'primary' as const } : {}),
             }),
           ),
         ],
         palette: PALETTE,
       };
+    }
     case 'birth':
       // Character creation: the screen's choices, the arrows (stats: left and right), OK.
       return {
@@ -515,11 +529,53 @@ export function controlsFor(
         palette: PALETTE,
       };
     case 'text':
+      // The character's name: "(* for a random name)" (ui-birth.c get_name_command).
+      if (/\(\* for a random name\)/.test(state.prompt ?? ''))
+        return {
+          actions: [
+            a('confirm', { label: 'OK', emphasis: 'primary' }),
+            a('random', { label: 'Random name' }),
+            a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+            a('cancel', { label: 'Back' }),
+          ],
+          palette: PALETTE,
+        };
       return {
         actions: [
           a(SHELL_COMMAND.keyboard, { label: 'Type', emphasis: 'primary' }),
           a('confirm', { label: 'OK' }),
           a('cancel', { label: 'Back' }),
+        ],
+        palette: PALETTE,
+      };
+    case 'death': {
+      // The death menu: a new game leads (it asks "Start a new game?"), then
+      // a look back at the game; Quit leaves for the savefile menu.
+      const labels: Record<string, string> = {
+        i: 'Information',
+        m: 'Messages',
+        f: 'File dump',
+        v: 'Scores',
+        x: 'Examine items',
+        h: 'History',
+        s: 'Spoilers',
+        q: 'Quit',
+      };
+      return {
+        actions: [
+          a(`${CHOOSE}n`, { label: 'New game', emphasis: 'primary', wide: true }),
+          ...['v', 'i', 'm', 'x', 'h', 'f', 'q']
+            .filter((key) => choices.some((choice) => choice.key === key))
+            .map((key) => a(`${CHOOSE}${key}`, { label: labels[key]! })),
+        ],
+        palette: [],
+      };
+    }
+    case 'verify':
+      return {
+        actions: [
+          a(`${CHOOSE}@`, { label: 'Retire character', emphasis: 'primary' }),
+          a('cancel', { label: 'Cancel' }),
         ],
         palette: PALETTE,
       };
@@ -530,6 +586,16 @@ export function controlsFor(
       if (/Press ESC to exit/.test(state.bottom ?? ''))
         return {
           actions: [a('cancel', { label: 'Done', emphasis: 'primary', wide: true }), a('page')],
+          palette: PALETTE,
+        };
+      // The last step of character creation (ui-birth.c): Escape steps back, S starts over.
+      if (/'ESC' to step back, 'S' to start over/.test(state.bottom ?? ''))
+        return {
+          actions: [
+            a('continue', { label: 'Start playing', emphasis: 'primary', wide: true }),
+            a('cancel', { label: 'Back' }),
+            a(`${CHOOSE}S`, { label: 'Start over' }),
+          ],
           palette: PALETTE,
         };
       return {

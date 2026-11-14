@@ -194,3 +194,58 @@ test('Angband phone: full-screen pages fitted with their keys as buttons; item l
   await dock.getByRole('button', { name: /^Cancel/ }).tap();
   await waitForContext(page, 'map');
 });
+
+test('Angband phone: a new character and its end by touch alone, then a new game', async ({ page }) => {
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await page.goto('?debug=1#/play/angband');
+  await expect.poll(() => angbandContext(page), { timeout: 120_000 }).toMatch(/more|select/);
+  if ((await angbandContext(page)) === 'more') await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await waitForContext(page, 'select');
+  await dock.getByRole('button', { name: 'New character' }).tap();
+  await waitForContext(page, 'birth');
+  for (let i = 0; i < 8 && (await angbandContext(page)) !== 'text'; i++) {
+    await dock.getByRole('button', { name: /^OK/ }).tap();
+    await page.waitForTimeout(400);
+  }
+  // The name: Angband's random name, no keyboard.
+  await waitForContext(page, 'text');
+  await dock.getByRole('button', { name: /^Random name/ }).tap();
+  await expect.poll(async () => (await screenText(page)).split('\n')[0]).toMatch(/random name\): +[A-Z]\w+/);
+  await dock.getByRole('button', { name: /^OK/ }).tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  // The last step: Escape steps back, so it is named for what it does.
+  await waitForContext(page, 'more');
+  await expect(dock.getByRole('button', { name: /^Start over/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^Start playing/ }).tap();
+  await waitForContext(page, 'map');
+
+  // Retire from the command list: the question, then its '@', as buttons.
+  await page.waitForTimeout(500);
+  await dock.getByRole('button', { name: /^More/ }).first().tap();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Retire character/ })
+    .tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForContext(page, 'verify');
+  await dock.getByRole('button', { name: /^Retire character/ }).tap();
+  for (let i = 0; i < 6 && (await angbandContext(page)) !== 'death'; i++) {
+    await page.waitForTimeout(500);
+    if ((await angbandContext(page)) === 'more') await dock.getByRole('button', { name: /^Continue/ }).tap();
+  }
+  // The tombstone's menu: the scores and back, then a new game.
+  await waitForContext(page, 'death');
+  await dock.getByRole('button', { name: /^Scores/ }).tap();
+  await waitForContext(page, 'more');
+  await expect.poll(() => screenText(page)).toContain('Hall of Fame');
+  await dock.getByRole('button', { name: /^Done/ }).tap();
+  await waitForContext(page, 'death');
+  await dock.getByRole('button', { name: /^New game/ }).tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForContext(page, 'select');
+  await expect(dock.getByRole('button', { name: /^New from .* \(dead\)$/ })).toBeVisible();
+  await expect(dock.locator('.dock-button--primary')).toHaveAttribute('aria-label', 'New character');
+});

@@ -16,6 +16,8 @@ import {
 import {
   aimPrompt,
   detectContext,
+  isDeathMenu,
+  tombstoneName,
   isLoadPrompt,
   itemPrompt,
   mapOverlay,
@@ -410,5 +412,84 @@ describe('Sil-Q situational docks', () => {
     expect(map).not.toContain('move-n');
     expect(map).not.toContain('yes');
     expect(map).not.toContain('run');
+  });
+});
+
+describe('the start and end of a game by touch', () => {
+  const notInDungeon = state({ 11: 1 });
+  // files.c print_tomb() and final_menu(), as drawn after "Q" (killing the character).
+  const DEATH = grid([
+    '',
+    '',
+    '               You have been slain',
+    "        50 ft  Thumbs of Feanor's House",
+    '               Slain by their own hand',
+    '               after 0 turns.  (14 Nov 2026)',
+    '',
+    '',
+    '',
+    '',
+    '   ____________________________________________________',
+    '',
+    '     #.....#   a) View scores',
+    '      .....    b) View inventory and equipment',
+    '       ...     c) View dungeon',
+    '       #@#     d) View final messages',
+    '       ...     e) View character sheet',
+    '      .....    f) Add comment to notes',
+    '     #.....#   g) Save character sheet',
+    '               h) Exit',
+  ]);
+
+  it('reads the death menu and the name on the tombstone', () => {
+    expect(isDeathMenu(DEATH)).toBe(true);
+    expect(detectContext(DEATH, notInDungeon)).toBe('death');
+    expect(tombstoneName(DEATH)).toBe('Thumbs');
+    expect(isDeathMenu(TITLE)).toBe(false);
+  });
+
+  it('leads the death menu with the way back to the title, the rest as plain buttons', () => {
+    const layout = actions(controlsFor('death', { hp: 0, maxHp: 0, run: false }, screenChoices(DEATH)));
+    expect(layout[0]).toMatchObject({ command: `${CHOOSE}h`, label: 'Back to title', emphasis: 'primary' });
+    expect(layout.map((action) => action.label)).toEqual([
+      'Back to title',
+      'Scores',
+      'Inventory',
+      'Dungeon',
+      'Messages',
+      'Character',
+      'Add a note',
+      'Save character sheet',
+    ]);
+    expect(layout.filter((action) => action.emphasis === 'primary')).toHaveLength(1);
+  });
+
+  it("answers the '@' verification of killing the character with a button", () => {
+    const top = "Please verify ABORTING by typing the '@' sign: ";
+    const screen = grid([top, ...Array(23).fill('')], { x: top.length, y: 0, visible: true });
+    expect(detectContext(screen, inDungeon)).toBe('verify');
+    const layout = actions(controlsFor('verify', { hp: 1, maxHp: 1, run: false }));
+    expect(layout.map((action) => action.command)).toEqual([`${CHOOSE}@`, 'cancel']);
+    expect(SIL_COMMANDS.find((command) => command.id === 'suicide')?.keys).toEqual(['Q'.charCodeAt(0)]);
+  });
+
+  it("names a dead character's savefile for what it does", () => {
+    const choices = [
+      { key: 'a', label: 'Tutorial' },
+      { key: 'b', label: 'New character' },
+      { key: 'c', label: 'Open saved character' },
+    ];
+    const labels = actions(
+      controlsFor(
+        'title',
+        { hp: 0, maxHp: 0, run: false },
+        choices,
+        null,
+        ['Beren', 'Thumbs'],
+        new Set(['Thumbs']),
+      ),
+    ).map((action) => action.label);
+    expect(labels).toContain('Continue Beren');
+    expect(labels).toContain('New from Thumbs (dead)');
   });
 });
