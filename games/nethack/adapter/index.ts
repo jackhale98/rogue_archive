@@ -210,6 +210,8 @@ class NetHackAdapter implements GameAdapter {
   #shortcuts = false;
   /** A touch command was just given on the map: if it asks for an item, its list opens at once (`?`). */
   #autoList = 0;
+  /** The item prompt whose list was last opened by itself (not again until back on the map). */
+  #listedPrompt: string | null = null;
   /** "You feel more confident in your … skills": Enhance leads until it is used. */
   #enhance = false;
   /**
@@ -724,12 +726,24 @@ class NetHackAdapter implements GameAdapter {
       // An item prompt from a touch command: its list at once.
       // (The map may be redrawn before the question appears, so the wish lasts a moment.)
       if (this.#autoList && Date.now() - this.#autoList > AUTO_LIST_MS) this.#autoList = 0;
+      const offersList = context === 'item' && /\?\*?\]/.test(frame?.prompt ?? '');
       if (this.#autoList && context !== 'map') {
         this.#autoList = 0;
-        if (context === 'item' && /\?\*?\]/.test(frame?.prompt ?? '')) {
+        if (offersList) {
+          this.#listedPrompt = frame?.prompt ?? '';
           this.#send([63]);
           return;
         }
+      }
+      // On a phone, every item prompt opens its list (one asked from the game's own menus or the
+      // keyboard too): its lines can be tapped. Once per question: back from the list (the
+      // prompt asked again), the prompt and its buttons stay.
+      if (context === 'map') this.#listedPrompt = null;
+      const prompt = frame?.prompt ?? '';
+      if (offersList && this.#presentation?.compact && this.#listedPrompt !== prompt) {
+        this.#listedPrompt = prompt;
+        this.#send([63]);
+        return;
       }
     }
     this.#emitLayout();

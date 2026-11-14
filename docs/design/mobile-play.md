@@ -226,7 +226,7 @@ NetHack's interface is its window port (`games/nethack/adapter/windowport.ts`), 
 | Fighting (a hostile monster next to the hero or lined up) | Fight ↖x (one tap, at the monster) · Fire →x (quiver loaded, monster lined up) or Throw · Cast or Zap · Quaff · Elbereth · More |
 | In trouble (stoned, slimed, strangled, ill, weak from hunger, low hit points) | Pray · Quaff · Elbereth · Fight ↖x or Flee ▴ (travel to the up stairs) · Pack · More |
 | Question ("[ynq]") | Its answers as buttons (Yes, No, Quit, All; other letters as themselves), Cancel |
-| Item prompt ("What do you want to eat? [fg or ?*]") | For a touch command, the suitable items open at once (`?`); up to three items are buttons of their own (letter and name); Choose, All items (`*`), Hands (`-`) when offered, Cancel |
+| Item prompt ("What do you want to eat? [fg or ?*]") | On a phone the suitable items open at once (`?`), whatever asked (a button, the game's own menus, the keyboard), once per question; on desktop for touch commands; up to three items are buttons of their own (letter and name); Choose, All items (`*`), Hands (`-`) when offered, Cancel |
 | Direction | The pad (Self in the centre), At ↖x (the monster), Down `>`, Up `<`, Cancel; or tap towards a cell |
 | Position (travel, farlook, jump…) | Select (also the pad's centre; the pad moves the cursor), Monster (fan: objects, doors, altars, anything, unexplored), Stairs (fan: up, traps), Yourself, Cancel; or tap the cell |
 | Menu | Choosing one: a button per line when there are five or fewer, else its Random line (`*`); Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |

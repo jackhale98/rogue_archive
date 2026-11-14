@@ -24,17 +24,19 @@ test('Sil-Q: new character, prompts, message log, save and continue after reload
   await waitForContext(page, 'map');
 
   // Walking into walls leaves messages in the shell's log.
-  for (const key of [
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-    'ArrowUp',
-  ]) {
-    await page.keyboard.press(key);
+  // (Up to 40 steps north: a tall room takes more than a few to reach its wall.)
+  const messages = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as {
+            __rogueArchive: { adapter: { debug: { state: { messageCount: number } | null } } };
+          }
+        ).__rogueArchive.adapter.debug.state?.messageCount ?? 0,
+    );
+  const before = await messages();
+  for (let i = 0; i < 40 && (await messages()) === before; i++) {
+    await page.keyboard.press('ArrowUp');
     await page.waitForTimeout(100);
     if ((await silContext(page)) !== 'map') await page.keyboard.press('Escape');
   }

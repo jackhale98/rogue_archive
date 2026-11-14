@@ -105,6 +105,10 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: 'screen';
   min-height: 0;
+  /* A long press on the game (look, act there) must not start a text selection or iOS's callout. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .play__screen {
   grid-area: screen;
