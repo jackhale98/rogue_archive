@@ -27,6 +27,8 @@ Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a v
 
 ## Brogue CE
 
+Done (November 2026): all of the list below. Read-only `ST_*` fields for danger, rethrow, food letter and playback; danger and quiet docks; Long search; Go ↓/↑; playback dock; touch commands in the key coverage.
+
 - **Bugs:** drop or rename the palette's `yes`/`no` (`y`/`n` move diagonally on the map; Brogue's `confirm()` takes Enter/Esc); `search` says "five turns" but `s` searches one turn; add **Long search (Ctrl+S)**; fix labels ("More" used for both acknowledge and the palette; Enter on the map is the keyboard look cursor, not "Confirm"); Rest-until-better also rests 100 turns at full health.
 - **Stairs:** `>` shows the route, a second `>` goes. When the cursor sits on the stairs (`ST_DOWN_X/Y` already in the snapshot) make "Go ↓" the primary button; after "I see no path for further exploration." promote Stairs.
 - **Danger dock** (new `ST_ENEMY_ADJACENT` = `adjacentFightingDir() != NO_DIRECTION`, `ST_ENEMIES_VISIBLE`): Throw again `T` (new `ST_CAN_RETHROW`), Fight `x`, Pack, Look; no Rest/Search as the main button.
@@ -37,6 +39,8 @@ Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a v
 
 ## Dungeon Crawl Stone Soup
 
+Done (November 2026): the list below, except a dedicated dock for `use_item` menus and changing the combat dock's emphasis by threat (`maxThreat` is read but not used yet). Also: phone popups scroll a screen per Page up/down, and descriptions wrap to the width.
+
 - **Bugs:** Rest leads below 50% HP even with monsters near (the game refuses); a latched Run disappears when wounded; aim (`TARGET_PATH`), look (`TARGET`) and direction (`TARGET_DIR`) share one dock — split them (Fire/Next/Quiver for aiming; Select/Next/Info for looking; pad + Cancel for directions).
 - **Monsters in view:** the client already receives map cells with monster attitude and threat; the client host can read them (as upstream's monster list does) and send `{hostiles, maxThreat}`. Hostiles → Fight Tab · "Fire: *quiver*" `p` (quiver from `player.quiver_desc`) · Cast `z` · Quaff · Look; no Explore (refused with monsters near).
 - **Underfoot** (map cell flags): Down/Up/Pray/Shop/Enter on the stairs button; otherwise Travel `G`.
@@ -46,6 +50,8 @@ Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a v
 
 ## Sil-Q
 
+Done (November 2026): the list below. The keysets are followed by sending map commands after Sil's keymap bypass (`\\`); flasks of oil still go through plain Throw `t`.
+
 - **Bugs:** the song prompt ("Songs: … Sing which song:") shows the typing dock — parse its letters into buttons (plus stop `s`, swap `x`); "Nearest" (`t`/`*`) is offered at plain direction prompts (open, close, bash, tunnel, disarm), where the game rejects it — only aim prompts ("'f' for") take it; the `*` button means "choose a target", not "list"; long-press on the map runs plain `l` rather than looking at that cell; the hardcoded original keyset breaks if a player enables `hjkl_movement` or `angband_keyset` (expose and follow them, or lock them).
 - **Phones hide the status line:** show stealth mode, current song, hunger and conditions in the band (new fields from `p_ptr`: `stealth_mode`, `song1/2`, `food`, `blind`, `confused`, `afraid`, `poisoned`, `cut`, `stun`, `entranced`, light timeout).
 - **Context leads** (new fields): on stairs (`cave_feat` FEAT_MORE/LESS) → Down/Up; at a forge → Smith; item underfoot → Pick up; the Iron Crown underfoot → Prise (`k`, today palette-only); `on_the_run` (escaping with a Silmaril) → Up; unspent experience → Abilities.
@@ -53,6 +59,8 @@ Not done: per-item verbs in the inventory (Rogue's lists take only Space, so a v
 - Flasks of oil have no THROWING flag, so "throw at nearest" never throws them: Throw `t` then the flask.
 
 ## HyperRogue
+
+Done (November 2026): the list below (Aim and Inspect through upstream's touch modes, crossbow Fire toggle, Drop, Orbs, Mark, the Orb of Safety hint).
 
 - **Demote `t`:** it targets the cell at the centre of the view, which after any move is the player (rejected). Keep it only when Strong Wind is held (new `RA_WIND`), where it jumps.
 - **Ranged orbs on touch:** a tap on a distant cell with a ranged orb (Teleport, Frog, Dash, …) uses it automatically if it applies, else walks — players can teleport by accident. Add an **Aim** toggle when a ranged orb is held (new `RA_RANGED` = `haveRangedOrb()`), using upstream's own touch modes (`touchmode`: ranged = forced target with error messages, info = inspect without moving) through a small UI-state setter, and show the orb a tap would use (`orbToTarget`). Smallest step: enable upstream's `touch_interface`, which draws its own mode-cycling button.

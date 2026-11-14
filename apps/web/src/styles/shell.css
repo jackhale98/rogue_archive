@@ -482,6 +482,11 @@
   z-index: 2;
   bottom: max(0.6rem, env(safe-area-inset-bottom));
 }
+/* An open long-press fan can reach across the thumb pad: keep it on top, so
+   sliding onto any part of an option picks it. */
+.play__dock:has(.action-fan) {
+  z-index: 3;
+}
 /* Side insets mostly protect a mid-height camera cutout; the bottom corners are clear of it. */
 .play__dock {
   left: max(0.5rem, calc(env(safe-area-inset-left) * 0.6));

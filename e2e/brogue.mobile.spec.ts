@@ -252,6 +252,8 @@ test("inventory: an item's details fill the sheet and the dock offers its action
   const dock = page.getByRole('group', { name: 'Actions' });
   await dock.getByRole('button', { name: 'Pack (i)' }).tap();
   await expect.poll(() => gameContext(page)).toBe('menu');
+  // (Wait until the list is drawn: a key pressed while it opens is lost.)
+  await waitForScreenText(page, 'dagger');
   // The starting dagger (b) is wielded: Remove is the likely action.
   await page.keyboard.press('b');
   await expect.poll(() => gameContext(page)).toBe('item');
@@ -311,7 +313,15 @@ test('search: progress towards the fifth search, and the five-turn search (Ctrl+
 }) => {
   await newGame(page);
   const dock = page.getByRole('group', { name: 'Actions' });
-  await dock.getByRole('button', { name: 'Search (s)' }).tap();
+  // The level is random: with a monster in view from the start, the danger
+  // dock (Fight, Throw...) replaces Search.
+  const search = dock.getByRole('button', { name: 'Search (s)' });
+  const quiet = await search.waitFor({ timeout: 5000 }).then(
+    () => true,
+    () => false,
+  );
+  test.skip(!quiet, 'A monster is in view at the start, so the dock is the danger dock.');
+  await search.tap();
   await expect(dock.getByRole('button', { name: 'Search 1/5 (s)' })).toBeVisible();
   await dock.getByRole('button', { name: 'Search 1/5 (s)' }).tap();
   await expect(dock.getByRole('button', { name: 'Search 2/5 (s)' })).toBeVisible();
