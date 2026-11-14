@@ -713,6 +713,16 @@ const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchActi
 export const KEY = 'key:';
 
 const YN_LABELS: Record<string, string> = { y: 'Yes', n: 'No', q: 'Quit', a: 'All' };
+/** "Shall I pick a character for you? [ynaq]": what each answer does there. */
+const PICK_LABELS: Record<string, string> = {
+  y: 'Pick for me',
+  n: 'Let me choose',
+  a: 'Pick, no questions',
+  q: 'Quit',
+};
+/** A menu of one choice with this few lines ("Is this ok?", the tutorial question): a button each. */
+export const FEW_CHOICES = 5;
+const short = (text: string, max = 22) => (text.length > max ? `${text.slice(0, max - 1)}…` : text);
 
 /** The choices a prompt offers in its brackets ("[ynq]", "[abc or ?*]"). */
 export function promptChoices(prompt: string): string[] {
@@ -742,6 +752,8 @@ export interface DockState {
   enhance?: boolean;
   /** This turn's messages ("d - an uncursed food ration." names an item prompt's letters). */
   messages?: readonly string[];
+  /** Strategy shortcuts (the Elbereth button and suggestion); on unless false. */
+  shortcuts?: boolean;
 }
 
 /** Item letters named by this turn's messages ("d - an uncursed food ration."). */
@@ -887,7 +899,29 @@ function mapControls(dock: DockState): TouchControlLayout {
   };
 }
 
+/**
+ * The dock for a context. With strategy shortcuts off (the default setting),
+ * nothing suggests Elbereth: no button, fan entry, command-list entry or
+ * engraving suggestion. Engraving it by hand (`E`) works as always.
+ */
 export function controlsFor(context: NhContext | 'start', dock: DockState): TouchControlLayout {
+  const layout = layoutFor(context, dock);
+  if (dock.shortcuts !== false) return layout;
+  const hidden = (command: string) => command === 'elbereth' || command === `${TEXT}Elbereth`;
+  return {
+    ...layout,
+    actions: layout.actions
+      .filter((action) => !hidden(typeof action === 'string' ? action : action.command))
+      .map((action) =>
+        typeof action === 'string' || !action.alternates
+          ? action
+          : { ...action, alternates: action.alternates.filter((id) => !hidden(id)) },
+      ),
+    palette: layout.palette?.filter((id) => !hidden(id)),
+  };
+}
+
+function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlLayout {
   switch (context) {
     case 'start':
     case 'loading':
@@ -915,25 +949,38 @@ export function controlsFor(context: NhContext | 'start', dock: DockState): Touc
           ],
           palette: PALETTE,
         };
+      // Choosing one: a short menu's lines are buttons; a long one's "Random" (`*`, as the
+      // role, race, gender and alignment menus have it) is.
+      const choices = menu?.how === 1 ? menu.items.filter((item) => item.key) : [];
+      const buttons = (
+        choices.length <= FEW_CHOICES ? choices : choices.filter((item) => item.key === 42)
+      ).map((item, i) =>
+        a(`${KEY}${item.key}`, {
+          label: short(item.text.trim()),
+          ...(i === 0 ? { emphasis: 'primary' as const } : {}),
+        }),
+      );
       return {
         actions: [
+          ...buttons,
           ...(menu?.how === 2
             ? [a('confirm', { label: 'Accept', emphasis: 'primary' as const }), a('select-all')]
             : []),
           ...(paging ? [a('previous-page'), a('next-page')] : []),
           a('cancel'),
-          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ...(buttons.length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
         ],
         palette: PALETTE,
       };
     }
     case 'yn': {
       const letters = promptChoices(dock.prompt).slice(0, 6);
+      const labels = /^Shall I pick/.test(dock.prompt) ? PICK_LABELS : YN_LABELS;
       return {
         actions: [
           ...letters.map((letter, i) =>
             a(`${KEY}${letter.charCodeAt(0)}`, {
-              label: YN_LABELS[letter] ?? letter,
+              label: labels[letter] ?? letter,
               ...(i === 0 ? { emphasis: 'primary' as const } : {}),
             }),
           ),

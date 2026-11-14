@@ -20,6 +20,8 @@ interface Props {
   adapter: GameAdapter;
   runtime: LoadedRuntime;
   settings: Record<string, unknown>;
+  /** The command list as the game last laid it out (it can change with a setting). */
+  palette?: readonly string[];
 }
 
 function downloadBytes(bytes: Uint8Array, filename: string, type = 'application/json'): void {
@@ -33,7 +35,16 @@ function downloadBytes(bytes: Uint8Array, filename: string, type = 'application/
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, settings }: Props) {
+export function ShellMenu({
+  open,
+  onClose,
+  onExit,
+  game,
+  adapter,
+  runtime,
+  settings,
+  palette: current,
+}: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
@@ -144,7 +155,7 @@ export function ShellMenu({ open, onClose, onExit, game, adapter, runtime, setti
     );
   };
 
-  const palette = adapter.touchLayout?.palette ?? [];
+  const palette = current ?? adapter.touchLayout?.palette ?? [];
   const commands = adapter.commands.filter((command) => palette.includes(command.id));
   const categories = [...new Set(commands.map((command) => command.category ?? 'Commands'))];
 

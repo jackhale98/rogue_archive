@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { TouchAction } from '@rogue-archive/game-api';
 import {
   DIR,
   FIGHT,
@@ -259,6 +260,43 @@ describe('NetHack prompts, keys and docks', () => {
     expect(controlsFor('start', dock).actions).toEqual([]);
   });
 
+  it('labels character creation’s questions and menus by what they do', () => {
+    const label = (a: TouchAction | string) => (typeof a === 'string' ? a : (a.label ?? a.command));
+    const pick = controlsFor('yn', {
+      state: null,
+      prompt: 'Shall I pick a character for you? [ynaq]',
+      menu: null,
+    }).actions.map(label);
+    expect(pick).toEqual(['Pick for me', 'Let me choose', 'Pick, no questions', 'Quit', 'cancel']);
+    const item = (key: string, text: string) => ({ key: key.charCodeAt(0), text });
+    // A short menu: a button per choice.
+    const ok = controlsFor('menu', {
+      state: null,
+      prompt: '',
+      menu: {
+        how: 1,
+        page: 0,
+        pages: 1,
+        items: [
+          { key: 0, text: 'Tester, lawful female dwarvish Valkyrie' },
+          item('y', 'Yes; start game'),
+          item('n', 'No; choose role again'),
+          item('q', 'Quit'),
+        ],
+      },
+    }).actions;
+    expect(ok.map(label)).toEqual(['Yes; start game', 'No; choose role again', 'Quit', 'cancel']);
+    expect(ok[0]).toMatchObject({ command: `${KEY}121`, emphasis: 'primary' });
+    // A long one (the roles): its Random line.
+    const roles = 'abcdefghijklm'.split('').map((key) => item(key, `role ${key}`));
+    const role = controlsFor('menu', {
+      state: null,
+      prompt: '',
+      menu: { how: 1, page: 0, pages: 1, items: [...roles, item('*', 'Random'), item('q', 'Quit')] },
+    }).actions.map(label);
+    expect(role).toEqual(['Random', 'cancel']);
+  });
+
   it('reads the state snapshot', () => {
     const state = parseState([
       1, 12, 16, 3, 5, 2, 40, 10, 77, 2, 1, 2, 3, 0b10010, 100, 4, 70, 3, 32, 1, 1, 1, 0, 1, 0,
@@ -348,6 +386,24 @@ describe('NetHack touch controls (docs/design/nethack-controls.md)', () => {
     expect(commands(at({ trouble: TROUBLE.hunger, adjacent: [2], adjacentChar: 'k' }))[3]).toBe(`${FIGHT}2`);
     // Blindness or levitation alone are not a reason to pray.
     expect(commands(at({ trouble: TROUBLE.blind | TROUBLE.levitating }))[0]).toBe('search');
+  });
+
+  it('suggests Elbereth only with strategy shortcuts on', () => {
+    const off = controlsFor('map', dock(at({ trouble: TROUBLE.hp }), { shortcuts: false }));
+    expect(off.actions.map((a) => (typeof a === 'string' ? a : a.command))).not.toContain('elbereth');
+    expect(off.palette).not.toContain('elbereth');
+    for (const action of off.actions)
+      if (typeof action !== 'string') expect(action.alternates ?? []).not.toContain('elbereth');
+    const engrave = controlsFor(
+      'getlin',
+      dock(base, { prompt: 'What do you want to write in the dust here?', shortcuts: false }),
+    );
+    expect(engrave.actions.map((a) => (typeof a === 'string' ? a : a.command))).not.toContain(
+      `${TEXT}Elbereth`,
+    );
+    expect(controlsFor('map', dock(at({ trouble: TROUBLE.hp }), { shortcuts: true })).palette).toContain(
+      'elbereth',
+    );
   });
 
   it('answers directions, positions, item prompts and engravings', () => {

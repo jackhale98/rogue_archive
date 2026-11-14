@@ -156,6 +156,18 @@ class NetHackAdapter implements GameAdapter {
       default: 'auto',
       appliesOn: 'immediately',
     },
+    {
+      key: 'shortcuts',
+      label: 'Strategy shortcuts',
+      description:
+        'Adds an Elbereth button to the fighting and trouble buttons and to the command list, and suggests Elbereth when you engrave. Engraving Elbereth is a well-known way to scare most monsters away, but the game never tells you about it directly, so this is off unless you want it. You can always engrave it yourself with E.',
+      options: [
+        { value: 'off', label: 'Off (discover it yourself)' },
+        { value: 'on', label: 'On' },
+      ],
+      default: 'off',
+      appliesOn: 'immediately',
+    },
   ];
   readonly resumeHint =
     'NetHack saves when you press S (it then ends the session, as on a desktop). Start again as the same character to continue.';
@@ -194,6 +206,8 @@ class NetHackAdapter implements GameAdapter {
   #cleanup: (() => void)[] = [];
   /** --More--: continue automatically, or wait as the original. */
   #autoMore = true;
+  /** Strategy shortcuts: the Elbereth button and suggestion. */
+  #shortcuts = false;
   /** A touch command was just given on the map: if it asks for an item, its list opens at once (`?`). */
   #autoList = 0;
   /** "You feel more confident in your … skills": Enhance leads until it is used. */
@@ -239,6 +253,7 @@ class NetHackAdapter implements GameAdapter {
     this.#defaultName = String(options.settings.lastName ?? '');
     this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
     this.#autoMore = options.settings.more !== 'wait';
+    this.#shortcuts = options.settings.shortcuts === 'on';
     this.#runtimeFiles = runtime.files;
     this.#runtimeBaseUrl = runtimeBaseUrl;
 
@@ -516,6 +531,11 @@ class NetHackAdapter implements GameAdapter {
   }
 
   applySetting(key: string, value: unknown): void {
+    if (key === 'shortcuts') {
+      this.#shortcuts = value === 'on';
+      this.#emitLayout();
+      return;
+    }
     if (key === 'more') {
       this.#autoMore = value !== 'wait';
       if (this.#autoMore && this.#context === 'more') this.#send([32]);
@@ -712,12 +732,21 @@ class NetHackAdapter implements GameAdapter {
         }
       }
     }
+    this.#emitLayout();
+  }
+
+  /** The touch layout for the current context (again after a setting changes it). */
+  #emitLayout(): void {
+    const context = this.#context;
+    if (!context) return;
+    const frame = this.#frame;
     const layout = controlsFor(context, {
       state: this.#state,
       prompt: frame?.prompt ?? '',
       menu: frame?.menu ?? null,
       enhance: this.#enhance,
       messages: frame?.messages ?? [],
+      shortcuts: this.#shortcuts,
     });
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature) return;

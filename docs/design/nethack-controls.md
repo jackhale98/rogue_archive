@@ -104,7 +104,7 @@ Never: monsters or traps the hero hasn't seen, prayer timeout, Luck, or any othe
 
 1. **Tapping the hero:** `#herecmdmenu`, a menu of everything possible here (not `mouseaction`'s single guess), since the dock's lead slot already gives the one-tap action.
 2. **Long-press:** `#therecmdmenu`, actions there. Next to the hero that is the game's menu; farther away, where upstream's menu has nothing for a click but travel, it is farlook (above).
-3. **Elbereth and Pray buttons:** yes, in the fighting and trouble docks and the command list, with the game's own confirmations.
+3. **Elbereth and Pray buttons:** yes, in the fighting and trouble docks and the command list, with the game's own confirmations. Later revised: Elbereth is behind a setting, *Strategy shortcuts*, off by default. Praying is in the Guidebook and the game's own help; Elbereth the game only hints at (fortune cookies, the Oracle), so a button that lights up in a fight is a strategy hint a new player wouldn't have.
 4. **Item prompts:** the list of suitable items at once (or, for up to three items, buttons for them).
 
 ## Notes from implementing it

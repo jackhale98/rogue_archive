@@ -10,8 +10,10 @@ test('NetHack phone: creation by taps, the status band, menus as sheets, the doc
   await waitForContext(page, 'yn');
   const dock = page.getByRole('group', { name: 'Actions' });
   // The question's answers are buttons.
-  for (const name of ['Yes', 'No', 'Quit']) await expect(dock.getByRole('button', { name })).toBeVisible();
-  await dock.getByRole('button', { name: 'No' }).tap();
+  // "Shall I pick a character for you? [ynaq]": each answer says what it does.
+  for (const name of ['Pick for me', 'Let me choose', 'Pick, no questions', 'Quit'])
+    await expect(dock.getByRole('button', { name })).toBeVisible();
+  await dock.getByRole('button', { name: 'Let me choose' }).tap();
   await waitForContext(page, 'menu');
   // Menus are a large sheet whose lines can be tapped.
   expect((await nethack(page))?.views).toEqual(['sheet']);
@@ -21,9 +23,13 @@ test('NetHack phone: creation by taps, the status band, menus as sheets, the doc
     await page.touchscreen.tap(at.x, at.y);
     await page.waitForTimeout(300);
   };
+  // The role menu: its lines, and Random as a button.
+  await expect(dock.getByRole('button', { name: /^Random/ })).toBeVisible();
   await tapLine(/a Valkyrie/);
   await tapLine(/dwarf/);
-  await tapLine(/Yes; start game/);
+  // "Is this ok?": a short menu, a button per choice.
+  await expect(dock.getByRole('button', { name: /^No; choose role again/ })).toBeVisible();
+  await dock.getByRole('button', { name: /^Yes; start game/ }).tap();
   await toMap(
     page,
     () => page.touchscreen.tap(200, 400),
@@ -79,7 +85,7 @@ test('NetHack phone: the game’s own context menus, item lists at once, travel 
   await startNetHack(page, 'Context');
   await waitForContext(page, 'yn');
   const dock = page.getByRole('group', { name: 'Actions' });
-  await dock.getByRole('button', { name: 'No' }).tap();
+  await dock.getByRole('button', { name: 'Let me choose' }).tap();
   const tapLine = async (pattern: RegExp) => {
     await expect.poll(() => lineAt(page, pattern).then((at) => at !== null)).toBe(true);
     const at = (await lineAt(page, pattern))!;
@@ -261,6 +267,13 @@ test('NetHack phone: the game’s own context menus, item lists at once, travel 
   await expect.poll(async () => (await nethack(page))?.state?.moves).toBeGreaterThan(before.moves);
   await waitForContext(page, 'map');
 
+  // Elbereth is a strategy shortcut, off by default: not in the command list until it is turned on.
+  await page.getByRole('button', { name: 'More', exact: true }).tap();
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Engrave Elbereth/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Menu' }).tap();
+  await page.getByLabel('Strategy shortcuts').selectOption('on');
+  await page.keyboard.press('Escape');
   // Elbereth, from the command list: the game's prompts answered, the engraving made.
   await page.getByRole('button', { name: 'More', exact: true }).tap();
   await page

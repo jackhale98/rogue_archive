@@ -226,11 +226,13 @@ NetHack's interface is its window port (`games/nethack/adapter/windowport.ts`), 
 | Item prompt ("What do you want to eat? [fg or ?*]") | For a touch command, the suitable items open at once (`?`); up to three items are buttons of their own (letter and name); Choose, All items (`*`), Hands (`-`) when offered, Cancel |
 | Direction | The pad (Self in the centre), At ↖x (the monster), Down `>`, Up `<`, Cancel; or tap towards a cell |
 | Position (travel, farlook, jump…) | Select (also the pad's centre; the pad moves the cursor), Monster (fan: objects, doors, altars, anything, unexplored), Stairs (fan: up, traps), Yourself, Cancel; or tap the cell |
-| Menu | Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |
+| Menu | Choosing one: a button per line when there are five or fewer, else its Random line (`*`); Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |
 | Text window, `--More--` | Next or Continue, Close |
-| Typed line, extended command | Elbereth when engraving, Type (the keyboard), OK, Cancel |
+| Typed line, extended command | Elbereth when engraving (with strategy shortcuts on), Type (the keyboard), OK, Cancel |
 
-The Elbereth button (fighting, trouble, the command list) engraves it in the dust: `E`, fingers, no to adding to an engraving, the text; every question is still the game's, and the game decides whether it works.
+Character creation: "Shall I pick a character for you?" answers as Pick for me, Let me choose, Pick, no questions, Quit; the role, race, gender and alignment menus have a Random button; "Is this ok?" has a button per choice.
+
+The Elbereth button (fighting, trouble, the command list; only with Settings → *Strategy shortcuts* on, off by default, since the game never tells you about Elbereth directly) engraves it in the dust: `E`, fingers, no to adding to an engraving, the text; every question is still the game's, and the game decides whether it works.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 

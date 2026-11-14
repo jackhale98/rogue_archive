@@ -443,6 +443,7 @@ function GameShell({ gameId }: { gameId: string }) {
           adapter={adapter}
           runtime={runtime}
           settings={session.settings}
+          palette={session.touchLayout?.palette}
         />
       ) : null}
     </div>
