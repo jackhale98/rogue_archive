@@ -9,16 +9,16 @@ const catalog = withDefaults(
 );
 
 describe('librarySections', () => {
-  it('separates playable games, the roadmap and the watchlist in priority order', () => {
+  it('lists playable games A–Z, the roadmap and the watchlist in the order they are planned', () => {
     const sections = librarySections(catalog.games, EMPTY_FILTERS);
     expect(sections.playable.map((g) => g.id)).toEqual([
+      'angband',
       'brogue-ce',
       'dcss',
-      'sil-q',
-      'rogue',
       'hyperrogue',
       'nethack',
-      'angband',
+      'rogue',
+      'sil-q',
     ]);
     expect(sections.roadmap[0]!.id).toBe('drl');
     expect(sections.roadmap.map((g) => g.priority)).toEqual(
@@ -42,13 +42,13 @@ describe('librarySections', () => {
     expect(graphical.roadmap.every((g) => g.interface.includes('graphical'))).toBe(true);
     const touch = librarySections(catalog.games, { ...EMPTY_FILTERS, touchOnly: true });
     expect(touch.playable.map((g) => g.id)).toEqual([
+      'angband',
       'brogue-ce',
       'dcss',
-      'sil-q',
-      'rogue',
       'hyperrogue',
       'nethack',
-      'angband',
+      'rogue',
+      'sil-q',
     ]);
     expect(touch.roadmap).toHaveLength(0);
   });

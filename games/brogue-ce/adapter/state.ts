@@ -375,14 +375,16 @@ export function controlsFor(
         palette,
       };
     case 'item':
-      // The panel's own buttons, plus stepping through the inventory and Back.
+      // Stepping through the inventory (Previous above Next), Back, then the
+      // panel's own buttons nearest the thumb.
       return {
         actions: [
-          ...itemDock(itemActionIds),
           a('previous-item', { alternates: ['next-item'] }),
           a('next-item'),
           a('cancel', { label: 'Back' }),
+          ...itemDock(itemActionIds),
         ],
+        reading: true,
         palette,
       };
     case 'targeting':

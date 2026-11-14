@@ -975,24 +975,26 @@ function menuControls(menu: MenuInfo | null | undefined): TouchControlLayout {
   if (menu?.tag === 'spell' || menu?.tag === 'ability') {
     return {
       actions: [
-        close,
+        type,
+        a('confirm', { label: 'Select', emphasis: 'primary' }),
+        a('menu-mode'),
         a('page-up', { alternates: ['line-up'] }),
         a('page-down', { alternates: ['line-down'] }),
-        a('menu-mode'),
-        a('confirm', { label: 'Select', emphasis: 'primary' }),
-        type,
+        close,
       ],
+      reading: true,
       palette: PALETTE,
     };
   }
   return {
     actions: [
-      close,
+      type,
+      a('confirm', { label: 'Select', emphasis: 'primary' }),
       a('page-up', { alternates: ['line-up'] }),
       a('page-down', { alternates: ['line-down'] }),
-      a('confirm', { label: 'Select', emphasis: 'primary' }),
-      type,
+      close,
     ],
+    reading: true,
     palette: PALETTE,
   };
 }
@@ -1015,7 +1017,6 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
       // screen's own extra keys (Recommended, Random...), Back.
       return {
         actions: [
-          a('confirm', { label: 'OK', emphasis: 'primary' }),
           // (This step's two, "Recommended species" and "Random species": the whole-character
           // ones stay at the bottom of the list, leaving room on screen for it.)
           ...(state.startKeys ?? []).slice(0, 2).map((entry) =>
@@ -1023,9 +1024,11 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
               label: entry.label.length > 22 ? `${entry.label.slice(0, 21)}…` : entry.label,
             }),
           ),
-          a('cancel', { label: 'Back' }),
           ...((state.startKeys ?? []).length ? [] : [a(SHELL_COMMAND.keyboard, { label: 'Type' })]),
+          a('cancel', { label: 'Back' }),
+          a('confirm', { label: 'OK', emphasis: 'primary' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'more':
@@ -1056,6 +1059,7 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
             a('stat-dex'),
             a(SHELL_COMMAND.keyboard, { label: 'Type' }),
           ],
+          reading: true,
           palette: PALETTE,
         };
       }
@@ -1104,12 +1108,13 @@ export function controlsFor(context: DcssContext, state: ControlState): TouchCon
     case 'popup':
       return {
         actions: [
-          a('cancel', { label: 'Close' }),
+          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          a('confirm', { label: 'Select', emphasis: 'primary' }),
           a('page-up', { alternates: ['line-up'] }),
           a('page-down', { alternates: ['line-down'] }),
-          a('confirm', { label: 'Select', emphasis: 'primary' }),
-          a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          a('cancel', { label: 'Close' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'aim':

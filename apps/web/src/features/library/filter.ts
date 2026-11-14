@@ -1,7 +1,7 @@
 import { isLaunchable, type CatalogGame, type InterfaceStyle } from '@rogue-archive/catalog';
 
-/** Featured is the archive's own order (the catalog's priority). */
-export const LIBRARY_SORTS = ['featured', 'title', 'newest', 'oldest'] as const;
+/** How the playable games are ordered (A–Z by default). */
+export const LIBRARY_SORTS = ['title', 'newest', 'oldest'] as const;
 export type LibrarySort = (typeof LIBRARY_SORTS)[number];
 
 export interface LibraryFilters {
@@ -15,7 +15,7 @@ export const EMPTY_FILTERS: LibraryFilters = {
   query: '',
   interfaceStyle: 'any',
   touchOnly: false,
-  sort: 'featured',
+  sort: 'title',
 };
 
 /** Whether anything narrows the list (the sort only orders it). */
@@ -58,14 +58,12 @@ function compare(sort: LibrarySort): (a: CatalogGame, b: CatalogGame) => number 
     return (ya - yb) * direction || byTitle(a, b);
   };
   switch (sort) {
-    case 'title':
-      return byTitle;
     case 'newest':
       return byYear(-1);
     case 'oldest':
       return byYear(1);
     default:
-      return (a, b) => a.priority - b.priority;
+      return byTitle;
   }
 }
 
@@ -75,12 +73,16 @@ export interface LibrarySections {
   watchlist: CatalogGame[];
 }
 
-/** Splits the catalog into launchable games, the roadmap and the watchlist, each in the chosen order. */
+/**
+ * Splits the catalog into launchable games (in the chosen order), the roadmap
+ * and the watchlist (in the order they are planned: the catalog's priority).
+ */
 export function librarySections(games: readonly CatalogGame[], filters: LibraryFilters): LibrarySections {
-  const sorted = games.filter((game) => matchesFilters(game, filters)).sort(compare(filters.sort));
+  const matching = games.filter((game) => matchesFilters(game, filters));
+  const planned = [...matching].sort((a, b) => a.priority - b.priority);
   return {
-    playable: sorted.filter((game) => isLaunchable(game)),
-    roadmap: sorted.filter((game) => !isLaunchable(game) && game.status !== 'blocked'),
-    watchlist: sorted.filter((game) => game.status === 'blocked'),
+    playable: matching.filter((game) => isLaunchable(game)).sort(compare(filters.sort)),
+    roadmap: planned.filter((game) => !isLaunchable(game) && game.status !== 'blocked'),
+    watchlist: planned.filter((game) => game.status === 'blocked'),
   };
 }

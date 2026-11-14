@@ -53,7 +53,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: games/sil-q/dist
-          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/upstream.env', 'games/sil-q/scripts/**', 'games/sil-q/port/**', 'games/sil-q/patches/**', 'games/sil-q/tests/conformance/**', 'games/sil-q/adapter/input.ts', '!games/sil-q/**/*.md') }}
+          key: runtime-sil-q-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/sil-q/upstream.env', 'games/sil-q/scripts/**', 'games/sil-q/port/**', 'games/sil-q/patches/**', 'games/sil-q/tests/conformance/**', 'games/sil-q/adapter/input.ts', 'games/sil-q/adapter/state.ts', '!games/sil-q/**/*.md') }}
       - name: Restore Rogue runtime
         id: rogue
         uses: actions/cache/restore@v4

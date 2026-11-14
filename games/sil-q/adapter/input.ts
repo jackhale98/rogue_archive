@@ -23,6 +23,7 @@ import {
   type TouchAction,
   type TouchControlLayout,
 } from '@rogue-archive/game-api';
+import type { BirthStep } from './state.ts';
 
 export const ESCAPE = 27;
 const ctrl = (letter: string) => letter.toUpperCase().charCodeAt(0) & 31;
@@ -450,6 +451,30 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
     category: 'Keys',
   },
   {
+    id: 'random-choice',
+    label: 'A random choice',
+    shortLabel: 'Random',
+    shortcut: '*',
+    keys: k('*'),
+    category: 'Keys',
+  },
+  {
+    id: 'reroll',
+    label: 'Reroll',
+    shortLabel: 'Reroll',
+    shortcut: 'Space',
+    keys: [32],
+    category: 'Keys',
+  },
+  {
+    id: 'random-name',
+    label: 'A random name',
+    shortLabel: 'Random name',
+    shortcut: 'Tab',
+    keys: [9],
+    category: 'Keys',
+  },
+  {
     id: 'list',
     label: 'Show the choices',
     shortLabel: 'List',
@@ -600,6 +625,8 @@ export interface DockState {
   flask?: string;
   /** The prompt line (aim, look/target and song prompts word their options there). */
   prompt?: string;
+  /** Character creation's step, when it is on screen. */
+  birth?: BirthStep | null;
 }
 
 /** Sil's song names by SNG_* index (lib/edit/ability.txt without "Song of "); the song prompt's letters are 'a' + index. */
@@ -737,6 +764,43 @@ function mapControls(state: DockState): TouchControlLayout {
   return { directionPad: PAD, actions, palette: PALETTE };
 }
 
+/**
+ * Character creation (birth.c), step by step, read top to bottom with OK
+ * nearest the thumb. Escape starts the character over at any step.
+ */
+function birthControls(step: BirthStep, choiceButtons: TouchAction[]): TouchControlLayout {
+  const startOver = a('cancel', { label: 'Start over' });
+  const accept = (label: string) => a('confirm', { label, emphasis: 'primary', wide: true });
+  const steps: Record<BirthStep, TouchAction[]> = {
+    // Race, then house: the current menu's choices (a tap shows one, OK takes it).
+    menu: [...choiceButtons, a('random-choice'), startOver, accept('OK')],
+    // Points: up and down the list, less or more for the line (the pad does the same).
+    stats: [
+      a('move-n', { label: '↑ Prev' }),
+      a('move-s', { label: '↓ Next' }),
+      a('move-w', { label: '− Less' }),
+      a('move-e', { label: '+ More' }),
+      startOver,
+      accept('Accept'),
+    ],
+    skills: [],
+    history: [a('reroll'), startOver, accept('Accept')],
+    body: [a('reroll'), startOver, accept('Accept')],
+    name: [
+      a(SHELL_COMMAND.keyboard, { label: 'Type a name' }),
+      a('random-name'),
+      startOver,
+      accept('Accept'),
+    ],
+  };
+  return {
+    directionPad: MENU_PAD,
+    actions: steps[step === 'skills' ? 'stats' : step],
+    reading: true,
+    palette: PALETTE,
+  };
+}
+
 /** The dock for each context. `choices` are lettered options shown on screen. */
 export function controlsFor(
   context: SilContext,
@@ -758,8 +822,18 @@ export function controlsFor(
   const prompt = state.prompt ?? '';
   switch (context) {
     case 'title':
-      // Title and character creation: the screen's choices as large buttons;
-      // on the main menu, saved characters can be continued directly.
+      if (state.birth) return birthControls(state.birth, choiceButtons);
+      // The title menu: its choices as large buttons, and saved characters to
+      // continue directly; other screens (the opening verse) wait for a key.
+      if (choices.length === 0)
+        return {
+          actions: [
+            a('confirm', { label: 'Continue', emphasis: 'primary', wide: true }),
+            a('cancel', { label: 'Back' }),
+            a(SHELL_COMMAND.keyboard, { label: 'Type' }),
+          ],
+          palette: PALETTE,
+        };
       return {
         directionPad: MENU_PAD,
         actions: [
@@ -771,6 +845,7 @@ export function controlsFor(
           a('cancel', { label: 'Back' }),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'death': {
@@ -811,6 +886,7 @@ export function controlsFor(
           a('confirm', { label: 'OK' }),
           a('cancel', { label: 'Back' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'text':
@@ -861,6 +937,7 @@ export function controlsFor(
           }),
           a('cancel', { label: 'Cancel' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'targeting': {
@@ -891,6 +968,7 @@ export function controlsFor(
           ...(item?.floor ? [a('floor-item', { label: 'Floor' })] : []),
           a('cancel', { label: 'Cancel' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'menu':
@@ -904,6 +982,7 @@ export function controlsFor(
           a('list', { label: 'Choices' }),
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
         ],
+        reading: true,
         palette: PALETTE,
       };
     case 'map':

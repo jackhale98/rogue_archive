@@ -68,3 +68,19 @@ export async function cellToClient(page: Page, x: number, y: number): Promise<{ 
   if (!point) throw new Error(`cell ${x},${y} is not drawn`);
   return point;
 }
+
+/**
+ * From the title menu's "New character" to the map, by taps: each creation
+ * step's lead button (OK on the menus, Accept after), then the opening verse.
+ */
+export async function createByTaps(page: Page): Promise<void> {
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: /New character/ }).tap();
+  for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
+    await page.waitForTimeout(400);
+    if ((await silContext(page)) === 'map') break;
+    const lead = dock.getByRole('button', { name: /^(OK|Accept|Continue) \(/ });
+    if (await lead.isVisible()) await lead.tap();
+  }
+  await waitForContext(page, 'map');
+}

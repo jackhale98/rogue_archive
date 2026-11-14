@@ -147,7 +147,11 @@ describe('DCSS prompt and menu docks', () => {
     expect(menu('inventory', 0x4)).toContain('select-all');
     expect(menu('spell')).toContain('menu-mode');
     expect(menu('ability')).toContain('menu-mode');
-    expect(menu('inventory')).toEqual(['cancel', 'page-up', 'page-down', 'confirm', 'shell:keyboard']);
+    // Read top to bottom: Page up above Page down, Close nearest the thumb.
+    expect(menu('inventory')).toEqual(['shell:keyboard', 'confirm', 'page-up', 'page-down', 'cancel']);
+    expect(
+      controlsFor('menu', { ...base, menu: { tag: 'inventory', flags: 0, always: false } }).reading,
+    ).toBe(true);
     // Item menus: describe, and the modes their key help offers.
     const keys = { describe: true, nextMode: 'wield', nextEquip: 'unequip' };
     const item = actions(

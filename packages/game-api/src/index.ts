@@ -141,8 +141,19 @@ export interface TouchControlLayout {
     s: string;
     se: string;
   };
-  /** Primary actions shown as buttons (a bare string is a command id). */
+  /**
+   * Primary actions shown as buttons (a bare string is a command id). The
+   * first sits nearest the thumb (the bottom of the dock) and the rest stack
+   * away from it, unless `reading` is set.
+   */
   actions: (string | TouchAction)[];
+  /**
+   * Show the actions in reading order instead (top to bottom, left to right in
+   * rows, anchored at the bottom of the dock): for menus and lettered choices,
+   * so "a" comes before "b" and Page up before Page down. A lead the thumb
+   * should reach goes last.
+   */
+  reading?: boolean;
   /** Commands available from the "more" command palette. */
   palette: string[];
 }

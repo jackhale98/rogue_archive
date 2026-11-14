@@ -22,10 +22,38 @@ test('Sil-Q phone: title buttons, creation by tap, item prompt dock, continue a 
   await dock.getByRole('button', { name: /New character/ }).tap();
   // Creation menus take arrow keys (stats and skills: left/right lowers/raises): the pad is shown.
   await expect(page.getByRole('group', { name: 'Movement' })).toBeVisible();
-  for (let i = 0; i < 12 && (await silContext(page)) !== 'map'; i++) {
-    await page.waitForTimeout(400);
-    if ((await silContext(page)) === 'map') break;
-    await dock.getByRole('button', { name: /^OK/ }).tap();
+  const labels = () => dock.locator('.dock-button').allInnerTexts();
+  const tapLead = async (name: RegExp, then: RegExp) => {
+    await dock.getByRole('button', { name }).tap();
+    await expect.poll(() => screenText(page)).toMatch(then);
+  };
+  // Race: the races in order, a random choice, then OK nearest the thumb (last).
+  await expect.poll(() => screenText(page)).toMatch(/a\) Noldor/);
+  await expect
+    .poll(async () => (await labels()).map((label) => label.split('\n')[0]))
+    .toEqual(['a) Noldor', 'b) Sindar', 'c) Naugrim', 'd) Edain', 'Random', 'Start over', 'OK']);
+  await tapLead(/^OK \(/, /House of/);
+  // House: only the houses (the races stay on screen beside them).
+  await expect(dock.getByRole('button', { name: /House of Feanor/ })).toBeVisible();
+  await expect(dock.getByRole('button', { name: /Noldor/ })).toHaveCount(0);
+  await tapLead(/^OK \(/, /allocate points to stats/);
+  // Stats: More raises the line's value (the points left go down).
+  const pointsLeft = async () => Number(/Points Left:\s*(\d+)/.exec(await screenText(page))?.[1]);
+  const before = await pointsLeft();
+  await dock.getByRole('button', { name: /\+ More/ }).tap();
+  await expect.poll(pointsLeft).toBeLessThan(before);
+  await tapLead(/^Accept \(/, /allocate points to skills/);
+  await tapLead(/^Accept \(/, /accept history/);
+  await expect(dock.getByRole('button', { name: /^Reroll/ })).toBeVisible();
+  await tapLead(/^Accept \(/, /accept age/);
+  await tapLead(/^Accept \(/, /accept name/);
+  await dock.getByRole('button', { name: /^Random name/ }).tap();
+  await expect.poll(() => screenText(page)).not.toMatch(/Name\s+nameless/);
+  const name = /Name\s+(\S+)/.exec(await screenText(page))![1]!;
+  for (let i = 0; i < 6 && (await silContext(page)) !== 'map'; i++) {
+    const lead = dock.getByRole('button', { name: /^(Accept|Continue) \(/ });
+    if (await lead.isVisible()) await lead.tap();
+    await page.waitForTimeout(500);
   }
   await waitForContext(page, 'map');
 
@@ -62,9 +90,9 @@ test('Sil-Q phone: title buttons, creation by tap, item prompt dock, continue a 
     const ok = dock.getByRole('button', { name: /^OK|^Continue \(/ }).first();
     if (await ok.isVisible()) await ok.tap();
   }
-  await dock.getByRole('button', { name: 'Continue nameless' }).tap();
+  await dock.getByRole('button', { name: `Continue ${name}` }).tap();
   await waitForContext(page, 'map', 30_000);
-  await expect.poll(() => screenText(page)).toContain('nameless');
+  await expect.poll(() => screenText(page)).toContain(name);
 });
 
 test('Sil-Q phone: context leads, song buttons, status band, long-press to look (tutorial)', async ({

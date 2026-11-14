@@ -353,6 +353,7 @@ function GameShell({ gameId }: { gameId: string }) {
         key={session.touchContext}
         adapter={adapter}
         actions={layout.actions}
+        reading={layout.reading ?? false}
         context={session.touchContext}
         hapticsEnabled={hapticsEnabled}
         onShellCommand={onShellCommand}

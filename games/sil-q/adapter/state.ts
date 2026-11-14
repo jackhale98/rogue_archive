@@ -217,10 +217,16 @@ export function mapOverlay(grid: Grid): Rect | null {
 export interface Choice {
   key: string;
   label: string;
+  /** The column of its letter (creation screens show earlier steps' menus beside the current one). */
+  x?: number;
 }
 
-/** Lettered choices on screen ("a) Tutorial", "b) New character"...), in reading order. */
-export function screenChoices(grid: Grid, region?: Rect): Choice[] {
+/**
+ * Lettered choices on screen ("a) Tutorial", "b) New character"...), in
+ * reading order, each letter once; with `allColumns`, once per column
+ * (creation menus show the race beside the houses, both lettered from a).
+ */
+export function screenChoices(grid: Grid, region?: Rect, allColumns = false): Choice[] {
   const choices: Choice[] = [];
   const seen = new Set<string>();
   const from = region?.y ?? 0;
@@ -230,12 +236,40 @@ export function screenChoices(grid: Grid, region?: Rect): Choice[] {
     for (const match of line.matchAll(/(?:^|\s)([a-z])\) ([^ ].*?)(?=\s{2,}|$)/g)) {
       const key = match[1]!;
       const label = match[2]!.trim();
-      if (!label || seen.has(key)) continue;
-      seen.add(key);
-      choices.push({ key, label });
+      const x = (region?.x ?? 0) + match.index! + match[0].indexOf(`${key})`);
+      const id = allColumns ? `${key}@${x}` : key;
+      if (!label || seen.has(id)) continue;
+      seen.add(id);
+      choices.push({ key, label, x });
     }
   }
   return choices;
+}
+
+/**
+ * Character creation's steps (birth.c), named by the key help Sil prints
+ * on the screen: a menu (race, house), points for stats or skills, the history,
+ * age/height/weight, the name.
+ */
+export type BirthStep = 'menu' | 'stats' | 'skills' | 'history' | 'body' | 'name';
+
+export function birthStep(grid: Grid): BirthStep | null {
+  let help = '';
+  for (let y = 0; y < grid.rows; y++) help += ` ${rowText(grid, y)}`;
+  if (!/ESC restart the character/.test(help)) return null;
+  if (/Arrow keys navigate the menu/.test(help)) return 'menu';
+  if (/allocate points to stats/.test(help)) return 'stats';
+  if (/allocate points to skills/.test(help)) return 'skills';
+  if (/accept history/.test(help)) return 'history';
+  if (/accept age\/height\/weight/.test(help)) return 'body';
+  if (/accept name/.test(help)) return 'name';
+  return null;
+}
+
+/** On a creation menu, the current step's choices: the right-most column (earlier steps' stay on the left). */
+export function currentColumn(choices: Choice[]): Choice[] {
+  const right = Math.max(...choices.map((choice) => choice.x ?? 0));
+  return choices.filter((choice) => (choice.x ?? 0) === right);
 }
 
 /** An item prompt on the top line, e.g. "(Inven: a-b, * to see, / for Equip, ESC) Drop which item?" */

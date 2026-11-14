@@ -15,6 +15,8 @@ import {
 } from '../adapter/input.ts';
 import {
   aimPrompt,
+  birthStep,
+  currentColumn,
   detectContext,
   isDeathMenu,
   tombstoneName,
@@ -26,6 +28,7 @@ import {
   screenChoices,
   songPrompt,
   statusTags,
+  type BirthStep,
 } from '../adapter/state.ts';
 
 const actions = (layout: { actions: (string | TouchAction)[] }): TouchAction[] =>
@@ -149,12 +152,68 @@ describe('Sil-Q state', () => {
   });
 
   it('reads lettered choices', () => {
-    expect(screenChoices(TITLE)).toEqual([
+    expect(screenChoices(TITLE).map(({ key, label }) => ({ key, label }))).toEqual([
       { key: 'a', label: 'Tutorial' },
       { key: 'b', label: 'New character' },
       { key: 'c', label: 'Open saved character' },
       { key: 'd', label: 'Quit' },
     ]);
+  });
+
+  it('follows character creation step by step', () => {
+    const help = (first: string, second: string) => [...Array<string>(20).fill(''), first, second];
+    const houses = grid([
+      '  Character Creation:',
+      '',
+      '  a) Noldor      a) House of Feanor        Str +0',
+      '  b) Sindar      b) House of Fingolfin     Dex +2',
+      '  c) Naugrim     c) House of Finarfin      Con +2',
+      '  d) Edain                                 Gra +2',
+      ...Array<string>(14).fill(''),
+      '  Arrow keys navigate the menu    Enter select the current menu item',
+      '           * random menu item       ESC restart the character',
+    ]);
+    expect(birthStep(houses)).toBe('menu');
+    expect(currentColumn(screenChoices(houses, undefined, true)).map((choice) => choice.label)).toEqual([
+      'House of Feanor',
+      'House of Fingolfin',
+      'House of Finarfin',
+    ]);
+    const steps: [string, string, string][] = [
+      ['  Arrow keys allocate points to stats     ESC restart the character', '', 'stats'],
+      ['  Arrow keys allocate points to skills    ESC restart the character', '', 'skills'],
+      ['  Enter accept history                    ESC restart the character', '', 'history'],
+      ['  Enter accept age/height/weight          ESC restart the character', '', 'body'],
+      ['  Enter accept name                       ESC restart the character', '', 'name'],
+    ];
+    for (const [first, second, step] of steps) expect(birthStep(grid(help(first, second)))).toBe(step);
+    expect(birthStep(TITLE)).toBeNull();
+
+    // The dock reads top to bottom, OK (Accept) last, nearest the thumb.
+    const dock = (birth: BirthStep, choices: { key: string; label: string }[] = []) =>
+      controlsFor('title', { hp: 0, maxHp: 0, run: false, birth }, choices);
+    const menu = dock('menu', [
+      { key: 'a', label: 'House of Feanor' },
+      { key: 'b', label: 'House of Fingolfin' },
+    ]);
+    expect(menu.reading).toBe(true);
+    expect(actions(menu).map((action) => action.command)).toEqual([
+      `${CHOOSE}a`,
+      `${CHOOSE}b`,
+      'random-choice',
+      'cancel',
+      'confirm',
+    ]);
+    expect(actions(dock('stats')).map((action) => action.command)).toEqual([
+      'move-n',
+      'move-s',
+      'move-w',
+      'move-e',
+      'cancel',
+      'confirm',
+    ]);
+    expect(actions(dock('history')).map((action) => action.command)).toContain('reroll');
+    expect(actions(dock('name')).map((action) => action.command)).toContain('random-name');
   });
 
   it('reads item prompts', () => {
