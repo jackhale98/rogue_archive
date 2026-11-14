@@ -11,7 +11,7 @@ Read this before changing anything. The full plan is [docs/plan/implementation-p
 
 ## Sequencing
 
-1. Brogue CE: done as `experimental`; outstanding work is real-device testing.
+1. Brogue CE: `playable` (played on a physical iPhone); Android Chrome, Firefox and desktop Safari still untested.
 2. DCSS: next. Do not start a third game until DCSS is complete.
 3. Then follow the order in `games/catalog.json` (`priority`). ToME and GearHead are watchlist only.
 

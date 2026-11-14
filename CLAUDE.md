@@ -5,7 +5,7 @@ Guidance for Claude Code in this repository. The full agent rules are in [AGENTS
 ## Essentials
 
 - Static, local-first site (React + Vite) hosting independently adapted roguelikes built from **pinned upstream source** to WebAssembly. No backend, accounts or telemetry.
-- Order of work: Brogue CE and DCSS (both experimental; need real-device testing) → the `priority` order in `games/catalog.json`. ToME and GearHead are watchlist only.
+- Order of work: Brogue CE, DCSS, Sil-Q, Rogue and HyperRogue are `playable` (played on a physical iPhone; Android not yet tested) → the `priority` order in `games/catalog.json`. ToME and GearHead are watchlist only.
 - Shared code (`apps/web`, `packages/*`) must never branch on a game id; game-specific code lives in `games/<id>/` under that game's license (Brogue CE: AGPL-3.0-or-later; DCSS: GPL-2.0-or-later; Sil-Q: GPL-2.0-only; Rogue: BSD-3-Clause). Platform code is MIT.
 - Never mark a game `playable` until its acceptance criteria pass; never claim a test ran unless it ran; no upstream submissions of AI-generated changes unless that project allows it.
 

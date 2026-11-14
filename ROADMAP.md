@@ -54,10 +54,11 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] iPhone: one-time "Add to Home Screen" hint for full screen
 - [x] Update safety: build reads upstream's Makefile; drift check; weekly canary against latest release and development branch
 - [ ] Before the next minor Brogue release: decide whether to keep the previous build playable for unfinished saves
-- [ ] **Test on physical iOS Safari and Android Chrome**, then fill in the compatibility table
+- [x] Played on a physical iPhone (iOS Safari); compatibility table updated
+- [ ] Test on Android Chrome
 - [ ] Test Firefox and desktop Safari
 - [ ] Measure peak memory and startup time on a mid-range phone
-- [ ] Promote to `playable` once the above pass
+- [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
 ## Phase 4 — Dungeon Crawl Stone Soup 🟡 experimental
 
@@ -78,7 +79,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Progress screen while DCSS starts (first launch builds its caches); character creation in one column on phones
 - [x] DCSS's level and database caches built at build time and shipped (first launch ~1 s instead of a minute on phones; building them crashed iOS Safari)
 - [ ] Test on physical phones, Firefox and Safari; measure memory and startup
-- [ ] Promote to `playable` once the above pass
+- [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
 ## Phase 6a — Sil-Q 🟡 experimental
 
@@ -95,7 +96,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] e2e: desktop (new character, item prompt, log, save, reload, continue) and phone (title buttons, tap creation, item dock, palette, continue; tutorial: leads, song buttons, status band, direction dock, long-press look)
 - [x] CI build, deploy, weekly canary
 - [ ] Test on physical phones, Firefox and Safari
-- [ ] Promote to `playable` once the above pass
+- [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
 ## Phase 6b — Rogue 5.4.4 🟡 experimental
 
@@ -113,7 +114,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] Display: Tiles setting (CC0 RLTiles-based tiles from crawl/tiles, pinned; each tile listed in LICENSES.md)
 - [x] Display: 1-Bit setting (Kenney's CC0 1-Bit Pack, pinned by SHA-256; one sheet cut and tinted in the page)
 - [ ] Test on physical phones, Firefox and Safari
-- [ ] Promote to `playable` once the above pass
+- [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
 ## Phase 6c — HyperRogue 13.1p 🟡 experimental
 
@@ -130,12 +131,12 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] CI build, deploy, weekly canary
 - [ ] Explain seed 7's divergence (one monster's tie-break after 324 turns)
 - [ ] Measure frame rate on physical phones; test on Firefox and Safari
-- [ ] Promote to `playable` once the above pass
+- [x] Promoted to `playable` (played on a physical iPhone, November 2026)
 
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
-- [ ] At least one game `playable`
+- [x] At least one game `playable`
 - [ ] Device compatibility matrix filled from real devices
 
 ## Phase 6 — Catalog expansion (after DCSS)

@@ -95,7 +95,7 @@ Every port climbs all of these; each step catches what the previous can't.
 | **Interface completeness (source-driven)** | Every input upstream defines is reachable | `tests/conformance/key-coverage.ts` parses `Rogue.h` |
 | **Upstream drift** | Nothing we copied or rely on changed | `tests/conformance/upstream-drift.ts` |
 | End-to-end (Playwright, desktop + phone emulation) | Real games start, play, save, reload, load, export/import; touch contexts; log | `e2e/<game>.spec.ts`, `e2e/<game>.mobile.spec.ts` (e.g. `brogue`, `dcss`) |
-| Real devices | Comfort, performance, memory | Required before `playable` |
+| Real devices | Comfort, performance, memory | A physical phone (iOS Safari or Android Chrome) required before `playable` |
 
 Prefer the game's **own** test data (seed catalogs, recordings, replay modes, regression suites) over inventing checks: they are what "behaves like the original" means.
 
@@ -108,7 +108,7 @@ Prefer the game's **own** test data (seed catalogs, recordings, replay modes, re
 
 ## 8. Definition of done
 
-A game moves to `experimental` when all of these hold, and to `playable` when, in addition, it has been tested on physical iOS Safari and Android Chrome:
+A game moves to `experimental` when all of these hold, and to `playable` when, in addition, it has been played on a physical phone (iOS Safari or Android Chrome; the other is still worth testing, and recorded in the compatibility table when it is):
 
 - [ ] Feasibility report and complete license/provenance inventory (code, data, tiles, fonts, audio, docs/screenshots, third-party code, generated artifacts)
 - [ ] Pinned, reproducible build reading upstream's build system; runtime manifest with hashes; Node test harness

@@ -4,11 +4,11 @@
 
 | Game | Status | Notes |
 |---|---|---|
-| [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Experimental** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. Not yet verified on physical phones. |
-| [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Experimental** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. Not yet verified on physical phones. |
-| [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Experimental** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. Not yet verified on physical phones. |
-| [HyperRogue](games/hyperrogue/PORTING.md) 13.1p | **Experimental** | Upstream's own web version with saving switched on; the hyperbolic plane drawn with WebGL; keyboard, mouse and touch modelled on its mobile version; score file export/import; offline. Not yet verified on physical phones. |
-| [Rogue](games/rogue/PORTING.md) 5.4.4 | **Experimental** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. Not yet verified on physical phones. |
+| [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Playable** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
+| [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Playable** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
+| [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Playable** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
+| [HyperRogue](games/hyperrogue/PORTING.md) 13.1p | **Playable** | Upstream's own web version with saving switched on; the hyperbolic plane drawn with WebGL; keyboard, mouse and touch modelled on its mobile version; score file export/import; offline. Played on a physical iPhone; Android not yet tested. |
+| [Rogue](games/rogue/PORTING.md) 5.4.4 | **Playable** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
 | HyperRogue, NetHack 5.0.0, Angband, DRL, Allure of the Stars, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works
