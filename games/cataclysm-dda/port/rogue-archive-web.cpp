@@ -137,6 +137,20 @@ std::string next_code_point( const char *&text, const char *end )
     return point;
 }
 
+// A curses cell as text: the line-drawing codes curses stores as single bytes
+// (output.h LINE_*_C) become their box-drawing characters.
+std::string cell_text( const std::string &ch )
+{
+    static const char *const lines[] = { "│", "─", "└", "┌", "┐", "┘", "├", "┴", "┤", "┬", "┼" };
+    if( ch.size() == 1 ) {
+        const unsigned char code = static_cast<unsigned char>( ch[0] );
+        if( code >= 0xa0 && code <= 0xaa ) {
+            return lines[code - 0xa0];
+        }
+    }
+    return ch;
+}
+
 std::string result;
 
 } // namespace
@@ -232,7 +246,7 @@ void __wrap__ZN15cata_cursesport17curses_drawwindowERKN10catacurses6windowE(
                     continue;
                 }
                 // Wide characters leave an empty cell after them.
-                screen[sy][sx] = cells[x].ch.empty() ? std::string() : cells[x].ch;
+                screen[sy][sx] = cell_text( cells[x].ch );
             }
         }
     }
@@ -243,6 +257,12 @@ static void record_text( const ImVec2 &pos, const char *text_begin, const char *
 {
     if( !text_begin || fontwidth <= 0 || fontheight <= 0 ) {
         return;
+    }
+    // ImGui's implicit "Debug" window is never shown.
+    if( const ImGuiContext *ctx = ImGui::GetCurrentContext() ) {
+        if( ctx->CurrentWindow && std::string( ctx->CurrentWindow->Name ).rfind( "Debug##", 0 ) == 0 ) {
+            return;
+        }
     }
     if( !text_end ) {
         text_end = text_begin + std::char_traits<char>::length( text_begin );

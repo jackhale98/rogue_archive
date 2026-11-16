@@ -17,7 +17,7 @@ test('Cataclysm: DDA phone: loads; placeholder dock and the thumb pad', async ({
     await expect(dock.getByRole('button', { name })).toBeVisible();
   const pad = page.getByRole('group', { name: 'Movement' });
   await expect(pad).toBeVisible();
-  await expect(pad.getByRole('button', { name: /^Wait/ })).toBeVisible();
+  await expect(pad.getByRole('button', { name: /^Pause/ })).toBeVisible();
 
   // More opens the command palette with the game's commands.
   await dock.getByRole('button', { name: /^More/ }).tap();

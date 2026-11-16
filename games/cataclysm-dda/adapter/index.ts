@@ -456,7 +456,9 @@ class CataclysmAdapter implements GameAdapter {
       const event = new KeyboardEvent(type, {
         key,
         code,
-        bubbles: true,
+        // SDL listens on the element itself; a bubbling event would reach
+        // the shell's own key handler on the page and come back here.
+        bubbles: false,
         cancelable: true,
         shiftKey: !!stroke.shift,
         ctrlKey: !!stroke.ctrl,
@@ -605,7 +607,7 @@ class CataclysmAdapter implements GameAdapter {
     if (this.debug.inputContext !== 'DEFAULTMODE') throw new Error('Could not reach the map to save.');
     this.#press(strokeFor('S')!);
     await until(() => this.debug.inputContext === 'YESNO', 10_000);
-    this.#press(strokeFor('y')!);
+    this.#press(strokeFor('Y')!);
     await until(() => this.debug.mainMenu && this.debug.waiting, 120_000);
     await this.#sync();
   }

@@ -97,7 +97,7 @@ jobs:
         with:
           path: games/angband/dist
           key: runtime-angband-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/angband/upstream.env', 'games/angband/scripts/**', 'games/angband/port/**', 'games/angband/patches/**', 'games/angband/licenses/**', 'games/angband/tests/conformance/**', 'games/angband/adapter/input.ts', '!games/angband/**/*.md') }}
-      - name: Restore Cataclysm: DDA runtime
+      - name: Restore Cataclysm DDA runtime
         id: cdda
         uses: actions/cache/restore@v4
         with:
@@ -207,7 +207,7 @@ jobs:
         with:
           path: games/angband/dist
           key: ${{ steps.angband.outputs.cache-primary-key }}
-      - name: Cache Cataclysm: DDA build tree
+      - name: Cache Cataclysm DDA build tree
         if: steps.cdda.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
@@ -218,13 +218,13 @@ jobs:
           key: cataclysm-dda-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'games/cataclysm-dda/upstream.env', 'games/cataclysm-dda/scripts/build.sh', 'games/cataclysm-dda/scripts/ports.sh', 'games/cataclysm-dda/scripts/emcc-*.sh', 'games/cataclysm-dda/port/**') }}
           # Upstream's Makefile rebuilds whatever a changed flag or source affects.
           restore-keys: cataclysm-dda-${{ runner.os }}-
-      - name: Build Cataclysm: DDA runtime
+      - name: Build Cataclysm DDA runtime
         if: steps.cdda.outputs.cache-hit != 'true'
         run: pnpm build:cataclysm-dda
-      - name: Cataclysm: DDA engine conformance (key coverage, upstream drift, runtime)
+      - name: Cataclysm DDA engine conformance (key coverage, upstream drift, runtime)
         if: steps.cdda.outputs.cache-hit != 'true'
         run: pnpm test:engine:cataclysm-dda
-      - name: Save Cataclysm: DDA runtime (built and verified)
+      - name: Save Cataclysm DDA runtime (built and verified)
         if: steps.cdda.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:

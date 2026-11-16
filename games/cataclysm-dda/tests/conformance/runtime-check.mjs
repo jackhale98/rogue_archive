@@ -18,7 +18,9 @@ for (const path of ['cataclysm-tiles.mjs', 'cataclysm-tiles.wasm', 'cataclysm-da
 
 const wasm = await WebAssembly.compile(readFileSync(join(dist, 'cataclysm-tiles.wasm')));
 const exports = new Set(WebAssembly.Module.exports(wasm).map((entry) => entry.name));
-for (const name of ['main', 'ra_state', 'ra_screen_text', 'ra_messages', 'ra_message_count', 'ra_stop'])
+if (!exports.has('main') && !exports.has('__main_argc_argv'))
+  problems.push('the module does not export main');
+for (const name of ['ra_state', 'ra_screen_text', 'ra_messages', 'ra_message_count', 'ra_stop'])
   if (!exports.has(name)) problems.push(`the module does not export ${name}`);
 
 // The file packager's metadata is in the glue (--pre-js): every packaged path.

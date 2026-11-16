@@ -33,7 +33,10 @@ source "$GAME_DIR/scripts/ports.sh"
 
 WORK="$RA_CACHE/cataclysm-dda"
 SRC="$WORK/src-$UPSTREAM_COMMIT"
-OBJ="$WORK/obj-$UPSTREAM_COMMIT"
+# Objects are keyed on the compiler (wrapper and Emscripten version): make
+# tracks sources and headers, not flags.
+COMPILER_STAMP="$(cat "$GAME_DIR/scripts/emcc-compile.sh" <(echo "$EMSDK_VERSION") | sha256sum | cut -c1-12)"
+OBJ="$WORK/obj-$UPSTREAM_COMMIT-$COMPILER_STAMP"
 OUT="$GAME_DIR/dist"
 JOBS="${ROGUE_ARCHIVE_JOBS:-$(nproc)}"
 # The tilesets shipped (each one's licence is recorded in LICENSES.md): the
@@ -73,6 +76,13 @@ for patch in "$GAME_DIR"/patches/*.patch; do
 done
 shopt -u nullglob
 
+# The precompiled header lives in the source tree and make does not rebuild
+# it when the compiler changes: drop it then.
+if [ "$(cat "$WORK/pch-compiler-$UPSTREAM_COMMIT" 2>/dev/null)" != "$COMPILER_STAMP" ]; then
+  rm -f "$SRC/pch/main-pch.hpp.gch" "$SRC/pch/main-pch.hpp.d"
+  echo "$COMPILER_STAMP" > "$WORK/pch-compiler-$UPSTREAM_COMMIT"
+fi
+
 # Upstream's web build (build-scripts/build-emscripten.sh), with objects
 # outside the source tree. The compiler wrapper only turns -Werror off (the
 # pinned Emscripten is newer than upstream's); the linker wrapper adds
@@ -110,6 +120,9 @@ done
 node "$GAME_DIR/scripts/drop-obsolete-mods.mjs" "$STAGE/data/mods"
 rm -rf "$STAGE/data/mods/MA"
 for tileset in "${TILESETS[@]}"; do cp -R "$SRC/gfx/$tileset" "$STAGE/gfx/"; done
+# The files at the top of gfx/ (the game's own images, e.g. cdda.png shown
+# while a new game starts, and the default tile configuration).
+find "$SRC/gfx" -maxdepth 1 -type f -exec cp {} "$STAGE/gfx/" \;
 find "$STAGE" -name .DS_Store -delete
 
 rm -rf "$OUT" && mkdir -p "$OUT"
@@ -141,6 +154,9 @@ RSP="$OBJ/rogue-archive-link.rsp"
   # Asyncify pass then needs more than 14 GB of memory (killed) after two
   # hours of Asyncify. -O1 keeps the link within a CI runner's memory.
   echo "-O1"
+  # The site's Content Security Policy allows no eval: embind (upstream's
+  # emscripten_exception.cpp) then builds its invokers without new Function.
+  echo "-sDYNAMIC_EXECUTION=0"
   echo "-sMODULARIZE=1"
   echo "-sEXPORT_ES6=1"
   echo "-sEXPORT_NAME=createCataclysm"

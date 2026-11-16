@@ -25,6 +25,9 @@ test('Cataclysm: DDA: new character, move, inventory, save, reload and continue'
   // Walk: try each direction until one is free.
   for (const key of ['h', 'l', 'k', 'j', 'y', 'u', 'b', 'n']) {
     await press(page, key, 600);
+    // Walking into someone or something can ask first ("Really…?"): decline.
+    for (let i = 0; i < 3 && (await cddaDebug(page))?.context !== 'map'; i++)
+      await press(page, 'Escape', 600);
     await waitForContext(page, 'map');
     const now = (await cddaDebug(page))!.player!;
     if (now.absX !== start.absX || now.absY !== start.absY) break;
@@ -49,7 +52,8 @@ test('Cataclysm: DDA: new character, move, inventory, save, reload and continue'
   // Save and quit (S, then yes): back to the main menu.
   await press(page, 'S');
   await waitForInputContext(page, 'YESNO');
-  await press(page, 'y');
+  // The game's FORCE_CAPITAL_YN (on by default): only a capital Y answers yes.
+  await press(page, 'Y');
   await waitForContext(page, 'title', 180_000);
 
   // A fresh page reads the world from IndexedDB: Load → the world → the character.
