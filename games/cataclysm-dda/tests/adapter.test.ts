@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SHELL_COMMAND } from '@rogue-archive/game-api';
 import {
   CDDA_COMMANDS,
+  MENU_PAD,
   PAD,
   PALETTE,
   controlsFor,
@@ -119,10 +120,34 @@ describe('Cataclysm: DDA contexts', () => {
       SHELL_COMMAND.palette,
       SHELL_COMMAND.keyboard,
     ]);
-    expect(controlsFor('menu').directionPad).toBeUndefined();
-    expect(commands(controlsFor('menu'))).toContain('QUIT');
     expect(controlsFor('direction').directionPad).toEqual(PAD);
     expect(commands(controlsFor('busy'))).toEqual([SHELL_COMMAND.palette, SHELL_COMMAND.keyboard]);
+  });
+
+  it('start screens and menus by touch: Play Now!, yes/no, creation tabs, arrows', () => {
+    const commands = (layout: ReturnType<typeof controlsFor>) =>
+      layout.actions.map((action) => (typeof action === 'string' ? action : action.command));
+    const title = controlsFor('title', 'MAIN_MENU');
+    expect(title.reading).toBe(true);
+    expect(commands(title).at(-1)).toBe('ra:play-now');
+    expect(title.directionPad).toEqual(MENU_PAD);
+    // Play Now!: New Game, then its sub-menu's default scenario.
+    expect(findCommand('ra:play-now')!.keys.map((key) => key.key)).toEqual(['n', 'd']);
+    // Menus move with the arrow keys, not the vi letters (entry hotkeys there).
+    expect(findCommand(MENU_PAD.n)!.keys[0]!.key).toBe('ArrowUp');
+    expect(commands(controlsFor('menu', 'UILIST'))).toEqual([
+      'QUIT',
+      SHELL_COMMAND.palette,
+      SHELL_COMMAND.keyboard,
+      'CONFIRM',
+    ]);
+    // Yes/no: a capital Y (FORCE_CAPITAL_YN is on by default).
+    expect(commands(controlsFor('menu', 'YESNO'))).toEqual(['ra:no', 'ra:yes']);
+    expect(findCommand('ra:yes')!.keys[0]!.key).toBe('Y');
+    expect(commands(controlsFor('menu', 'NEW_CHAR_STATS')).slice(0, 2)).toEqual(['PREV_TAB', 'NEXT_TAB']);
+    expect(commands(controlsFor('menu', 'NEW_CHAR_DESCRIPTION')).at(-1)).toBe('ra:finish');
+    // The helpers stay out of the command list (held to upstream's bindings).
+    expect(CDDA_COMMANDS.some((command) => command.id.startsWith('ra:'))).toBe(false);
   });
 });
 

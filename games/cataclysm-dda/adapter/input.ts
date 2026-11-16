@@ -337,7 +337,41 @@ export const COMMAND_BINDINGS: Readonly<Record<string, string>> = Object.fromEnt
   ROWS.map(([action, , , key]) => [action, key]),
 );
 
-const BY_ID = new Map(CDDA_COMMANDS.map((command) => [command.id, command]));
+/**
+ * Keys for the start screens and menus that are not upstream actions of the
+ * map (so not in CDDA_COMMANDS, which the key coverage check holds to
+ * upstream's bindings): main menu shortcuts, menu arrows, yes/no.
+ */
+const helper = (id: string, label: string, shortLabel: string, keys: string[]): CddaCommand => ({
+  id,
+  action: id,
+  label,
+  shortLabel,
+  shortcut: keys.map(shortcutLabel).join(' '),
+  category: 'Keys',
+  keys: keys.map(k),
+});
+export const HELPER_COMMANDS: readonly CddaCommand[] = [
+  // The main menu (main_menu.cpp): n New Game, then its sub-menu's d (Play
+  // Now!, default scenario) or o (Play Now!, random scenario); a Load.
+  helper('ra:play-now', 'Play Now! (default scenario, default character)', 'Play Now!', ['n', 'd']),
+  helper('ra:play-now-random', 'Play Now! (random scenario)', 'Random start', ['n', 'o']),
+  helper('ra:new-game', 'New Game (custom, preset or random character)', 'New game', ['n']),
+  helper('ra:load', 'Load a saved game', 'Load', ['a']),
+  // Menus take the arrow keys (their letters are often entry hotkeys).
+  helper('ra:up', 'Up', '↑', ['UP']),
+  helper('ra:down', 'Down', '↓', ['DOWN']),
+  helper('ra:left', 'Left', '←', ['LEFT']),
+  helper('ra:right', 'Right', '→', ['RIGHT']),
+  // Yes/no questions want a capital Y by default (FORCE_CAPITAL_YN: "(Case Sensitive)").
+  helper('ra:yes', 'Yes', 'Yes', ['Y']),
+  helper('ra:no', 'No', 'No', ['N']),
+  // Character creation (newcharacter.cpp): > finishes on the description tab, * picks at random.
+  helper('ra:finish', 'Finish the character', 'Finish', ['>']),
+  helper('ra:random', 'Random choice', 'Random', ['*']),
+];
+
+const BY_ID = new Map([...CDDA_COMMANDS, ...HELPER_COMMANDS].map((command) => [command.id, command]));
 export function findCommand(id: string): CddaCommand | undefined {
   return BY_ID.get(id);
 }
@@ -363,15 +397,38 @@ export const PALETTE = CDDA_COMMANDS.filter(
 /** What the adapter tells apart (state.ts detectContext). */
 export type CddaContext = 'loading' | 'title' | 'map' | 'direction' | 'menu' | 'text' | 'busy';
 
-/**
- * Placeholder controls (phase 1, pending design): on the map the pad and
- * Inventory, Look and Actions; elsewhere Enter and Esc; always More and the
- * keyboard.
- */
+/** Menus: the pad sends arrow keys (Page up/down on the diagonals), Enter in its centre. */
+export const MENU_PAD = {
+  nw: 'PAGE_UP',
+  n: 'ra:up',
+  ne: 'PAGE_UP',
+  w: 'ra:left',
+  center: 'CONFIRM',
+  e: 'ra:right',
+  sw: 'PAGE_DOWN',
+  s: 'ra:down',
+  se: 'PAGE_DOWN',
+} as const;
+
 const MORE: TouchAction = { command: SHELL_COMMAND.palette, label: 'More' };
 const TYPE: TouchAction = { command: SHELL_COMMAND.keyboard, label: 'Keyboard' };
+const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
-export function controlsFor(context: CddaContext): TouchControlLayout {
+/** Yes/no questions (popup.cpp, query_yn): their keybinding contexts. */
+const YES_NO = new Set(['YESNO', 'YESNOQUIT', 'YES_NO_ALWAYS_NEVER']);
+
+/**
+ * Controls for each screen. On the map (phase 1, pending design): the pad
+ * and Inventory, Look and Actions. The start screens and menus (enough to
+ * start and play a game by touch; the full phone design is still to come):
+ * - the main menu: Play Now! (the quickest way into a game), New game and
+ *   Load, with the pad moving along the menu and Enter in its centre;
+ * - yes/no questions: Yes and No;
+ * - character creation: the tabs, Random, Finish on the last tab;
+ * - other menus and popups: the pad (arrows), Back and OK.
+ * `inputContext` is the game's keybinding context (keybindings.json category).
+ */
+export function controlsFor(context: CddaContext, inputContext = ''): TouchControlLayout {
   switch (context) {
     case 'map':
       return {
@@ -381,12 +438,65 @@ export function controlsFor(context: CddaContext): TouchControlLayout {
       };
     case 'direction':
       return { directionPad: PAD, actions: ['QUIT', MORE, TYPE], palette: PALETTE };
-    // No pad: in menus the vi keys are often item letters (taps choose rows).
-    case 'menu':
     case 'title':
+      return {
+        directionPad: MENU_PAD,
+        actions: [
+          a('ra:new-game', { label: 'New game' }),
+          a('ra:load', { label: 'Load' }),
+          a('ra:play-now-random', { label: 'Random start' }),
+          a('QUIT', { label: 'Back' }),
+          a('ra:play-now', { label: 'Play Now!', emphasis: 'primary', wide: true }),
+        ],
+        reading: true,
+        palette: PALETTE,
+      };
     case 'text':
       return {
-        actions: ['CONFIRM', 'QUIT', MORE, TYPE],
+        actions: [
+          a('QUIT', { label: 'Back' }),
+          a('CONFIRM', { label: 'OK' }),
+          { ...TYPE, emphasis: 'primary' },
+        ],
+        reading: true,
+        palette: PALETTE,
+      };
+    case 'menu':
+      if (YES_NO.has(inputContext))
+        return {
+          actions: [
+            a('ra:no', { label: 'No' }),
+            ...(inputContext === 'YESNOQUIT' ? [a('QUIT', { label: 'Cancel' })] : []),
+            a('ra:yes', { label: 'Yes', emphasis: 'primary', wide: true }),
+          ],
+          reading: true,
+          palette: PALETTE,
+        };
+      if (inputContext.startsWith('NEW_CHAR_'))
+        return {
+          directionPad: MENU_PAD,
+          actions: [
+            a('PREV_TAB', { label: '← Tab' }),
+            a('NEXT_TAB', { label: 'Tab →' }),
+            a('ra:random', { label: 'Random' }),
+            a('QUIT', { label: 'Back' }),
+            TYPE,
+            inputContext === 'NEW_CHAR_DESCRIPTION'
+              ? a('ra:finish', { label: 'Finish', emphasis: 'primary', wide: true })
+              : a('CONFIRM', { label: 'OK', emphasis: 'primary' }),
+          ],
+          reading: true,
+          palette: PALETTE,
+        };
+      return {
+        directionPad: MENU_PAD,
+        actions: [
+          a('QUIT', { label: 'Back' }),
+          MORE,
+          TYPE,
+          a('CONFIRM', { label: 'OK', emphasis: 'primary' }),
+        ],
+        reading: true,
         palette: PALETTE,
       };
     default:
