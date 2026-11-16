@@ -177,6 +177,23 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Test on physical phones, Firefox and Safari
 - [ ] Promote to `playable` once the above pass
 
+## Phase 6f — Cataclysm: DDA 0.I-1 ⚪ planned (phase 1 of the port done)
+
+- [x] Feasibility report: docs/games/cataclysm-dda-feasibility.md (upstream's own Emscripten build)
+- [x] License/provenance report (CC BY-SA 3.0 code and data; fonts OFL/Apache; third-party code and Emscripten ports permissive, notices shipped; the two default tilesets shipped under CC BY-SA 3.0, the others left out for size; no sound or translations)
+- [x] WASM build of 0.I-1 with upstream's Makefile (`make NATIVE=emscripten`) and data packing (as `prepare-web.sh`), no patches; Emscripten ports from git where archive downloads are blocked
+- [x] Runs on the page (SDL2/WebGL, Asyncify); keys from the shell on a private element; upstream's mouse
+- [x] Read-only view through link-time wrappers: keybinding context, in game / main menu, player position, screen text (curses and ImGui), message log
+- [x] Saves in upstream's IndexedDB mount; sync on hide and leave; Save and leave (the game's Save and quit); export/import of the user directory
+- [x] Engine conformance: key coverage against keybindings.json, upstream drift, runtime contents
+- [x] e2e: desktop (Play Now!, move, inventory, log, save, reload, continue) and phone (loads; placeholder dock and pad)
+- [x] CI build, deploy, weekly canary (latest release and `master`)
+- [x] UI inventory for the phone design: games/cataclysm-dda/UI-INVENTORY.md
+- [ ] Phone design (next phase, with the project owner), then the dock, sheets and layout
+- [ ] Native vs WebAssembly equivalence (upstream's test suite under Node; see PORTING.md)
+- [ ] Memory and load time on real phones (iOS Safari first)
+- [ ] Move to `experimental` once the definition of done is met
+
 ## Phase 5 — First public release
 
 - [ ] Pages deployment verified at the real URL
@@ -185,5 +202,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → ~~Angband 4.2.6~~ (experimental, Phase 6e) → DRL → Cataclysm: DDA (reproduce upstream's Emscripten build first) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → ~~Angband 4.2.6~~ (experimental, Phase 6e) → DRL → Cataclysm: DDA (Phase 6f: upstream's Emscripten build reproduced; phone design next) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

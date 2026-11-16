@@ -294,6 +294,12 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 
 `games/angband/tests/conformance/key-coverage.ts` checks that each command sends, in both keysets, the key `ui-game.c`'s tables bind to that command and that no keymap takes first; the conformance replays send the same keys and clicks as the dock and the map gestures.
 
+## Cataclysm: DDA (pending design)
+
+**Not designed yet.** Phase 1 of the port (`games/cataclysm-dda`) runs upstream's own web build on the page and gives phones only a placeholder: the canvas at the game's smallest terminal (80×24 cells, 640×384 CSS px, so an upright phone shows its left part), the thumb pad (vi keys, wait in the centre) on the map and at direction prompts, and a dock of Inventory (`i`), Look (`;`), Actions (the game's action menu, Enter) on the map, OK/Back in menus, and More and Keyboard everywhere. Taps reach the game as clicks (SDL2), which upstream already uses on the map (route, then walk), in look and targeting, and in every menu.
+
+The design is the next phase, to be agreed with the project owner. Its input is [`games/cataclysm-dda/UI-INVENTORY.md`](../../games/cataclysm-dda/UI-INVENTORY.md): every screen a player meets, how upstream drives and labels it (keybinding context ids), how the adapter detects it, what upstream's Android port does (quick-shortcuts bar per context, virtual joystick, gestures, native dialogs), the pain points, and a ranked list of candidate helpers.
+
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)
 
 - **ThumbPad** (160–192 CSS px across, scaled to the screen): press anywhere on the disc and slide; the direction follows the finger (8 sectors, dead zone in the middle). Holding repeats steps; sliding to the centre stops; tapping the centre sends the centre command. Each direction is also a labelled button.

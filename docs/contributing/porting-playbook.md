@@ -198,3 +198,14 @@ Things that cost time on Brogue; check for their equivalents in every port.
 - **Graphics modes are game data.** A front end selects one (`init_graphics_modes`, `use_graphics`, `reset_visuals`) and draws what `pict_hook` gives it; switch at a wait for input, as upstream's SDL2 front end does, and ship only the tilesets whose own terms allow it (check each in `docs/copying.rst`).
 - **Save and quit can end the program.** Start a fresh module instance after `exit` to return to the game's own start (Angband's savefile menu), as relaunching the desktop game would.
 
+
+### From Cataclysm: DDA
+
+- **A newer Emscripten can silently drop upstream's web code.** Emscripten 6 no longer predefines the legacy `EMSCRIPTEN` macro (only `__EMSCRIPTEN__`); CDDA writes its web code as `#if defined(EMSCRIPTEN)`, so its IndexedDB mount, per-redraw yield and unsaved-game flag were compiled out with no error. Check `emcc -dM -E` against the macros upstream tests, and add the old one in the compiler wrapper. Make doesn't track flags: key the object directory (and any precompiled header) on the wrapper.
+- **Asyncify plus `-Os` on a large C++ module can exceed a CI runner.** Upstream's `-Os` link ran two hours, then its last `wasm-opt` pass was killed at 14 GB. Linking at `-O1` (Asyncify alone, a minute) and running `wasm-opt -O2` as its own step (9 minutes, 5 GB) gave a 79 MB module instead of 135 MB.
+- **`--wrap` observes a game without patching it.** `wasm-ld --wrap=<mangled name>` on a few functions (input waits, curses window draws, ImGui text, the game loop) gave the keybinding context, the screen text and in-game state; private members are readable through an explicit template instantiation. Wrappers for C++ member functions take `this` first (and a result returned in memory before it); `llvm-nm` on the objects gives the exact mangled names.
+- **Synthetic key events must not bubble** when the element SDL listens to is in the document: they reach the shell's own key handler, which sends them back (stack overflow).
+- **A content security policy without `eval`** breaks embind's generated invokers: link with `-sDYNAMIC_EXECUTION=0`.
+- **Setting a canvas's size clears it, even to the same size.** SDL does so on every page resize event; send one only when the size changed, and make sure the game redraws after a real resize (CDDA waited for the next key: a black screen that state-based tests did not notice; the desktop test now checks the canvas has pixels).
+- **Read every prompt's wording.** CDDA's yes/no prompts take only a capital `Y` by default ("(Case Sensitive)", option `FORCE_CAPITAL_YN`).
+- **Emscripten ports download GitHub archives,** which some build environments block while allowing git: check out the same tags with git where Emscripten unpacks them (with its marker file), and check the recipes still name those versions.

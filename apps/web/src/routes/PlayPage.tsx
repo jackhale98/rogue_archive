@@ -34,7 +34,10 @@ function canFullscreen(): boolean {
 
 export function PlayPage({ gameId }: { gameId: string }) {
   const game = gamesById.get(gameId);
-  if (!game || !isLaunchable(game) || !game.adapter) return <NotFoundPage />;
+  // A game still in development (not launchable from the library) opens only
+  // by its address, once it has an adapter and a runtime build: for testing
+  // a port before its status changes.
+  if (!game || !game.adapter || !(isLaunchable(game) || game.runtimeManifest)) return <NotFoundPage />;
   return <GameShell gameId={gameId} />;
 }
 

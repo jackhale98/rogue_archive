@@ -27,7 +27,14 @@ export default tseslint.config(
     },
   },
   {
-    files: ['tools/**', '*.config.{js,ts}', 'apps/web/vite.config.ts', 'e2e/**', 'games/*/tests/**'],
+    files: [
+      'tools/**',
+      '*.config.{js,ts}',
+      'apps/web/vite.config.ts',
+      'e2e/**',
+      'games/*/tests/**',
+      'games/*/scripts/**',
+    ],
     languageOptions: { globals: { ...globals.node } },
   },
   {

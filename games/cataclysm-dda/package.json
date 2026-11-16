@@ -1,0 +1,14 @@
+{
+  "name": "@rogue-archive/game-cataclysm-dda",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rogue Archive adapter for Cataclysm: Dark Days Ahead.",
+  "license": "CC-BY-SA-3.0",
+  "type": "module",
+  "exports": {
+    ".": "./adapter/index.ts"
+  },
+  "dependencies": {
+    "@rogue-archive/game-api": "workspace:*"
+  }
+}
