@@ -18,18 +18,25 @@
 // stores (CDP Runtime.getHeapUsage). Prints a table of each phase's maxima.
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { chromium } from '@playwright/test';
+import { chromium, webkit } from '@playwright/test';
 
 const [base, outFile, optionsJson] = process.argv.slice(2);
 if (!base) throw new Error('usage: memory-profile.mjs <base URL> [out.json]');
 const MB = 1048576;
 // RA_SHOT=<dir> saves screenshots of the main menu and the map; RA_JS_FLAGS passes V8 flags (to attribute memory to a compiler tier, for example).
-const browser = await chromium.launch({
-  args: [
-    '--enable-precise-memory-info',
-    ...(process.env.RA_JS_FLAGS ? [`--js-flags=${process.env.RA_JS_FLAGS}`] : []),
-  ],
-});
+// RA_BROWSER=webkit runs Playwright's WebKit (JavaScriptCore, Safari's engine) instead: no JS heap or
+// ArrayBuffer figures there; its WPEWebProcess is the page's process.
+const isWebKit = process.env.RA_BROWSER === 'webkit';
+const browser = isWebKit
+  ? await webkit.launch()
+  : await chromium.launch({
+      args: [
+        '--enable-precise-memory-info',
+        ...(process.env.RA_JS_FLAGS ? [`--js-flags=${process.env.RA_JS_FLAGS}`] : []),
+      ],
+    });
+const PAGE_PROCESS = isWebKit ? 'WPEWebProcess' : 'chrom.*--type=renderer';
+const GPU_PROCESS = isWebKit ? 'WPEGPUProcess' : 'chrom.*--type=gpu-process';
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 // Keep the module's memory reachable for the sampler (whichever way the glue
 // instantiates the module).
@@ -52,7 +59,7 @@ await page.addInitScript(() => {
       return result;
     };
 });
-const cdp = await page.context().newCDPSession(page);
+const cdp = isWebKit ? null : await page.context().newCDPSession(page);
 
 const t0 = Date.now();
 const secs = () => ((Date.now() - t0) / 1000).toFixed(1);
@@ -72,7 +79,7 @@ const record = (sample) => {
 
 // The renderer of the page: Chromium's largest renderer process.
 const rendererPid = () => {
-  const pids = execSync("pgrep -f 'chrom.*--type=renderer' || true").toString().trim().split(/\s+/);
+  const pids = execSync(`pgrep -f '${PAGE_PROCESS}' || true`).toString().trim().split(/\s+/);
   let best = null;
   let bestRss = -1;
   for (const pid of pids.filter(Boolean)) {
@@ -114,10 +121,7 @@ const procSample = () => {
     }
     // The GPU process (WebGL textures live there).
     let gpu = 0;
-    for (const gpuPid of execSync("pgrep -f 'chrom.*--type=gpu-process' || true")
-      .toString()
-      .trim()
-      .split(/\s+/))
+    for (const gpuPid of execSync(`pgrep -f '${GPU_PROCESS}' || true`).toString().trim().split(/\s+/))
       try {
         if (gpuPid)
           gpu += Number(/VmRSS:\s+(\d+)/.exec(readFileSync(`/proc/${gpuPid}/status`, 'utf8'))?.[1] ?? 0);
@@ -128,6 +132,7 @@ const procSample = () => {
       rss: kb('VmRSS') / 1024,
       hwm: kb('VmHWM') / 1024,
       shmem: kb('RssShmem') / 1024,
+      anon: kb('RssAnon') / 1024,
       linearRss: linear / 1024,
       codeRss: code / 1024,
       gpuRss: gpu / 1024,
@@ -157,7 +162,7 @@ const pageSample = async () => {
       waiting: !!d?.waiting,
     };
   });
-  const usage = await cdp.send('Runtime.getHeapUsage').catch(() => null);
+  const usage = await cdp?.send('Runtime.getHeapUsage').catch(() => null);
   return { ...s, backing: usage?.backingStorageSize ?? 0 };
 };
 
@@ -306,12 +311,12 @@ console.log(
 
 const fmt = (v) => (v === undefined ? '' : Math.round(v).toString());
 console.log(
-  '\n| Phase | from (s) | renderer RSS max (MB) | VmHWM (MB) | linear memory size (MB) | linear memory resident (MB) | code resident (MB) | JS heap (MB) | ArrayBuffers (MB) | renderer shared memory (MB) | GPU process RSS (MB) |',
+  '\n| Phase | from (s) | renderer RSS max (MB) | of which anonymous (MB) | VmHWM (MB) | linear memory size (MB) | linear memory resident (MB) | code resident (MB) | JS heap (MB) | ArrayBuffers (MB) | renderer shared memory (MB) | GPU process RSS (MB) |',
 );
-console.log('|---|---|---|---|---|---|---|---|---|---|---|');
+console.log('|---|---|---|---|---|---|---|---|---|---|---|---|');
 for (const p of phases)
   console.log(
-    `| ${p.name} | ${p.at} | ${fmt(p.max.rss)} | ${fmt(p.max.hwm)} | ${fmt(p.max.wasmMB)} | ${fmt(p.max.linearRss)} | ${fmt(p.max.codeRss)} | ${fmt(p.max.heapMB)} | ${fmt(p.max.backingMB)} | ${fmt(p.max.shmem)} | ${fmt(p.max.gpuRss)} |`,
+    `| ${p.name} | ${p.at} | ${fmt(p.max.rss)} | ${fmt(p.max.anon)} | ${fmt(p.max.hwm)} | ${fmt(p.max.wasmMB)} | ${fmt(p.max.linearRss)} | ${fmt(p.max.codeRss)} | ${fmt(p.max.heapMB)} | ${fmt(p.max.backingMB)} | ${fmt(p.max.shmem)} | ${fmt(p.max.gpuRss)} |`,
   );
 if (outFile) writeFileSync(outFile, JSON.stringify({ phases, series }, null, 1));
 await browser.close();

@@ -65,6 +65,18 @@ Measured with `tests/memory-profile.mjs` (headless Chromium on the production bu
 | First map | 979 | 1,777 | 576 / 512 | 93 | 88 | 73 | 599 |
 | A few turns, inventory | 1,214 | 1,777 | 576 / 512 | 99 | 89 | 73 | 642 |
 
+**Safari's engine (WebKit, JavaScriptCore)**, the same script with `RA_BROWSER=webkit`: Playwright's WebKit for Linux (WPE). Not iOS: the libraries are Linux's, and WebGL draws in software inside the web process, so the tile textures count there (on iOS, WebGL runs in a separate GPU process). The web process's resident set (of which anonymous), MB:
+
+| Phase | Before | After | After, `Use tiles` off |
+|---|---|---|---|
+| Download, inflate, compile, start | 979 (798) | 957 (768) | 1,005 |
+| Data load, main menu (peak) | 1,247 (1,044) | 989 (657) | 1,041 |
+| Play Now! to the first map (peak) | **2,527 (2,333)** | **2,130 (1,891)** | **1,764** |
+| A few turns, inventory | 2,219 (2,028) | 1,988 (1,793) | 1,568 |
+| Linear memory: size / resident | 1,089 / 1,000 | 576 / 515 | 576 / 528 |
+
+JavaScriptCore has no counterpart to Chromium's start-up spike, but its web process sits higher than Chromium's renderer from the start (about 0.8–1.0 GB at the main menu). In a bare page, fetching the 78 MB module took the process up by about 280 MB and compiling it by about 100 MB more (240 MB at the peak), and that memory was not handed back within 10 seconds. With tiles, the textures (about 370–420 MB here) offset most of the heap's saving; with `Use tiles` off the peak is 0.76 GB below the original's.
+
 Where it went, and what changed (each step measured on its own; `PORTING.md`, "Memory", has the reasons):
 
 1. **The 3.3 GB start-up peak was the compiler, not the game.** `wasm-opt -O2` inlined every static constructor (each called once) into `__wasm_call_ctors`: one 6.6 MB function, run once at start-up, which Chromium's baseline compiler (Liftoff) took about 3 GB of memory to compile (`--js-flags=--no-liftoff` made it go away; compiling or instantiating the module alone stays at about 300 MB, since V8 compiles lazily). The constructors are now kept out of line (`--no-inline` on `_GLOBAL__sub_I_*` and `__cxx_global_var_init*`, by name: the link keeps function names for this step and the step drops them): the largest function is now 440 KB, the start-up peak 557 MB instead of 3,302, and the `wasm-opt` step is faster.
