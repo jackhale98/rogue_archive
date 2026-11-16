@@ -227,6 +227,8 @@ class CataclysmAdapter implements GameAdapter {
   #presentation: Presentation = { compact: false, insets: { top: 0, right: 0, bottom: 0, left: 0 } };
   #resizeObserver: ResizeObserver | null = null;
   #resizeFrame = 0;
+  /** The canvas size SDL was last told about. */
+  #sizeSent = '';
   #poll: ReturnType<typeof setInterval> | undefined;
   #context: CddaContext | null = null;
   #layoutSignature = '';
@@ -419,8 +421,17 @@ class CataclysmAdapter implements GameAdapter {
     cancelAnimationFrame(this.#resizeFrame);
     this.#resizeFrame = requestAnimationFrame(() => {
       this.#layout();
-      // SDL resizes the game's window (and terminal) on the page's resize event.
-      if (this.#module && !this.#stopped) window.dispatchEvent(new Event('resize'));
+      // SDL resizes the game's window (and terminal) on the page's resize
+      // event: only when the size changed, since SDL also sets the canvas's
+      // size then, which clears it even when unchanged, and the game redraws
+      // only when its window size changes.
+      const canvas = this.#canvas;
+      if (!this.#module || this.#stopped || !canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const size = `${Math.round(rect.width)}x${Math.round(rect.height)}`;
+      if (size === this.#sizeSent) return;
+      this.#sizeSent = size;
+      window.dispatchEvent(new Event('resize'));
     });
   }
 

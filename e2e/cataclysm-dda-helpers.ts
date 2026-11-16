@@ -60,12 +60,32 @@ export async function waitForInputContext(page: Page, inputContext: string, time
 }
 
 export async function waitForContext(page: Page, context: string, timeout = 60_000): Promise<void> {
-  await expect
-    .poll(async () => (await cddaDebug(page))?.context ?? null, {
-      timeout,
-      message: `waiting for the ${context} context`,
-    })
-    .toBe(context);
+  try {
+    await expect
+      .poll(async () => (await cddaDebug(page))?.context ?? null, {
+        timeout,
+        message: `waiting for the ${context} context`,
+      })
+      .toBe(context);
+  } catch (error) {
+    // Say what the game shows instead.
+    const d = await cddaDebug(page);
+    const screen = (d?.screen ?? '')
+      .split('\n')
+      .map((line) => line.trimEnd())
+      .filter(Boolean)
+      .join('\n');
+    throw new Error(`${(error as Error).message}\ninput context: ${d?.inputContext}\nscreen:\n${screen}`, {
+      cause: error,
+    });
+  }
+}
+
+/** Answers whatever the game asks (Escape, then Space for message boxes) until it is back on the map. */
+export async function backToMap(page: Page): Promise<void> {
+  for (let i = 0; i < 6 && (await cddaDebug(page))?.context !== 'map'; i++)
+    await press(page, i % 2 ? 'Space' : 'Escape', 800);
+  await waitForContext(page, 'map');
 }
 
 /** Opens the game and waits for its main menu (the data takes a while to load). */
@@ -102,4 +122,21 @@ export async function playNow(page: Page): Promise<void> {
       { timeout: 300_000, intervals: [2_000], message: 'waiting for the map after Play Now' },
     )
     .toBe('map');
+}
+
+/** How many pixels of the game's canvas are not black (the game draws into a 2D or WebGL canvas). */
+export function litPixels(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas.cdda-canvas');
+    if (!canvas) return 0;
+    const copy = document.createElement('canvas');
+    copy.width = canvas.width;
+    copy.height = canvas.height;
+    const context = copy.getContext('2d')!;
+    context.drawImage(canvas, 0, 0);
+    const data = context.getImageData(0, 0, copy.width, copy.height).data;
+    let lit = 0;
+    for (let i = 0; i < data.length; i += 4) if (data[i]! + data[i + 1]! + data[i + 2]! > 30) lit++;
+    return lit;
+  });
 }

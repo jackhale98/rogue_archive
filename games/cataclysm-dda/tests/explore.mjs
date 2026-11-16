@@ -1,4 +1,4 @@
-/* global window */
+/* global window, document */
 // Exploratory browser run (not a test): opens the game in headless Chromium,
 // logs the console, the debug snapshot and timings, and saves screenshots.
 // Usage: node explore.mjs <base URL> <out dir> [keys...]
@@ -48,6 +48,51 @@ await page.locator('canvas.cdda-canvas').focus();
 for (const key of keys) {
   if (key.startsWith('wait=')) {
     await page.waitForTimeout(Number(key.slice(5)));
+  } else if (key === 'probe') {
+    log(
+      'probe',
+      JSON.stringify(
+        await page.evaluate(() => {
+          const c = document.querySelector('canvas.cdda-canvas');
+          const out = {};
+          out.canvases = [...document.querySelectorAll('canvas')].map(
+            (e) => e.id + '.' + e.className + ':' + e.width + 'x' + e.height,
+          );
+          for (const t of ['webgl', 'webgl2', '2d']) {
+            const g = c.getContext(t);
+            out[t] = g ? (g.getContextAttributes ? g.getContextAttributes() : 'yes') : null;
+          }
+          const k = document.createElement('canvas');
+          k.width = c.width;
+          k.height = c.height;
+          const x = k.getContext('2d');
+          x.drawImage(c, 0, 0);
+          const d = x.getImageData(0, 0, k.width, k.height).data;
+          let lit = 0;
+          for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] > 30) lit++;
+          out.lit = lit;
+          return out;
+        }),
+      ),
+    );
+  } else if (key === 'canvas') {
+    log(
+      'canvas',
+      JSON.stringify(
+        await page.evaluate(() => {
+          const c = document.querySelector('canvas.cdda-canvas');
+          const r = c.getBoundingClientRect();
+          return {
+            w: c.width,
+            h: c.height,
+            cssW: r.width,
+            cssH: r.height,
+            top: r.top,
+            style: c.getAttribute('style'),
+          };
+        }),
+      ),
+    );
   } else if (key.startsWith('shot=')) {
     await page.screenshot({ path: `${out}/${key.slice(5)}.png` });
     log('screen\n' + (await screen()));

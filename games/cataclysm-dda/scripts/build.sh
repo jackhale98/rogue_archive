@@ -141,6 +141,7 @@ WRAPPED=(
   _ZN10ImDrawList7AddTextEP6ImFontfRK6ImVec2jPKcS6_fPK6ImVec4
   _ZN10ImDrawList7AddTextERK6ImVec2jPKcS4_
   _ZN5ImGui8NewFrameEv
+  _Z13handle_resizeii
   _Z7do_turnv
   _ZN9main_menu14opening_screenEv
 )
@@ -149,10 +150,10 @@ RSP="$OBJ/rogue-archive-link.rsp"
   echo "$PORT_OBJ"
   for symbol in "${WRAPPED[@]}"; do echo "-Wl,--wrap=$symbol"; done
   echo "--pre-js=$WORK/cataclysm-data.js"
-  # Link-time optimisation level (the objects keep upstream's -Os). Upstream
-  # links with -Os; with the pinned Emscripten, the optimisation after the
-  # Asyncify pass then needs more than 14 GB of memory (killed) after two
-  # hours of Asyncify. -O1 keeps the link within a CI runner's memory.
+  # Link at -O1 (the objects keep upstream's -Os), then optimise below.
+  # Upstream links at -Os; with the pinned Emscripten that runs two hours of
+  # optimisation inside the Asyncify run, then a pass that was killed above
+  # 14 GB of memory. At -O1 the link takes about a minute.
   echo "-O1"
   # The site's Content Security Policy allows no eval: embind (upstream's
   # emscripten_exception.cpp) then builds its invokers without new Function.
@@ -170,7 +171,12 @@ echo "Linking..."
 RA_LINK_RSP="$RSP" make -s --no-print-directory -C "$SRC" "${MAKE_VARS[@]}" "$OBJ/cataclysm-tiles.js"
 
 cp "$OBJ/cataclysm-tiles.js" "$OUT/cataclysm-tiles.mjs"
-cp "$OBJ/cataclysm-tiles.wasm" "$OUT/cataclysm-tiles.wasm"
+# The optimisation the -O1 link leaves out, as its own wasm-opt run (-O2:
+# about 9 minutes on four cores and 5.5 GB of memory; it shrinks the module
+# from about 135 MB to 79 MB, 25 MB gzipped). -Os was stopped at 12 GB.
+# Names of imports and exports are kept: the glue is unchanged.
+echo "Optimising the module (wasm-opt -O2, about 10 minutes)..."
+"$EMSDK/upstream/bin/wasm-opt" "$OBJ/cataclysm-tiles.wasm" -O2 -o "$OUT/cataclysm-tiles.wasm"
 # The data package is sent compressed (gzip over LZ4: about half the size),
 # named .gzip so no server inflates it before the integrity check.
 gzip -9 -n -c "$WORK/cataclysm-data.data" > "$OUT/cataclysm-data.data.gzip"

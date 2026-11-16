@@ -18,6 +18,8 @@
 //                                      the text of the game's ImGui windows
 //                                      (menus, popups), placed in the same grid
 //   do_turn, main_menu::opening_screen in a game, or at the main menu
+//   handle_resize                      (display only) redraw at once after the
+//                                      page resizes the game, not at the next key
 //
 // The page reads the result through the exported ra_* functions (JSON text).
 #include <emscripten/emscripten.h>
@@ -40,6 +42,8 @@
 #include "messages.h"
 #include "output.h"
 #include "sdltiles.h"
+#include "ui_manager.h"
+#include "point.h"
 #include "third-party/imgui/imgui.h"
 #include "third-party/imgui/imgui_internal.h"
 
@@ -309,6 +313,23 @@ void __wrap__ZN5ImGui8NewFrameEv()
         std::fill( row.begin(), row.end(), std::string() );
     }
     __real__ZN5ImGui8NewFrameEv();
+}
+
+bool __real__Z13handle_resizeii( int w, int h );
+
+// After the window is resized (the page's area changed), redraw at once, as
+// upstream does after its render target is reset (sdltiles.cpp
+// CheckMessages). Upstream otherwise redraws at the next key, so the screen
+// stays black until then: on the web the game's window is resized once the
+// page has laid it out, after the main menu is drawn. This only redraws.
+bool __wrap__Z13handle_resizeii( int w, int h )
+{
+    const bool resized = __real__Z13handle_resizeii( w, h );
+    if( resized ) {
+        ui_manager::invalidate( rectangle<point>( point::zero, point( w, h ) ), false );
+        ui_manager::redraw_invalidated();
+    }
+    return resized;
 }
 
 bool __wrap__Z7do_turnv()

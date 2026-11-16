@@ -459,7 +459,7 @@ grab/drag)
   "Save and quit?", "You see...", "--press any key--", count prompts
   ("How many do you want to drop?"), names.
 - **Driven by:** `YESNO` (`Y`/`y` yes, `N`/`n`/`Esc` no; option
-  `FORCE_CAPITAL_YN` requires capitals), `YESNOQUIT` (`q` cancel),
+  `FORCE_CAPITAL_YN`, **on by default**, requires the capital: the prompt says "(Case Sensitive)" and a lowercase `y` is ignored), `YESNOQUIT` (`q` cancel),
   `YES_QUERY` (dangerous actions: "Yes, I will!"), `YES_NO_ALWAYS_NEVER`
   (pickup questions), `CANCEL_ACTIVITY_OR_IGNORE_QUERY` (an activity was
   interrupted: continue, ignore, cancel), `POPUP_WAIT` / `WAIT_FOR_ANY_KEY`

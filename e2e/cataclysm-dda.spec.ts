@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 import {
   cddaDebug,
   openCataclysm,
+  backToMap,
+  litPixels,
   playNow,
   press,
   waitForContext,
@@ -16,6 +18,8 @@ test('Cataclysm: DDA: new character, move, inventory, save, reload and continue'
   page.on('pageerror', (error) => errors.push(error.message));
   await openCataclysm(page);
   expect((await cddaDebug(page))?.screen).toContain('New Game');
+  // Drawn, not just running: the page resizes the game after it starts (it must redraw).
+  await expect.poll(() => litPixels(page)).toBeGreaterThan(5_000);
 
   // New Game → Play Now! (default scenario): a world and a character without questions.
   await playNow(page);
@@ -26,9 +30,7 @@ test('Cataclysm: DDA: new character, move, inventory, save, reload and continue'
   for (const key of ['h', 'l', 'k', 'j', 'y', 'u', 'b', 'n']) {
     await press(page, key, 600);
     // Walking into someone or something can ask first ("Really…?"): decline.
-    for (let i = 0; i < 3 && (await cddaDebug(page))?.context !== 'map'; i++)
-      await press(page, 'Escape', 600);
-    await waitForContext(page, 'map');
+    await backToMap(page);
     const now = (await cddaDebug(page))!.player!;
     if (now.absX !== start.absX || now.absY !== start.absY) break;
   }
