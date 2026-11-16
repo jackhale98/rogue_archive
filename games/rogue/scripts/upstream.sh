@@ -13,7 +13,11 @@ if [ -n "${ROGUE_ARCHIVE_UPSTREAM_REF:-}" ]; then
   if [ "$ref" = "latest-release" ]; then
     ref="$(git ls-remote --tags --refs "$UPSTREAM_REPO" '*' | sed 's#.*refs/tags/##' | grep -E '^v?[0-9.]+$' | sort -V | tail -1)"
   fi
-  commit="$(git ls-remote "$UPSTREAM_REPO" "refs/tags/$ref^{}" "refs/tags/$ref" "refs/heads/$ref" | head -1 | cut -f1)"
+  # An annotated tag is listed twice, the tag object and then the commit it
+  # points to (`<tag>^{}`): take the commit. A branch or a lightweight tag has one line.
+  refs="$(git ls-remote "$UPSTREAM_REPO" "refs/tags/$ref" "refs/tags/$ref^{}" "refs/heads/$ref")"
+  commit="$(printf '%s\n' "$refs" | awk '$2 ~ /\^\{\}$/ { print $1; exit }')"
+  [ -n "$commit" ] || commit="$(printf '%s\n' "$refs" | head -1 | cut -f1)"
   if [ -z "$commit" ]; then
     echo "error: upstream ref $ref not found" >&2
     exit 1

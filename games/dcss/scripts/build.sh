@@ -40,6 +40,16 @@ if [ "$ACTUAL_COMMIT" != "$UPSTREAM_COMMIT" ]; then
 fi
 # shellcheck disable=SC2086
 git -C "$SRC" submodule update --init --depth 1 --quiet $UPSTREAM_SUBMODULES
+# Upstream's Makefile names the version with `git describe`, which needs an
+# annotated tag in the history. A release tag is one; a canary build of a
+# branch (a one-commit clone) has none, so tag it as upstream's version would
+# read: the next version's first alpha after the latest release (0.35-a0).
+if [ -n "$RA_CANARY" ] && ! git -C "$SRC" describe >/dev/null 2>&1; then
+  latest="$(git ls-remote --tags --refs "$UPSTREAM_REPO" '[0-9]*' | sed 's#.*refs/tags/##' | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)"
+  minor="$(echo "$latest" | cut -d. -f2)"
+  git -C "$SRC" -c user.name=canary -c user.email=canary@localhost \
+    tag -a "${latest%%.*}.$((minor + 1))-a0" -m "Rogue Archive canary build of $UPSTREAM_TAG"
+fi
 
 # Upstream's Makefile builds in the source tree. Reuse the tree between runs
 # (a full build takes a while) unless asked for a clean one, but always start
