@@ -12,11 +12,12 @@ export function SiteHeader({ route }: { route: Route }) {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <a className="wordmark" href={href('/')}>
-        <span className="wordmark__glyph" aria-hidden="true">
-          @
+      <a className="wordmark" href={href('/')} aria-label="Rogue Archive">
+        <img className="wordmark__mark" src={`${import.meta.env.BASE_URL}icons/mark-144.png`} alt="" />
+        <span className="wordmark__text" aria-hidden="true">
+          <span className="wordmark__rogue">Rogue</span>
+          <span className="wordmark__archive">Archive</span>
         </span>
-        Rogue Archive
       </a>
       <nav aria-label="Primary">
         <ul className="site-nav">

@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand/lockup.png" alt="Rogue Archive" width="480" /></p>
+
 # Rogue Archive
 
 **Classic roguelikes, playable in your browser.** A curated, static, local-first library of the genre's landmark games, built from their original source. No account, no installs, no backend. Games run on your device, and saves stay in your browser unless you export them.

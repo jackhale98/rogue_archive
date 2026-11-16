@@ -164,28 +164,41 @@ main {
 .wordmark {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-family: var(--font-display);
-  font-size: 1.3rem;
-  font-weight: 600;
+  gap: var(--space-3);
   color: var(--text);
   text-decoration: none;
-  letter-spacing: -0.01em;
 }
 .wordmark:hover {
   color: var(--text);
 }
-.wordmark__glyph {
-  display: inline-grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-s);
-  background: var(--accent);
-  color: var(--accent-ink);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-size: 1.1rem;
+.wordmark__mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+}
+/* After the logo's lockup: ROGUE in the display serif, ARCHIVE in spaced amber capitals below. */
+.wordmark__text {
+  display: grid;
+  justify-items: center;
+  line-height: 1;
+}
+.wordmark__rogue {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.wordmark__archive {
+  margin-top: 0.2rem;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  /* The spacing follows the last letter too: pull it back so the word stays centred. */
+  margin-right: -0.42em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 .site-nav {
   display: flex;
