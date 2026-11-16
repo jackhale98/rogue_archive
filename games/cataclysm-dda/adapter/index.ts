@@ -91,6 +91,8 @@ export interface CddaDebugState {
   cellToClient(x: number, y: number): { x: number; y: number };
   messages(): string[];
   files(): string[];
+  /** The module's linear memory in bytes (it never shrinks: its high-water mark). */
+  memoryBytes(): number;
 }
 
 function findFile(files: readonly RuntimeFile[], path: string): RuntimeFile {
@@ -137,9 +139,35 @@ async function fetchVerified(
   return bytes;
 }
 
+/**
+ * Inflates the gzipped data package straight into one buffer of its final
+ * size (the gzip trailer's ISIZE), without the copies Blob and
+ * Response.arrayBuffer make (the input, a list of chunks, then the result).
+ */
 async function gunzip(bytes: Uint8Array<ArrayBuffer>): Promise<ArrayBuffer> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
-  return new Response(stream).arrayBuffer();
+  const size = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(
+    bytes.byteLength - 4,
+    true,
+  );
+  const out = new Uint8Array(size);
+  const input = new ReadableStream<Uint8Array<ArrayBuffer>>({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+  const reader = input.pipeThrough(new DecompressionStream('gzip')).getReader();
+  let at = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (at + value.length > size)
+      throw Object.assign(new Error('The game data is larger than expected.'), { kind: 'integrity' });
+    out.set(value, at);
+    at += value.length;
+  }
+  if (at !== size) throw Object.assign(new Error('The game data is incomplete.'), { kind: 'integrity' });
+  return out.buffer;
 }
 
 /** Text without the game's colour tags (<color_red>…</color>). */
@@ -219,6 +247,8 @@ class CataclysmAdapter implements GameAdapter {
 
   #host: GameHost | null = null;
   #module: CddaModule | null = null;
+  /** The module's linear memory (the module exports it). */
+  #memory: WebAssembly.Memory | null = null;
   #root: HTMLDivElement | null = null;
   #canvas: HTMLCanvasElement | null = null;
   /** SDL listens for keys here (not on the page): the shell decides what reaches the game. */
@@ -250,6 +280,7 @@ class CataclysmAdapter implements GameAdapter {
       cellToClient: (x: number, y: number) => this.#cellToClient(x, y),
       messages: () => this.#readLog().map((entry) => entry.runs.map((run) => run.text).join('')),
       files: () => this.#listFiles().map((file) => file.path),
+      memoryBytes: () => this.#memory?.buffer.byteLength ?? 0,
     };
   }
 
@@ -274,26 +305,35 @@ class CataclysmAdapter implements GameAdapter {
           progress: { loaded: loaded.reduce((a, b) => a + b, 0), total },
         },
       });
-    const [glue, wasm, packed] = await Promise.all(
-      files.map((file, i) =>
-        fetchVerified(new URL(file.path, runtimeBaseUrl).href, file, signal, (n) => {
-          loaded[i] = n;
-          progress();
-        }),
-      ),
-    );
-    if (signal.aborted) return;
-    host.emit({ type: 'status', status: { stage: 'initializing', detail: 'Unpacking the game data' } });
-    const data = await gunzip(packed!);
-    if (signal.aborted) return;
-
-    const glueUrl = URL.createObjectURL(new Blob([glue!], { type: 'text/javascript' }));
-    let factory: ModuleFactory;
-    try {
-      factory = ((await import(/* @vite-ignore */ glueUrl)) as { default: ModuleFactory }).default;
-    } finally {
-      URL.revokeObjectURL(glueUrl);
-    }
+    // Each download is let go as soon as it has been used (BUILDING.md,
+    // memory): the compressed data once inflated, the glue once imported, the
+    // module's bytes once the engine has them, the inflated package once the
+    // file system has it.
+    // (The compressed data and the glue's text are this function's locals and
+    // go with it; `held` gives up the rest as the module takes it.)
+    const download = async () => {
+      const [glue, wasm, packed] = await Promise.all(
+        files.map((file, i) =>
+          fetchVerified(new URL(file.path, runtimeBaseUrl).href, file, signal, (n) => {
+            loaded[i] = n;
+            progress();
+          }),
+        ),
+      );
+      if (signal.aborted) return null;
+      host.emit({ type: 'status', status: { stage: 'initializing', detail: 'Unpacking the game data' } });
+      const data = await gunzip(packed!);
+      const glueUrl = URL.createObjectURL(new Blob([glue!], { type: 'text/javascript' }));
+      try {
+        const factory = ((await import(/* @vite-ignore */ glueUrl)) as { default: ModuleFactory }).default;
+        return { factory, wasm: wasm as Uint8Array<ArrayBuffer> | null, data: data as ArrayBuffer | null };
+      } finally {
+        URL.revokeObjectURL(glueUrl);
+      }
+    };
+    const held = await download();
+    if (!held || signal.aborted) return;
+    const { factory } = held;
 
     this.#buildDom(options.mount);
     this.#layout();
@@ -309,10 +349,32 @@ class CataclysmAdapter implements GameAdapter {
       this.#module = await Promise.race([
         factory({
           canvas: this.#canvas,
-          wasmBinary: wasm,
+          // The module is compiled here rather than from Module.wasmBinary,
+          // which the glue would keep for the page's lifetime (78 MB). The
+          // engine copies the bytes when compilation starts.
+          instantiateWasm: (
+            imports: WebAssembly.Imports,
+            receive: (instance: WebAssembly.Instance) => void,
+          ) => {
+            const bytes = held.wasm!;
+            held.wasm = null;
+            WebAssembly.instantiate(bytes, imports).then(({ instance }) => {
+              this.#memory =
+                Object.values(instance.exports).find(
+                  (value): value is WebAssembly.Memory => value instanceof WebAssembly.Memory,
+                ) ?? null;
+              receive(instance);
+            }, failed);
+            return {};
+          },
           locateFile: (path: string) => path,
-          // The verified package (the file packager's loader asks for it instead of fetching).
-          getPreloadedPackage: () => data,
+          // The verified package (the file packager's loader asks for it
+          // instead of fetching, once); its LZ4 file system keeps it.
+          getPreloadedPackage: () => {
+            const inflated = held.data;
+            held.data = null;
+            return inflated;
+          },
           print: (text: string) => host.logger.debug(text),
           printErr: (text: string) => host.logger.debug(text),
           onAbort: (what: unknown) => {
@@ -725,6 +787,7 @@ class CataclysmAdapter implements GameAdapter {
     delete upstream.game_unsaved;
     this.#root = this.#canvas = null;
     this.#module = null;
+    this.#memory = null;
   }
 }
 

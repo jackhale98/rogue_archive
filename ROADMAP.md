@@ -191,6 +191,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [x] UI inventory for the phone design: games/cataclysm-dda/UI-INVENTORY.md
 - [ ] Phone design (next phase, with the project owner), then the dock, sheets and layout
 - [ ] Native vs WebAssembly equivalence (upstream's test suite under Node; see PORTING.md)
+- [x] Memory, measured phase by phase (tests/memory-profile.mjs) and cut: start-up peak 3.3 GB → 0.56 GB, WebAssembly heap 1.09 GB → 0.58 GB (constructors out of line, no kept download copies, WebGL renderer by default, smaller memory settings; BUILDING.md, PORTING.md)
 - [ ] Memory and load time on real phones (iOS Safari first)
 - [ ] Move to `experimental` once the definition of done is met
 

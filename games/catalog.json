@@ -990,7 +990,7 @@
         {
           "environment": "Safari (macOS / iOS)",
           "result": "untested",
-          "notes": "About 3.4 GB peak memory in desktop Chromium: iOS is expected to fail until memory comes down."
+          "notes": "An earlier build ran out of memory on an iPhone during Play Now!; memory has since come down (WebAssembly heap 0.58 GB instead of 1.09 GB, start-up peak 0.56 GB instead of 3.3 GB in desktop Chromium), not yet retested on an iPhone."
         },
         {
           "environment": "Chrome for Android",
@@ -999,7 +999,7 @@
       ],
       "knownLimitations": [
         "Work in progress (phase 1): desktop keyboard and mouse only; the phone controls are a placeholder and an upright phone shows only part of the 80-column screen.",
-        "Large: about 53 MB to download (gzip), about 3.4 GB peak memory in desktop Chromium (1.6 GB while playing).",
+        "Large: about 53 MB to download (gzip); in desktop Chromium about 1.8 GB peak in the page’s process during Play Now! (1.0–1.2 GB while playing) plus about 0.6 GB of tile textures in the GPU process.",
         "No sound and no translations, as in upstream’s web build; Tutorial Game does not work (its mod is left out of the web bundle, as upstream does).",
         "Two tilesets (the defaults: UltimateCataclysm and Larwick Overmap); the other upstream tilesets are not shipped.",
         "A game continues from its last save (Save and quit, S then Y), as on the desktop."

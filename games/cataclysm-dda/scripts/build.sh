@@ -144,6 +144,7 @@ WRAPPED=(
   _Z13handle_resizeii
   _Z7do_turnv
   _ZN9main_menu14opening_screenEv
+  _ZN15options_manager4loadEv
 )
 RSP="$OBJ/rogue-archive-link.rsp"
 {
@@ -155,6 +156,17 @@ RSP="$OBJ/rogue-archive-link.rsp"
   # optimisation inside the Asyncify run, then a pass that was killed above
   # 14 GB of memory. At -O1 the link takes about a minute.
   echo "-O1"
+  # Function names, so the wasm-opt step can tell the static constructors
+  # apart (below); that step drops them again.
+  echo "--profiling-funcs"
+  # Memory (BUILDING.md, "Memory"). Upstream reserves 512 MB up front and
+  # lets it grow to 4 GB. The game's heap peaks at about 520-600 MB with the
+  # WebGL renderer (PORTING.md), so start small, grow in 64 MB steps and stop
+  # at 2 GB: smaller reservations and fewer large regrowths, which iOS Safari
+  # handles worst, and pointers stay below 2 GB (no unsigned fix-ups in the glue).
+  echo "-sINITIAL_MEMORY=128MB"
+  echo "-sMAXIMUM_MEMORY=2GB"
+  echo "-sMEMORY_GROWTH_LINEAR_STEP=64MB"
   # The site's Content Security Policy allows no eval: embind (upstream's
   # emscripten_exception.cpp) then builds its invokers without new Function.
   echo "-sDYNAMIC_EXECUTION=0"
@@ -164,7 +176,9 @@ RSP="$OBJ/rogue-archive-link.rsp"
   echo "-sEXPORTED_FUNCTIONS=_main,_ra_state,_ra_screen_text,_ra_messages,_ra_message_count,_ra_stop"
   # FS, as upstream's; ENV for the keyboard hint; what the data loader uses.
   echo "-sEXPORTED_RUNTIME_METHODS=FS,ENV,UTF8ToString,FS_createPath,FS_createDataFile,FS_createPreloadedFile,addRunDependency,removeRunDependency"
-  echo "-sINCOMING_MODULE_JS_API=canvas,wasmBinary,locateFile,print,printErr,onAbort,onExit,preRun,postRun,setStatus,monitorRunDependencies"
+  # instantiateWasm, not wasmBinary: the page compiles the module itself and
+  # lets its bytes go (the glue would keep Module.wasmBinary for good).
+  echo "-sINCOMING_MODULE_JS_API=canvas,instantiateWasm,locateFile,print,printErr,onAbort,onExit,preRun,postRun,setStatus,monitorRunDependencies"
 } > "$RSP"
 rm -f "$OBJ/cataclysm-tiles.js" "$OBJ/cataclysm-tiles.wasm"
 echo "Linking..."
@@ -175,8 +189,25 @@ cp "$OBJ/cataclysm-tiles.js" "$OUT/cataclysm-tiles.mjs"
 # about 9 minutes on four cores and 5.5 GB of memory; it shrinks the module
 # from about 135 MB to 79 MB, 25 MB gzipped). -Os was stopped at 12 GB.
 # Names of imports and exports are kept: the glue is unchanged.
-echo "Optimising the module (wasm-opt -O2, about 10 minutes)..."
-"$EMSDK/upstream/bin/wasm-opt" "$OBJ/cataclysm-tiles.wasm" -O2 -o "$OUT/cataclysm-tiles.wasm"
+# The result is kept, keyed on the linked module and the optimiser's
+# version: a change to the glue alone (link flags that do not touch the
+# module) then skips the 10 minutes.
+# The static constructors (one per source file, each called once, from
+# __wasm_call_ctors) are not inlined: -O2 otherwise inlines them all into
+# __wasm_call_ctors, one 6.6 MB function that runs once at start-up and that
+# Chromium's baseline compiler needed about 3 GB of memory for (BUILDING.md).
+# The names the link kept for this are dropped afterwards.
+# (Passes run in order: the functions are marked before -O2.)
+WASM_OPT_FLAGS=("--no-inline=_GLOBAL__sub_I_*" "--no-inline=__cxx_global_var_init*" -O2 --strip-debug)
+OPT_STAMP="$(cat "$OBJ/cataclysm-tiles.wasm" <(echo "${WASM_OPT_FLAGS[*]}" "$EMSDK_VERSION") | sha256sum | cut -c1-16)"
+OPT_WASM="$OBJ/cataclysm-tiles-opt-$OPT_STAMP.wasm"
+if [ ! -f "$OPT_WASM" ]; then
+  echo "Optimising the module (wasm-opt ${WASM_OPT_FLAGS[*]}, about 10 minutes)..."
+  rm -f "$OBJ"/cataclysm-tiles-opt-*.wasm
+  "$EMSDK/upstream/bin/wasm-opt" "$OBJ/cataclysm-tiles.wasm" "${WASM_OPT_FLAGS[@]}" -o "$OPT_WASM.tmp"
+  mv "$OPT_WASM.tmp" "$OPT_WASM"
+fi
+cp "$OPT_WASM" "$OUT/cataclysm-tiles.wasm"
 # The data package is sent compressed (gzip over LZ4: about half the size),
 # named .gzip so no server inflates it before the integrity check.
 gzip -9 -n -c "$WORK/cataclysm-data.data" > "$OUT/cataclysm-data.data.gzip"

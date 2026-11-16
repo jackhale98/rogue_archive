@@ -124,19 +124,25 @@ export async function playNow(page: Page): Promise<void> {
     .toBe('map');
 }
 
-/** How many pixels of the game's canvas are not black (the game draws into a 2D or WebGL canvas). */
-export function litPixels(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const canvas = document.querySelector<HTMLCanvasElement>('canvas.cdda-canvas');
-    if (!canvas) return 0;
+/**
+ * How many pixels of the game's canvas, as shown on the page, are not black.
+ * Read from a screenshot: the game draws with WebGL (its renderer option),
+ * whose drawing buffer reads back blank once it has been presented.
+ */
+export async function litPixels(page: Page): Promise<number> {
+  const canvas = page.locator('canvas.cdda-canvas');
+  if (!(await canvas.count())) return 0;
+  const png = await canvas.screenshot();
+  return page.evaluate(async (bytes) => {
+    const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: 'image/png' }));
     const copy = document.createElement('canvas');
-    copy.width = canvas.width;
-    copy.height = canvas.height;
+    copy.width = image.width;
+    copy.height = image.height;
     const context = copy.getContext('2d')!;
-    context.drawImage(canvas, 0, 0);
+    context.drawImage(image, 0, 0);
     const data = context.getImageData(0, 0, copy.width, copy.height).data;
     let lit = 0;
     for (let i = 0; i < data.length; i += 4) if (data[i]! + data[i + 1]! + data[i + 2]! > 30) lit++;
     return lit;
-  });
+  }, Array.from(png));
 }

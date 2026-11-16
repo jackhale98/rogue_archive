@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: CC-BY-SA-3.0
 //
 // Rogue Archive's read-only view of Cataclysm: Dark Days Ahead, linked into
-// upstream's own web build (make NATIVE=emscripten). Nothing here changes the
-// game: it observes it.
+// upstream's own web build (make NATIVE=emscripten). It observes the game;
+// the only thing it changes is the default of an option on a first start.
 //
 // Upstream's code is not patched. A few upstream functions are wrapped at link
 // time (wasm-ld --wrap, see scripts/emcc-link.sh): each wrapper records what
-// it sees and then calls the real function.
+// it sees and then calls the real function. The one exception to "nothing
+// changes": first-start option defaults (options_manager::load, below).
 //
 //   input_context::handle_input        which keybinding context (data/raw/
 //                                      keybindings.json "category") the game
@@ -20,6 +21,9 @@
 //   do_turn, main_menu::opening_screen in a game, or at the main menu
 //   handle_resize                      (display only) redraw at once after the
 //                                      page resizes the game, not at the next key
+//   options_manager::load              once per browser, platform defaults for
+//                                      options the player sees and changes in
+//                                      the game's Options menu (the renderer)
 //
 // The page reads the result through the exported ra_* functions (JSON text).
 #include <emscripten/emscripten.h>
@@ -28,19 +32,24 @@
 #include <cstdio>
 #include <cstdlib>
 #include <list>
+#include <ostream>
 #include <string>
 #include <vector>
 
 #include "avatar.h"
 #include "calendar.h"
+#include "cata_utility.h"
 #include "cursesdef.h"
 #include "cursesport.h"
+#include "filesystem.h"
 #include "game.h"
 #include "input.h"
 #include "input_context.h"
 #include "main_menu.h"
 #include "messages.h"
+#include "options.h"
 #include "output.h"
+#include "path_info.h"
 #include "sdltiles.h"
 #include "ui_manager.h"
 #include "point.h"
@@ -350,6 +359,40 @@ bool __wrap__ZN9main_menu14opening_screenEv( main_menu *self )
     const bool start = __real__ZN9main_menu14opening_screenEv( self );
     at_main_menu = false;
     return start;
+}
+
+void __real__ZN15options_manager4loadEv( options_manager *self );
+
+// Platform defaults, through upstream's own options: values the game itself
+// offers in its Options menu, where the player sees and changes them. They
+// are applied once per browser (the marker file below records it; the game
+// saves its options file when a game starts), so a later choice of the
+// player's stands. The marker, rather than "no options file yet", also covers
+// browsers that ran an earlier build of the port, which wrote upstream's
+// default into the options file. See PORTING.md, "Memory".
+//
+//   RENDERER = opengles2  Graphics > Renderer ("Requires restart"). Upstream's
+//                         default is SDL's software renderer, which keeps every
+//                         tile texture (five colour variants of each tileset
+//                         sprite) in the WebAssembly heap: about 500 MB of the
+//                         1.1 GB the heap reached during Play Now!. With the
+//                         WebGL renderer the textures live on the GPU. If it
+//                         cannot start, the game falls back to software itself.
+void __wrap__ZN15options_manager4loadEv( options_manager *self )
+{
+    __real__ZN15options_manager4loadEv( self );
+    const cata_path marker = PATH_INFO::config_dir_path() / "rogue-archive-defaults.json";
+    if( file_exist( marker ) ) {
+        return;
+    }
+    // setValue keeps the current value if this one is not on offer.
+    self->get_option( "RENDERER" ).setValue( std::string( "opengles2" ) );
+    // On a first start the config directory does not exist yet. A failure
+    // only means the defaults are applied again next time (no popup).
+    assure_dir_exist( PATH_INFO::config_dir_path() );
+    write_to_file( marker, []( std::ostream & out ) {
+        out << "{ \"applied\": { \"RENDERER\": \"opengles2\" } }\n";
+    }, nullptr );
 }
 
 // --- Exports for the page ----------------------------------------------------

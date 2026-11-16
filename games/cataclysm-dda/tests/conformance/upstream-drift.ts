@@ -100,6 +100,26 @@ const WATCHED: Watched[] = [
     sha256: '84857e72e528966ff2403668025384bd5aa29f0eeb5c1df81589496c589c7d22',
   },
   {
+    name: 'options: load, and the renderers on offer',
+    text: () =>
+      [
+        lines('src/options.h', /^\s*void load\(\);/),
+        lines('src/sdltiles.cpp', /get_options\(\)\.load\(\);/),
+        between(
+          'src/cata_tiles.cpp',
+          /^std::vector<options_manager::id_and_option> cata_tiles::build_renderer_list\(\)/,
+          /^}$/,
+        ),
+        between(
+          'src/sdltiles.cpp',
+          /bool software_renderer = get_option<std::string>\( "RENDERER" \)/,
+          /^#else$/,
+        ),
+      ].join('\n'),
+    why: 'options_manager::load is wrapped at link time to make RENDERER default to opengles2 once (PORTING.md, "Memory"): before the renderer starts, and among the renderers the option offers',
+    sha256: 'dbcfc92c69baeb3a7c2f33349574f388cbbe7eadfb9b929e90fd460dc5e4c4f7',
+  },
+  {
     name: 'Dear ImGui: ImDrawList::AddText and NewFrame',
     text: () =>
       [
