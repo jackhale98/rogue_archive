@@ -159,8 +159,9 @@ export async function createByTaps(page: Page, name: string) {
   await dock.getByRole('button', { name: /^OK/ }).tap();
   await waitForContext(page, 'yesno');
   await dock.getByRole('button', { name: /^Yes/ }).tap();
+  // The last step: any key but Escape (a step back) and S (start over) starts.
   await waitForContext(page, 'more');
-  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await dock.getByRole('button', { name: /^Start playing/ }).tap();
   await waitForContext(page, 'map');
   return dock;
 }

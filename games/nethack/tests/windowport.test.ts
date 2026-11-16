@@ -9,6 +9,7 @@ import {
   TEXT,
   controlsFor,
   dynamicKeys,
+  endOfGame,
   keyToNetHack,
   mapLead,
   promptChoices,
@@ -468,5 +469,52 @@ describe('NetHack touch controls (docs/design/nethack-controls.md)', () => {
         for (const alternate of (typeof action === 'string' ? [] : action.alternates) ?? [])
           expect(ids.has(alternate), alternate).toBe(true);
       }
+  });
+});
+
+describe('the end of a game', () => {
+  const labels = (layout: ReturnType<typeof controlsFor>) =>
+    layout.actions.map((a) => (typeof a === 'string' ? a : (a.label ?? a.command)));
+
+  it('knows the end-of-game questions and says what q does there', () => {
+    expect(endOfGame('Do you want your possessions identified? [ynq] (n)')).toBe(true);
+    expect(endOfGame('Do you want to see what you had when you died? [ynq] (n)')).toBe(true);
+    expect(endOfGame('Really quit without saving? [yn] (n)')).toBe(false);
+    const dock = {
+      state: null,
+      prompt: 'Do you want to see your conduct? [ynq] (n)',
+      menu: null,
+      ending: true,
+    };
+    expect(labels(controlsFor('yn', dock))).toEqual(['Yes', 'No', 'Skip to the end']);
+  });
+
+  it('continues past the lists, the tombstone and "Goodbye" with one button', () => {
+    const menu = { how: 1, items: [{ key: 97, text: 'a - a +2 bullwhip' }], page: 0, pages: 1 };
+    const ending = { state: null, prompt: '', menu, ending: true };
+    expect(labels(controlsFor('menu', ending))).toEqual(['Continue']);
+    expect(labels(controlsFor('text', ending))).toEqual(['continue']);
+    expect(labels(controlsFor('text', { ...ending, ending: false }))).toEqual(['Next', 'Close']);
+  });
+
+  it('has a way to quit without saving in the command list', () => {
+    const quit = NETHACK_COMMANDS.find((command) => command.id === 'quit');
+    expect(quit?.keys).toEqual([...'#quit'].map((c) => c.charCodeAt(0)).concat(13));
+  });
+
+  it('marks the window system as up while it is (the tombstone and scores depend on it)', async () => {
+    const globals = { iflags: { window_inited: false } };
+    (globalThis as { nethackGlobal?: unknown }).nethackGlobal = { globals };
+    try {
+      const { port } = setup();
+      await port.call('shim_init_nhwindows');
+      expect(globals.iflags.window_inited).toBe(true);
+      await port.call('shim_exit_nhwindows', '');
+      expect(globals.iflags.window_inited).toBe(false);
+      await port.call('shim_raw_print', ' No  Points     Name                     Hp [max]');
+      expect(port.closingText).toBe('No  Points  Name  Hp [max]');
+    } finally {
+      delete (globalThis as { nethackGlobal?: unknown }).nethackGlobal;
+    }
   });
 });

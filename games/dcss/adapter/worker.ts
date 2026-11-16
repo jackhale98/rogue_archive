@@ -117,11 +117,15 @@ function received(text: string): void {
     return;
   }
   // For the server. "flush_messages" marks the end of a burst; the rest
-  // (client_path, milestone, dump) only matter to a multi-user server.
+  // (client_path, milestone) only matter to a multi-user server; "dump" (the
+  // morgue file written) tells the shell the game is over.
   try {
     const message = JSON.parse(text.slice(1)) as { msg?: string; type?: string; message?: string };
     if (message.msg === 'flush_messages') postOutbox();
-    else if (message.msg === 'exit_reason')
+    else if (message.msg === 'dump') {
+      postOutbox();
+      post({ type: 'game-over' });
+    } else if (message.msg === 'exit_reason')
       exitReason = { type: message.type ?? 'unknown', message: message.message ?? '' };
   } catch {
     // Not for us.

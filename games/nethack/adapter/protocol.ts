@@ -34,8 +34,11 @@ export type FromWorker =
   | FrameMessage
   /** A message the game printed (for the shell's log). */
   | { type: 'message'; text: string }
-  /** The game ended (saved, died or quit); a fresh process is ready. */
-  | { type: 'exit'; saved: boolean; saves: SavedGame[] }
+  /**
+   * The game ended (saved, died or quit); a fresh process is ready. `scores`:
+   * what NetHack printed after closing its windows (topten()), if anything.
+   */
+  | { type: 'exit'; saved: boolean; saves: SavedGame[]; scores: string }
   | { type: 'saves'; saves: SavedGame[] }
   | { type: 'flushed'; id: number; error?: string }
   | { type: 'exported'; id: number; files: SaveFile[]; error?: string }

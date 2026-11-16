@@ -32,6 +32,7 @@ import {
   controlsFor,
   findCommand,
   KEY,
+  TYPE,
   keyInput,
   latchedMove,
   type ControlState,
@@ -333,6 +334,11 @@ class DcssAdapter implements GameAdapter {
       this.#press(keyInput({ key: input.commandId.slice(KEY.length) }));
       return;
     }
+    if (input.commandId.startsWith(TYPE)) {
+      for (const key of input.commandId.slice(TYPE.length)) this.#press(keyInput({ key }));
+      this.#press(keyInput({ key: 'Enter' }));
+      return;
+    }
     const command = findCommand(input.commandId);
     if (!command) return;
     let spec = command.keys;
@@ -531,6 +537,10 @@ class DcssAdapter implements GameAdapter {
           this.#backlog.push(...message.lines);
         }
         break;
+      case 'game-over':
+        this.#tracker.apply({ msg: 'dump' });
+        this.#publishContext();
+        break;
       case 'status':
         host?.emit({ type: 'status', status: message.status });
         break;
@@ -643,6 +653,7 @@ class DcssAdapter implements GameAdapter {
       menu: tracker.menu,
       statPrompt: tracker.statPrompt,
       startKeys: tracker.startKeys,
+      confirmWord: tracker.confirmWord,
     };
   }
 

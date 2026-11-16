@@ -331,6 +331,8 @@ export interface DockState {
   /** Upstream's touch mode (state.ts TOUCH_MODE). */
   touchMode: number;
   markMode: boolean;
+  /** The player can still move (false: caught, the game is over). */
+  canMove?: boolean;
 }
 
 const QUIET: DockState = {
@@ -383,12 +385,19 @@ export function controlsFor(context: HyperContext, dock: DockState = QUIET): Tou
     case 'loading':
       return { actions: [], palette: [] };
     case 'dialog':
+      // Caught, the game shows its quest screen (checkmove.cpp showMissionScreen):
+      // a new game leads; Back looks at the scene.
+      if (dock.canMove === false)
+        return {
+          actions: [a('new-game', { emphasis: 'primary', wide: true }), a('back'), a('confirm')],
+          palette: PALETTE,
+        };
       // Menus and help are drawn by the game; tap their lines, or go back.
       return { actions: [a('back', { emphasis: 'primary' }), a('confirm')], palette: PALETTE };
     case 'over':
-      // Caught: the quest screen offers to start again or look around.
+      // Caught, looking at the scene: a new game, or the quest screen again (the score).
       return {
-        actions: [a('mission', { label: 'Options', emphasis: 'primary' }), a('new-game'), a('menu')],
+        actions: [a('new-game', { emphasis: 'primary', wide: true }), a('mission'), a('menu')],
         palette: PALETTE,
       };
     case 'map':

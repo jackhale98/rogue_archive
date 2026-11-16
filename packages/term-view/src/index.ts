@@ -532,6 +532,37 @@ export function findText(grid: Grid, region: Rect, minWords = 2): Rect | null {
   return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
+/**
+ * The part of a grid with anything drawn in it (any cell but a space), with
+ * `margin` cells around it, within the grid; the whole grid when it is blank.
+ * Full-screen text drawn in part of the screen (a title menu, a tombstone)
+ * can then be fitted larger.
+ */
+export function usedRect(grid: Grid, margin = 1): Rect {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (let y = 0; y < grid.rows; y++)
+    for (let x = 0; x < grid.cols; x++) {
+      const code = grid.cells[(y * grid.cols + x) * 2]!;
+      if (code === 32 || code === 0) continue;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+    }
+  if (minX > maxX) return { x: 0, y: 0, width: grid.cols, height: grid.rows };
+  const x = Math.max(0, minX - margin);
+  const y = Math.max(0, minY - margin);
+  return {
+    x,
+    y,
+    width: Math.min(grid.cols, maxX + margin + 1) - x,
+    height: Math.min(grid.rows, maxY + margin + 1) - y,
+  };
+}
+
 /** The text of one grid row (characters 32-126; others as spaces). */
 export function rowText(grid: Grid, y: number, from = 0, to = grid.cols): string {
   let text = '';

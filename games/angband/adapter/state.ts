@@ -204,30 +204,61 @@ export function isTargeting(top: string): boolean {
 
 /** "Press any key", "-more-", "Press Return": the game waits for any key. */
 const CONTINUE =
-  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key to (?:continue|page forward|accept)|\(press any key\)/i;
+  /-more-|\[Press any key to continue\]|Press any key|Hit any key|Press Return \(or Escape\)|any other key (?:to (?:continue|page forward|accept)|for next page)|\(press any key\)/i;
+
+/**
+ * The last line with anything on it: where pages say how to leave them (the
+ * scores' "[Press ESC to exit, …]" is not always on the bottom row).
+ */
+export function lastLine(grid: Grid): string {
+  for (let y = grid.rows - 1; y > 0; y--) {
+    const line = rowText(grid, y);
+    if (line.trim()) return line;
+  }
+  return '';
+}
 
 /** A store or the home: the shopkeeper's line and "Gold Remaining" at the bottom. */
 export function isStore(grid: Grid): boolean {
   return /Gold Remaining:/.test(rowText(grid, grid.rows - 1)) && /\(\d+\)\s*$|Home/.test(rowText(grid, 1));
 }
 
+/**
+ * The death menu beside the tombstone (ui-death.c death_actions: "i)
+ * Information" to "q) Quit"), also shown on retiring.
+ */
+export function isDeathMenu(grid: Grid): boolean {
+  let info = false;
+  let newGame = false;
+  let quit = false;
+  for (let y = 0; y < grid.rows; y++) {
+    const line = rowText(grid, y);
+    info ||= /\bi\) Information\b/.test(line);
+    newGame ||= /\bn\) New Game\b/.test(line);
+    quit ||= /\bq\) Quit\b/.test(line);
+  }
+  return info && newGame && quit;
+}
+
 export function detectContext(grid: Grid, state: AngbandState): AngbandContext {
   if (!state.waiting) return 'busy';
   const top = rowText(grid, 0);
   if (saveMenu(grid)) return 'select';
+  // Retiring (or committing suicide) asks for '@' after its yes/no question.
+  if (/by typing the '@' sign/.test(top)) return 'verify';
   if (isTargeting(top)) return 'targeting';
   if (/-more-/.test(top)) return 'more';
   if (/\[y\/n\]/i.test(top)) return 'yesno';
   if (aimPrompt(top)) return 'aim';
   if (/^\s*Direction\b/.test(top)) return 'direction';
   if (itemPrompt(top)) return 'item';
-  const bottom = rowText(grid, grid.rows - 1);
+  const bottom = lastLine(grid);
   if (CONTINUE.test(top) || CONTINUE.test(bottom)) return 'more';
   // A text field (names, quantities, inscriptions, rest counts): the cursor waits on the prompt line.
   const cursor = grid.cursor;
   const textField =
     !!cursor?.visible && cursor.y === 0 && top.trim().length > 0 && cursor.x >= top.trimEnd().length - 12;
-  if (!state.inGame) return textField ? 'text' : 'birth';
+  if (!state.inGame) return textField ? 'text' : isDeathMenu(grid) ? 'death' : 'birth';
   if (isStore(grid)) return textField ? 'text' : 'store';
   if (textField) return 'text';
   if (mapOverlay(grid, state)) return 'menu';

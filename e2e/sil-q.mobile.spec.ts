@@ -212,3 +212,47 @@ test('Sil-Q phone: tiles by MicroChasm, the map in square cells', async ({ page 
   expect(map).toEqual({ graphics: true, views: ['map'] });
   await page.screenshot({ path: test.info().outputPath('sil-tiles-phone.png') });
 });
+
+test('Sil-Q phone: kill the character by touch, the tombstone and its menu, back to the title', async ({
+  page,
+}) => {
+  await openSil(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: /New character/ }).tap();
+  // Each creation step's lead (OK, Accept…), then the intro's pages.
+  for (let i = 0; i < 14 && (await silContext(page)) !== 'map'; i++) {
+    await page.waitForTimeout(400);
+    if ((await silContext(page)) === 'map') break;
+    const lead = dock.locator('.dock-button--primary').first();
+    if (await lead.isVisible()) await lead.tap();
+  }
+  await waitForContext(page, 'map');
+  await expect(dock.getByRole('button', { name: 'Pack (i)' })).toBeVisible();
+  await page.waitForTimeout(500);
+
+  // Kill character (Q) from the command list: Sil's question, then its '@', as buttons.
+  await dock.getByRole('button', { name: 'More', exact: true }).tap();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Kill character/ })
+    .tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForContext(page, 'verify');
+  await dock.getByRole('button', { name: /^Kill character/ }).tap();
+
+  // The tombstone and the menu after death: back to the title leads.
+  await waitForContext(page, 'death');
+  await expect.poll(() => screenText(page)).toContain('You have been slain');
+  for (const name of [/^Scores/, /^Inventory/, /^Dungeon/, /^Messages/, /^Character/])
+    await expect(dock.getByRole('button', { name })).toBeVisible();
+  await dock.getByRole('button', { name: /^Messages/ }).tap();
+  await expect.poll(() => silContext(page)).not.toBe('death');
+  await dock.getByRole('button', { name: /^Back/ }).tap();
+  await waitForContext(page, 'death');
+  await dock.getByRole('button', { name: /^Back to title/ }).tap();
+  await waitForContext(page, 'title');
+  await expect.poll(() => screenText(page)).toContain('b) New character');
+  // The dead character's savefile starts a new character: it says so.
+  await expect(dock.getByRole('button', { name: 'New from nameless (dead)' })).toBeVisible();
+});

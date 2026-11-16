@@ -410,7 +410,13 @@ test('the end of a game by touch: Continue past the scores, then keep or skip th
   await newGame(page);
   const dock = page.getByRole('group', { name: 'Actions' });
   // Quitting goes through the same screens as dying (after the gravestone's --MORE--).
-  await page.keyboard.press('Shift+Q');
+  // Abandon game is in the command list (More).
+  await page.waitForTimeout(300);
+  await dock.getByRole('button', { name: 'More', exact: true }).tap();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Abandon game/ })
+    .tap();
   await expect.poll(() => gameContext(page)).toBe('yesno');
   await dock.getByRole('button', { name: /^Yes/ }).tap();
   await waitForScreenText(page, 'HIGH SCORES');

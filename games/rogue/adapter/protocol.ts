@@ -38,8 +38,11 @@ export type FromWorker =
       /** Read-only game state; see adapter/state.ts for the field order. */
       state: Int32Array;
     }
-  /** The game ended (Rogue exits after saving, dying or quitting); a fresh process is ready. */
-  | { type: 'exit'; status: number; saved: boolean; saves: SavedGame[] }
+  /**
+   * The game ended (Rogue exits after saving, dying or quitting); a fresh
+   * process is ready. `scores`: the top ten Rogue printed as it ended, if it did.
+   */
+  | { type: 'exit'; status: number; saved: boolean; saves: SavedGame[]; scores: string }
   | { type: 'saves'; saves: SavedGame[] }
   | { type: 'flushed'; id: number; error?: string }
   | { type: 'exported'; id: number; files: SaveFile[]; error?: string }

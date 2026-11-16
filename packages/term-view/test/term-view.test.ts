@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findText, fittedView, followView, hitTest, rowText, type Grid } from '../src/index.ts';
+import { findText, fittedView, followView, hitTest, rowText, usedRect, type Grid } from '../src/index.ts';
 
 /** A grid from text rows (colour 1 everywhere). */
 function grid(lines: string[], cols = 40): Grid {
@@ -70,5 +70,13 @@ describe('text helpers', () => {
     const text = findText(g, { x: 0, y: 0, width: 40, height: 4 }, 2);
     expect(text).toEqual({ x: 11, y: 1, width: 19, height: 2 });
     expect(findText(grid(['#.@..#', '######']), { x: 0, y: 0, width: 40, height: 2 })).toBeNull();
+  });
+});
+
+describe('usedRect', () => {
+  it('is the part of the screen drawn in, with a margin, or the whole of a blank screen', () => {
+    const screen = grid(['', '', '      a) Tutorial', '      b) New game', ''], 40);
+    expect(usedRect(screen)).toEqual({ x: 5, y: 1, width: 13, height: 4 });
+    expect(usedRect(grid(['', ''], 10))).toEqual({ x: 0, y: 0, width: 10, height: 2 });
   });
 });

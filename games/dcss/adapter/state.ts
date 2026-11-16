@@ -135,6 +135,8 @@ export function underfootHere(map: MapContext, place: string | undefined): Under
 
 /** "Increase (S)trength, (I)ntelligence, or (D)exterity?" (player-stats.cc attribute_increase). */
 const STAT_PROMPT = /Increase \(S\)trength, \(I\)ntelligence, or \(D\)exterity\?/i;
+/** A prompt asking for a word to be typed (prompt.cc confirm_prompt): "… (Confirm with "quit".)". */
+const CONFIRM_WORD = /\(Confirm with "([^"]+)"\.\)\s*$/;
 /** Casting or listing spells with none memorised (MSG_NO_SPELLS). */
 const NO_SPELLS = "You don't know any spells.";
 
@@ -202,6 +204,16 @@ export class GameTracker {
   more = false;
   /** Whether a character exists (the game has drawn the map at least once). */
   inGame = false;
+  /**
+   * The game is over: DCSS has written the morgue file (end.cc end_game sends
+   * "dump"); the inventory and the "Goodbye" screen follow.
+   */
+  gameOver = false;
+  /**
+   * The word a text prompt asks to be typed to confirm ("(Confirm with
+   * "quit".)", prompt.cc confirm_prompt), while it waits.
+   */
+  confirmWord: string | null = null;
   /** The stat increase question was asked and the game is still in that prompt. */
   #statAsked = false;
   /**
@@ -249,6 +261,8 @@ export class GameTracker {
     this.textInput = false;
     this.more = false;
     this.inGame = false;
+    this.gameOver = false;
+    this.confirmWord = null;
     this.#statAsked = false;
     this.caster = null;
   }
@@ -285,6 +299,10 @@ export class GameTracker {
         return true;
       case 'ui-pop':
         this.popups.pop();
+        this.confirmWord = null;
+        return true;
+      case 'dump':
+        this.gameOver = true;
         return true;
       case 'menu': {
         const menu = menuInfo(message);
@@ -312,6 +330,7 @@ export class GameTracker {
         return true;
       case 'close_input':
         this.textInput = false;
+        this.confirmWord = null;
         return true;
       case 'msgs': {
         let changed = false;
@@ -320,6 +339,11 @@ export class GameTracker {
           if (typeof entry?.text !== 'string') continue;
           const text = plainText(entry.text);
           if (STAT_PROMPT.test(text)) this.#statAsked = changed = true;
+          const confirm = CONFIRM_WORD.exec(text);
+          if (confirm) {
+            this.confirmWord = confirm[1]!;
+            changed = true;
+          }
           if (text.includes(NO_SPELLS)) {
             this.caster = false;
             changed = true;
@@ -338,6 +362,8 @@ export class GameTracker {
 
   context(): DcssContext {
     const top = this.popups[this.popups.length - 1];
+    // The end of a game: the inventory (a menu), then "Goodbye" (a popup).
+    if (this.gameOver && (top || this.menu)) return 'game-over';
     if (top === 'newgame-choice' || top === 'game-menu' || top === 'seed-selection') return 'start';
     // "Do you want to play this combination? [Y/n/q]" (a recommended or random character).
     if (top === 'newgame-random-combo') return 'yesno';

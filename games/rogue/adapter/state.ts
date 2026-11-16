@@ -218,3 +218,15 @@ export function detectContext(grid: Grid, state: RogueState): RogueContext {
   if (state.inGame) return 'map';
   return 'busy';
 }
+
+/**
+ * The top ten Rogue prints once its screen is closed (rip.c score(): "Top Ten
+ * Rogueists:", a heading and a line per score), without its prompt.
+ */
+export function scoreList(lines: readonly string[]): string {
+  const start = lines.findLastIndex((line) => /^Top .*:$/.test(line.trim()));
+  if (start < 0) return '';
+  const list = lines.slice(start).map((line) => line.replace(/\[Press return to continue\]/, '').trimEnd());
+  // (Nothing to show when no game has scored yet: only the heading.)
+  return list.some((line) => /^\s*\d+\s+\d+ /.test(line)) ? list.join('\n').trim() : '';
+}

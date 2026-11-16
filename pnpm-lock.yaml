@@ -132,6 +132,9 @@ importers:
       '@rogue-archive/game-api':
         specifier: workspace:*
         version: link:../../packages/game-api
+      '@rogue-archive/start-screen':
+        specifier: workspace:*
+        version: link:../../packages/start-screen
 
   games/hyperrogue:
     dependencies:

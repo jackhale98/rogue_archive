@@ -286,6 +286,14 @@ export const NETHACK_COMMANDS: NetHackCommand[] = [
   },
   { id: 'help', label: 'Help', shortLabel: 'Help', shortcut: '?', keys: k('?'), category: 'Information' },
   { id: 'save', label: 'Save and quit', shortLabel: 'Save', shortcut: 'S', keys: k('S'), category: 'Game' },
+  {
+    id: 'quit',
+    label: 'Quit without saving (the game ends)',
+    shortLabel: 'Quit',
+    shortcut: '#quit',
+    keys: ext('quit'),
+    category: 'Game',
+  },
   { id: 'options', label: 'Options', shortLabel: 'Options', shortcut: 'O', keys: k('O'), category: 'Game' },
   {
     id: 'redraw',
@@ -713,6 +721,8 @@ const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchActi
 export const KEY = 'key:';
 
 const YN_LABELS: Record<string, string> = { y: 'Yes', n: 'No', q: 'Quit', a: 'All' };
+/** The end-of-game questions ("Do you want to see your attributes? [ynq]"): `q` skips the rest. */
+const ENDING_LABELS: Record<string, string> = { y: 'Yes', n: 'No', q: 'Skip to the end' };
 /** "Shall I pick a character for you? [ynaq]": what each answer does there. */
 const PICK_LABELS: Record<string, string> = {
   y: 'Pick for me',
@@ -754,6 +764,18 @@ export interface DockState {
   messages?: readonly string[];
   /** Strategy shortcuts (the Elbereth button and suggestion); on unless false. */
   shortcuts?: boolean;
+  /** The game is over: its end-of-game questions, lists and the tombstone (end.c). */
+  ending?: boolean;
+}
+
+/**
+ * The first question NetHack asks once a game is over (end.c disclose()), or
+ * once the hero has died and nothing is left to disclose (the tombstone follows).
+ */
+export function endOfGame(prompt: string): boolean {
+  return /^Do you want (your possessions identified|to see what you had when you (?:quit|died)|to see your attributes)\?/.test(
+    prompt,
+  );
 }
 
 /** Item letters named by this turn's messages ("d - an uncursed food ration."). */
@@ -934,6 +956,12 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
         palette: PALETTE,
       };
     case 'text':
+      // At the end of a game (the attributes, the tombstone, "Goodbye"): one way on.
+      if (dock.ending)
+        return {
+          actions: [a('continue', { emphasis: 'primary', wide: true })],
+          palette: PALETTE,
+        };
       return {
         actions: [a('continue', { label: 'Next', emphasis: 'primary' }), a('cancel', { label: 'Close' })],
         palette: PALETTE,
@@ -941,6 +969,16 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
     case 'menu': {
       const menu = dock.menu;
       const paging = menu && menu.pages > 1;
+      // At the end of a game the lists (what you had, the vanquished, the
+      // overview) are only to read: Continue (Enter leaves a menu, choosing nothing).
+      if (dock.ending)
+        return {
+          actions: [
+            a('confirm', { label: 'Continue', emphasis: 'primary' }),
+            ...(paging ? [a('previous-page'), a('next-page')] : []),
+          ],
+          palette: PALETTE,
+        };
       if (menu?.how === 0)
         return {
           actions: [
@@ -977,7 +1015,8 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
     }
     case 'yn': {
       const letters = promptChoices(dock.prompt).slice(0, 6);
-      const labels = /^Shall I pick/.test(dock.prompt) ? PICK_LABELS : YN_LABELS;
+      const ending = dock.ending && /\[ynq\]/.test(dock.prompt);
+      const labels = /^Shall I pick/.test(dock.prompt) ? PICK_LABELS : ending ? ENDING_LABELS : YN_LABELS;
       return {
         actions: [
           ...letters.map((letter, i) =>
@@ -986,7 +1025,8 @@ function layoutFor(context: NhContext | 'start', dock: DockState): TouchControlL
               ...(i === 0 ? { emphasis: 'primary' as const } : {}),
             }),
           ),
-          a('cancel'),
+          // (Escape answers `q` there.)
+          ...(ending ? [] : [a('cancel')]),
         ],
         reading: true,
         palette: PALETTE,

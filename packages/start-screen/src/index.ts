@@ -18,6 +18,7 @@ export interface StartScreenOptions {
   hint?: string;
   /** Allowed names (default: 1-20 letters, digits, - or _). */
   namePattern?: RegExp;
+  /** The name field's first value; a random name when there is none, so Start is one tap. */
   defaultName?: string;
   onNew(name: string): void;
   onContinue(name: string): void;
@@ -47,6 +48,12 @@ const STYLE = `
   font-weight:700;cursor:pointer}
 .ra-start__go:disabled{opacity:.5;cursor:default}
 .ra-start__hint{margin:0;color:#b3a88f;font-size:13px}
+.ra-start__random{justify-self:start;min-height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(236,227,207,.22);
+  background:transparent;color:inherit;font:inherit;font-size:14px;cursor:pointer}
+.ra-start__random:hover,.ra-start__random:focus-visible{border-color:#e0aa4a;outline:none}
+.ra-start__details{margin:0;max-height:min(40vh,22rem);overflow:auto;padding:10px 12px;border-radius:12px;
+  border:1px solid rgba(236,227,207,.14);background:#13110d;color:#ece3cf;
+  font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
 .ra-start__error{margin:0;color:#ef8a76;font-size:13px}
 `;
 
@@ -63,6 +70,7 @@ export class StartScreen {
   readonly #root: HTMLDivElement;
   readonly #style: HTMLStyleElement;
   readonly #notice: HTMLParagraphElement;
+  readonly #details: HTMLPreElement;
   readonly #savesSection: HTMLDivElement;
   readonly #saves: HTMLDivElement;
   readonly #input: HTMLInputElement;
@@ -86,6 +94,11 @@ export class StartScreen {
     this.#notice = element('p', 'ra-start__notice');
     this.#notice.hidden = true;
     this.#notice.setAttribute('role', 'status');
+    // What the game printed as it ended (its scores), when it did.
+    this.#details = element('pre', 'ra-start__details');
+    this.#details.hidden = true;
+    this.#details.tabIndex = 0;
+    this.#details.setAttribute('aria-label', 'Scores');
 
     this.#savesSection = element('div', 'ra-start__section');
     this.#saves = element('div', 'ra-start__section');
@@ -104,13 +117,20 @@ export class StartScreen {
     this.#input.spellcheck = false;
     this.#input.setAttribute('autocapitalize', 'words');
     this.#input.setAttribute('enterkeyhint', 'go');
-    this.#input.value = options.defaultName ?? '';
+    this.#input.value = options.defaultName || randomName();
     this.#button = element('button', 'ra-start__go', 'Start');
     this.#button.type = 'submit';
     form.append(this.#input, this.#button);
     this.#error = element('p', 'ra-start__error');
     this.#error.hidden = true;
-    newSection.append(label, form, this.#error);
+    // Another name without the keyboard.
+    const random = element('button', 'ra-start__random', 'Random name');
+    random.type = 'button';
+    random.addEventListener('click', () => {
+      this.#input.value = randomName();
+      this.#validate();
+    });
+    newSection.append(label, form, this.#error, random);
     if (options.hint) newSection.append(element('p', 'ra-start__hint', options.hint));
 
     this.#input.addEventListener('input', () => this.#validate());
@@ -124,7 +144,7 @@ export class StartScreen {
       if (button?.dataset.name) options.onContinue(button.dataset.name);
     });
 
-    card.append(heading, this.#notice, this.#savesSection, newSection);
+    card.append(heading, this.#notice, this.#details, this.#savesSection, newSection);
     this.#root.append(card);
     container.append(this.#style, this.#root);
   }
@@ -133,10 +153,16 @@ export class StartScreen {
     return !this.#root.hidden;
   }
 
-  show(entries: SavedEntry[], notice?: string): void {
+  /**
+   * Shows the screen, with a notice (how the last game ended) and the text the
+   * game printed as it ended, such as its high scores (`details`), if any.
+   */
+  show(entries: SavedEntry[], notice?: string, details?: string): void {
     this.#entries = entries;
     this.#notice.textContent = notice ?? '';
     this.#notice.hidden = !notice;
+    this.#details.textContent = details ?? '';
+    this.#details.hidden = !details;
     this.update(entries);
     this.#root.hidden = false;
     const first = this.#saves.querySelector('button');
@@ -181,6 +207,40 @@ export class StartScreen {
     this.#button.disabled = !name || !!problem;
     return name && !problem ? name : null;
   }
+}
+
+const NAME_STARTS = [
+  'Al',
+  'Bran',
+  'Cor',
+  'Dar',
+  'El',
+  'Fen',
+  'Gar',
+  'Hal',
+  'Is',
+  'Jor',
+  'Kel',
+  'Lor',
+  'Mar',
+  'Nor',
+  'Or',
+  'Per',
+  'Ros',
+  'Syl',
+  'Tor',
+  'Ul',
+  'Val',
+  'Wyn',
+  'Ya',
+  'Zan',
+];
+const NAME_ENDS = ['a', 'an', 'ard', 'en', 'eth', 'ia', 'in', 'ion', 'is', 'or', 'ric', 'wen', 'wyn', 'ys'];
+
+/** A random name (letters only, at most 9), for a new character started without typing. */
+export function randomName(random: () => number = Math.random): string {
+  const pick = (list: readonly string[]) => list[Math.floor(random() * list.length) % list.length]!;
+  return pick(NAME_STARTS) + pick(NAME_ENDS);
 }
 
 /** "just now", "5 minutes ago", "yesterday", or a date. */

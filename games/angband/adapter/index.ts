@@ -37,6 +37,7 @@ import {
   fittedView,
   followView,
   rowText,
+  usedRect,
   type Grid,
   type Rect,
   type View,
@@ -63,6 +64,7 @@ import type { FromWorker, ToWorker } from './protocol.ts';
 import {
   detectContext,
   itemPrompt,
+  lastLine,
   mapOverlay,
   mapRect,
   parseState,
@@ -73,6 +75,9 @@ import {
   type AngbandState,
   type SaveChoice,
 } from './state.ts';
+
+/** The shell's tools row over the top of an upright phone (CSS px). */
+const TOOLS_ROW_HEIGHT = 50;
 
 export const GAME_ID = 'angband';
 const FLUSH_TIMEOUT_MS = 8000;
@@ -676,7 +681,12 @@ class AngbandAdapter implements GameAdapter {
     const top = grid ? rowText(grid, 0) : '';
     const overlay =
       grid && state && (context === 'menu' || context === 'item') ? mapOverlay(grid, state) : null;
-    const lettered = context === 'birth' || context === 'menu' || context === 'item' || context === 'store';
+    const lettered =
+      context === 'birth' ||
+      context === 'death' ||
+      context === 'menu' ||
+      context === 'item' ||
+      context === 'store';
     const choices = grid && lettered ? screenChoices(grid, overlay ?? undefined) : [];
     this.#saveMenu = grid && context === 'select' ? (saveMenu(grid) ?? []) : [];
     const layout = controlsFor(
@@ -687,7 +697,7 @@ class AngbandAdapter implements GameAdapter {
         maxHp: state?.maxHp ?? 0,
         run: this.#run,
         prompt: top,
-        bottom: grid ? rowText(grid, grid.rows - 1) : '',
+        bottom: grid ? lastLine(grid) : '',
         cursorLine: grid?.cursor?.visible ? rowText(grid, grid.cursor.y) : '',
       },
       choices,
@@ -766,7 +776,13 @@ class AngbandAdapter implements GameAdapter {
       return;
     }
     const insets = presentation.insets;
-    const band = this.#setBand(inMap && state ? state : null);
+    const bandHeight = this.#setBand(inMap && state ? state : null);
+    // Without the band, full-screen pages start below the shell's tools when they
+    // are above the game (an upright phone), so nothing drawn is under them.
+    const mount = this.#mount;
+    const toolsAbove =
+      (presentation.topRightReserve ?? 0) > 0 && !!mount && mount.clientHeight > mount.clientWidth;
+    const band = bandHeight || (toolsAbove ? TOOLS_ROW_HEIGHT : 0);
     const area: Rect = {
       x: Math.round(insets.left * dpr),
       y: Math.round(band * dpr),
@@ -781,7 +797,7 @@ class AngbandAdapter implements GameAdapter {
     const page = !inMap || !state || (!!overlay && overlay.width >= 0.8 * (grid.cols - state.colMap));
     this.#showingPage = page;
     if (page) {
-      renderer.setViews([this.#pageView(whole, area)]);
+      renderer.setViews([this.#pageView(usedRect(grid), area)]);
       return;
     }
     const map = followView(

@@ -23,6 +23,7 @@ import {
 import {
   aimPrompt,
   detectContext,
+  isDeathMenu,
   isStore,
   isTargeting,
   itemPrompt,
@@ -356,5 +357,78 @@ describe('docks', () => {
     expect(controlsFor('store', base).reading).toBe(true);
     expect(ids(controlsFor('store', base))).toEqual(['store-examine', 'inventory', 'cancel', 'sell', 'buy']);
     expect(ids(controlsFor('text', base))[0]).toBe('shell:keyboard');
+  });
+});
+
+describe('the start and end of a game by touch', () => {
+  const base: DockState = { hp: 0, maxHp: 0, run: false };
+  // ui-death.c: the tombstone and death_actions, after retiring.
+  const DEATH = grid([
+    '                                       ___________',
+    '                                      |\\           i) Information',
+    '                                      | \\          m) Messages',
+    '                                      |  \\    ~~   f) File dump',
+    '                                      |   \\   ~~~  v) View scores',
+    '                                      H    \\       x) Examine items',
+    '                                      |\\    \\      h) History',
+    '                      the             | \\   |      s) Spoilers',
+    '                    Rookie            |     |      n) New Game',
+    '                                      H     |      q) Quit',
+  ]);
+
+  it('reads the death menu and leads it with a new game', () => {
+    expect(isDeathMenu(DEATH)).toBe(true);
+    expect(detectContext(DEATH, notInGame)).toBe('death');
+    const layout = actions(controlsFor('death', base, screenChoices(DEATH)));
+    expect(layout.at(-1)).toMatchObject({ command: `${CHOOSE}n`, label: 'New game', emphasis: 'primary' });
+    expect(layout.map((action) => action.label)).toEqual([
+      'Scores',
+      'Information',
+      'Messages',
+      'Examine items',
+      'History',
+      'File dump',
+      'Quit',
+      'New game',
+    ]);
+  });
+
+  it("answers the '@' verification of retiring with a button", () => {
+    const top = "Please verify RETIRING THIS CHARACTER by typing the '@' sign: ";
+    const screen = grid([top], { x: top.length, y: 0, visible: true });
+    expect(detectContext(screen, inTown)).toBe('verify');
+    expect(ids(controlsFor('verify', base))).toEqual([`${CHOOSE}@`, 'cancel']);
+  });
+
+  it('offers a random name, and names the last step of creation for what its keys do', () => {
+    const name = ids(
+      controlsFor('text', { ...base, prompt: 'Enter a name for your character (* for a random name): ' }),
+    );
+    expect(name).toEqual(['confirm', 'random', 'shell:keyboard', 'cancel']);
+    const last = actions(
+      controlsFor('more', {
+        ...base,
+        bottom: "      ['ESC' to step back, 'S' to start over, or any other key to continue]",
+      }),
+    );
+    expect(last.map((action) => action.label)).toEqual(['Start playing', 'Back', 'Start over']);
+  });
+
+  it('takes the scores page for a page left with Escape, wherever its prompt is', () => {
+    const scores = grid([
+      '                              Angband Hall of Fame',
+      '      [Press ESC to exit, up for prior page, any other key for next page.]',
+    ]);
+    expect(detectContext(scores, notInGame)).toBe('more');
+  });
+
+  it("says what a dead character's savefile does on the savefile menu", () => {
+    const saves = [
+      { row: 3, label: 'New game' },
+      { row: 4, label: 'Gwedel: Gwedel, dead (Retiring)' },
+    ];
+    const layout = actions(controlsFor('select', base, [], null, saves));
+    expect(layout.map((action) => action.label)).toEqual(['New character', 'New from Gwedel (dead)']);
+    expect(layout[0]!.emphasis).toBe('primary');
   });
 });

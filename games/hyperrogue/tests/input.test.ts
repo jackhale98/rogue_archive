@@ -169,3 +169,13 @@ describe('HyperRogue keys', () => {
     expect(hintFor(null, ui)).toEqual([]);
   });
 });
+
+describe('the end of a game', () => {
+  const ids = (layout: { actions: (string | TouchAction)[] }) =>
+    layout.actions.map((action) => (typeof action === 'string' ? action : action.command));
+  it('leads with a new game once caught, on the quest screen and on the map', () => {
+    expect(ids(controlsFor('dialog', { ...QUIET, canMove: false }))).toEqual(['new-game', 'back', 'confirm']);
+    expect(ids(controlsFor('dialog', QUIET))).toEqual(['back', 'confirm']);
+    expect(ids(controlsFor('over', QUIET))).toEqual(['new-game', 'mission', 'menu']);
+  });
+});

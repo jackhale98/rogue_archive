@@ -333,3 +333,52 @@ test('NetHack phone: an item prompt from the keyboard opens its list, whose line
   await page.getByRole('button', { name: 'Message log' }).tap();
   await expect(page.getByRole('dialog')).toContainText(/dagger \(weapon in (right |left )?hands?\)/);
 });
+
+test('NetHack phone: a new game and its end by touch alone: questions, "Goodbye", the scores', async ({
+  page,
+}) => {
+  await page.goto('?debug=1#/play/nethack');
+  const start = page.locator('.ra-start');
+  await expect(start).toBeVisible({ timeout: 120_000 });
+  // A name is ready (no keyboard needed).
+  await expect(start.getByLabel('New character')).toHaveValue(/^[A-Z][a-z]+$/);
+  await start.getByRole('button', { name: 'Start' }).tap();
+  await waitForContext(page, 'yn');
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: 'Pick for me' }).tap();
+  await dock.getByRole('button', { name: /^Yes; start game/ }).tap();
+  await toMap(
+    page,
+    () => dock.locator('.dock-button--primary').first().tap(),
+    () => dock.getByRole('button', { name: /^No, just start play/ }).tap(),
+  );
+
+  // Quit from the command list, then NetHack's questions about the game, as buttons.
+  await page.waitForTimeout(300);
+  await dock.getByRole('button', { name: 'More', exact: true }).tap();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Quit without saving/ })
+    .tap();
+  await waitForContext(page, 'yn');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  // "Do you want your possessions identified?" (and the rest): q skips to the end.
+  await expect.poll(async () => (await nethack(page))?.prompt ?? '').toMatch(/possessions identified/);
+  await expect(dock.getByRole('button', { name: 'Skip to the end' })).toBeVisible();
+  await dock.getByRole('button', { name: 'Yes', exact: true }).tap();
+  // The possessions list: only to read.
+  await waitForContext(page, 'menu');
+  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  for (let i = 0; i < 12 && (await nethack(page))?.context === 'yn'; i++) {
+    await dock.getByRole('button', { name: 'No', exact: true }).tap();
+    await page.waitForTimeout(300);
+  }
+  // "Goodbye …" (worded by role: "Sayonara" for a Samurai, "Farvel" for a
+  // Valkyrie...): the game's summary, then the scores on the start screen.
+  await waitForContext(page, 'text');
+  await expect.poll(async () => (await nethack(page))?.text ?? '').toMatch(/You quit in /);
+  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  await expect(start).toBeVisible();
+  await expect(start.getByRole('status')).toContainText('game is over');
+  await expect(start.getByLabel('Scores')).toContainText('Points');
+});

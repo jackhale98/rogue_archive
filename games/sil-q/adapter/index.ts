@@ -31,6 +31,7 @@ import {
   fittedView,
   followView,
   rowText,
+  usedRect,
   type Grid,
   type Rect,
   type View,
@@ -63,10 +64,14 @@ import {
   playerCell,
   screenChoices,
   songPrompt,
+  tombstoneName,
   statusTags,
   type SilState,
   type StatusTone,
 } from './state.ts';
+
+/** The shell's tools row over the top of an upright phone (CSS px). */
+const TOOLS_ROW_HEIGHT = 50;
 
 export const GAME_ID = 'sil-q';
 const FLUSH_TIMEOUT_MS = 8000;
@@ -172,6 +177,10 @@ class SilAdapter implements GameAdapter {
   #logId = 0;
   #log: LogEntry[] = [];
   #saves: string[] = [];
+  /** Saved characters that died (their savefiles start a new character), as Settings keep them. */
+  #dead = new Set<string>();
+  /** The saved character being opened, until the map shows. */
+  #opening: string | null = null;
   #cleanup: (() => void)[] = [];
   readonly debug: SilDebugState;
 
@@ -204,6 +213,11 @@ class SilAdapter implements GameAdapter {
     const stored = Number(options.settings.mapCellCss);
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
     this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.#dead = new Set(
+      String(options.settings.deadCharacters ?? '')
+        .split(',')
+        .filter(Boolean),
+    );
     this.#runtimeFiles = runtime.files;
     this.#runtimeBaseUrl = runtimeBaseUrl;
 
@@ -288,6 +302,7 @@ class SilAdapter implements GameAdapter {
       const fromMenu = this.#context === 'title';
       const typed = !fromMenu && this.#grid?.cursor ? Math.max(0, this.#grid.cursor.x - LOAD_PROMPT_X) : 0;
       const name = input.commandId.slice(LOAD.length);
+      this.#opening = name;
       this.#send([
         ...(fromMenu ? ['c'.charCodeAt(0)] : []),
         ...Array<number>(typed).fill(8),
@@ -558,10 +573,17 @@ class SilAdapter implements GameAdapter {
     this.debug.context = context;
     const state = this.#state;
     const grid = this.#grid;
+    // Remember who died (the savefile now starts a new character), and who came back.
+    const died = grid && context === 'death' ? tombstoneName(grid) : null;
+    if (died && !this.#dead.has(died)) this.#setDead(died, true);
+    if (context === 'map' && this.#opening) {
+      if (this.#dead.has(this.#opening)) this.#setDead(this.#opening, false);
+      this.#opening = null;
+    }
     // Lettered choices: on title and creation screens anywhere, in menus within the list.
     const overlay = grid && (context === 'menu' || context === 'item') ? mapOverlay(grid) : null;
     let choices =
-      grid && (context === 'title' || context === 'menu' || context === 'item')
+      grid && (context === 'title' || context === 'death' || context === 'menu' || context === 'item')
         ? screenChoices(grid, overlay ?? undefined)
         : [];
     // Creation menus keep earlier steps' choices on screen (the race beside the houses).
@@ -589,6 +611,7 @@ class SilAdapter implements GameAdapter {
       choices,
       item,
       this.#saves,
+      this.#dead,
     );
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature) return;
@@ -598,6 +621,12 @@ class SilAdapter implements GameAdapter {
       type: 'input-context',
       context: { textEntry: context === 'text' || context === 'title' || context === 'load', mode: context },
     });
+  }
+
+  #setDead(name: string, dead: boolean): void {
+    if (dead) this.#dead.add(name);
+    else this.#dead.delete(name);
+    this.#host?.emit({ type: 'setting-changed', key: 'deadCharacters', value: [...this.#dead].join(',') });
   }
 
   /** MicroChasm's tile sheet (tiles.png), downloaded and verified when tiles are chosen. */
@@ -749,17 +778,23 @@ class SilAdapter implements GameAdapter {
     }
     const state = this.#state;
     const insets = presentation.insets;
-    const band = this.#setBand(state?.inDungeon ? state : null);
+    const bandHeight = this.#setBand(state?.inDungeon ? state : null);
+    // Without the band, full-screen pages start below the shell's tools when they
+    // are above the game (an upright phone), so nothing drawn is under them.
+    const mount = this.#mount;
+    const toolsAbove =
+      (presentation.topRightReserve ?? 0) > 0 && !!mount && mount.clientHeight > mount.clientWidth;
+    const band = bandHeight || (toolsAbove ? TOOLS_ROW_HEIGHT : 0);
     const area: Rect = {
       x: Math.round(insets.left * dpr),
       y: Math.round(band * dpr),
       width: Math.max(1, width - Math.round((insets.left + insets.right) * dpr)),
       height: Math.max(1, height - Math.round((band + insets.bottom) * dpr)),
     };
-    // Full-screen text (title, character creation): the whole screen fitted;
-    // its choices are also large buttons in the dock.
+    // Full-screen text (title, character creation, the tombstone): the part
+    // of the screen in use, fitted; its choices are also large buttons in the dock.
     if (!state?.inDungeon || this.#context === 'title') {
-      renderer.setViews([fittedView('screen', whole, area)]);
+      renderer.setViews([fittedView('screen', usedRect(grid), area)]);
       return;
     }
     const map = followView(

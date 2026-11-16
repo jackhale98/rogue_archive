@@ -150,6 +150,8 @@ export interface NhFrame {
   tiles: Uint16Array;
   cursor: { x: number; y: number; visible: boolean };
   context: NhContext;
+  /** The game waits for the player (a key, a click); otherwise a redraw while it works. */
+  waiting: boolean;
   /** The prompt being answered (yn_function, getlin, extended command). */
   prompt: string;
   /** The open menu or text window on screen: its page, for the touch controls. */
@@ -217,6 +219,19 @@ export function promptContext(query: string, choices: string): NhContext {
   return 'item';
 }
 
+/**
+ * NetHack's `iflags.window_inited`, which libnh lets the page read and set
+ * (libnhmain.c js_globals_init). Window ports set it once their windows are up
+ * and clear it as they close (tty_init_nhwindows, tty_exit_nhwindows); the
+ * core then writes messages to the message window, and at the end of a game
+ * shows the tombstone and the "Goodbye" summary (end.c really_done).
+ */
+function setWindowsUp(up: boolean): void {
+  const globals = (globalThis as { nethackGlobal?: { globals?: { iflags?: { window_inited?: boolean } } } })
+    .nethackGlobal?.globals;
+  if (globals?.iflags) globals.iflags.window_inited = up;
+}
+
 /** Keys tty gives menu items without their own: a-z then A-Z. */
 const MENU_LETTERS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -242,6 +257,10 @@ export class WindowPort {
   /** Map cells (char, colour, tile) as the game drew them; the screen is drawn from these. */
   #map = new Int32Array(COLS * MAP_ROWS * 3);
   #stateFields = 0;
+  /** Waiting for the player (#waitKey, #posKey), not redrawing while the game works. */
+  #waiting = false;
+  /** What the game printed after closing its windows: the scores (topten()). */
+  #closing: string[] = [];
 
   constructor(host: WindowPortHost) {
     this.#host = host;
@@ -261,6 +280,15 @@ export class WindowPort {
     return this.#history;
   }
 
+  /** What the game printed after its windows closed at the end of a game (its scores), if anything. */
+  get closingText(): string {
+    // topten() pads its columns for an 80-column terminal: closed up, the lines fit a phone.
+    return this.#closing
+      .map((line) => line.trim().replace(/\s{3,}/g, '  '))
+      .join('\n')
+      .replace(/^\n+|\s+$/g, '');
+  }
+
   /** The shim's callback: one call per window operation; resolves with its result. */
   async call(name: string, ...args: unknown[]): Promise<unknown> {
     const a = args as number[];
@@ -273,6 +301,8 @@ export class WindowPort {
           : '';
     switch (name) {
       case 'shim_init_nhwindows':
+        setWindowsUp(true);
+        return undefined;
       case 'shim_get_nh_event':
       case 'shim_suspend_nhwindows':
       case 'shim_resume_nhwindows':
@@ -295,6 +325,7 @@ export class WindowPort {
         return this.#askname();
       case 'shim_exit_nhwindows':
         if (args[0]) this.#addMessage(s(args[0]));
+        setWindowsUp(false);
         this.#context = 'over';
         this.#emit();
         return undefined;
@@ -345,6 +376,7 @@ export class WindowPort {
       case 'shim_raw_print_bold': {
         const text = s(args[0]);
         this.#host.raw?.(text);
+        if (this.#context === 'over') this.#closing.push(text);
         if (text.trim()) this.#addMessage(text.trim());
         return undefined;
       }
@@ -695,8 +727,10 @@ export class WindowPort {
   async #waitKey(context: NhContext, accept: (key: number) => boolean): Promise<number> {
     for (;;) {
       this.#context = context;
+      this.#waiting = true;
       this.#emit();
       const input = await this.#host.nextInput();
+      this.#waiting = false;
       if (!('key' in input)) continue;
       if (context === 'map') this.#turnMessages = [];
       if (accept(input.key)) return input.key;
@@ -706,8 +740,10 @@ export class WindowPort {
   /** nh_poskey(): a key, or a click on the map (0, with its cell and button). */
   async #posKey(xPtr: number, yPtr: number, modPtr: number): Promise<number> {
     this.#context = 'map';
+    this.#waiting = true;
     this.#emit();
     const input = await this.#host.nextInput();
+    this.#waiting = false;
     this.#turnMessages = [];
     if ('key' in input) return input.key;
     const { x, y, button } = input.click;
@@ -926,6 +962,7 @@ export class WindowPort {
       tiles: this.tiles,
       cursor: { ...this.#cursor, visible: this.#context === 'map' && !this.#overlay },
       context,
+      waiting: this.#waiting,
       prompt: this.#prompt,
       menu: this.#menuView,
       state,

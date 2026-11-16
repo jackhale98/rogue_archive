@@ -321,3 +321,22 @@ describe('DCSS tracker: menus, prompts and status', () => {
     expect(tracker.orb).toBe(true);
   });
 });
+
+describe('the end of a game', () => {
+  const base: ControlState = { hp: 10, hpMax: 10, run: false };
+  it('confirms quitting with one button, and leads each end screen with Continue', () => {
+    const quit = controlsFor('text', { ...base, confirmWord: 'quit' }).actions as TouchAction[];
+    expect(quit.map((action) => [action.command, action.label])).toEqual([
+      ['type:quit', 'Abandon character'],
+      ['cancel', 'Cancel'],
+    ]);
+    const inventory = controlsFor('game-over', {
+      ...base,
+      menu: { tag: 'inventory', flags: 0, always: false },
+    }).actions as TouchAction[];
+    expect(inventory[0]).toMatchObject({ command: 'cancel', label: 'Continue', emphasis: 'primary' });
+    expect(inventory.map((action) => action.command)).toEqual(['cancel', 'page-up', 'page-down']);
+    const goodbye = controlsFor('game-over', base).actions as TouchAction[];
+    expect(goodbye.map((action) => action.command)).toEqual(['cancel']);
+  });
+});

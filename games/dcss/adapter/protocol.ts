@@ -32,6 +32,11 @@ export type FromWorker =
   | { type: 'ready'; characters: SavedCharacter[] }
   /** WebTiles messages from the game for the client, in order (JSON text each). */
   | { type: 'messages'; lines: string[] }
+  /**
+   * The game is over: it wrote the character's morgue file (end.cc end_game's
+   * "dump" message, meant for a server); its last screens follow.
+   */
+  | { type: 'game-over' }
   /** The game process ended (death, save, quit); `reason` is from its exit_reason message. */
   | { type: 'exit'; status: number; reason: string; message: string; characters: SavedCharacter[] }
   /** The saved characters changed (e.g. after an import). */

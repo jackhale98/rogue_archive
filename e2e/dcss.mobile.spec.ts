@@ -182,3 +182,39 @@ test('DCSS phone: in character creation a tap shows an option, a second chooses 
   await page.waitForTimeout(1500);
   await createByTaps(page);
 });
+
+test('DCSS phone: a new character and its end by touch alone', async ({ page }) => {
+  await page.goto('?debug=1#/play/dcss');
+  const launcher = page.locator('.dcss-launcher');
+  await expect(launcher).toBeVisible({ timeout: 120_000 });
+  // A name is ready (no keyboard needed); Random name picks another.
+  const name = launcher.getByLabel('New character');
+  await expect(name).toHaveValue(/^[A-Z][a-z]+$/);
+  await launcher.getByRole('button', { name: 'Random name' }).tap();
+  await expect(name).toHaveValue(/^[A-Z][a-z]+$/);
+  await launcher.getByRole('button', { name: 'Start' }).tap();
+  await waitForContext(page, 'start', 180_000);
+  await createByTaps(page);
+
+  // Quit from the command list: DCSS asks for "quit" to be typed; one button types it.
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await page.waitForTimeout(500);
+  await dock.getByRole('button', { name: 'More', exact: true }).tap();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /^Quit \(abandon/ })
+    .tap();
+  await waitForContext(page, 'text');
+  await dock.getByRole('button', { name: /^Abandon character/ }).tap();
+  // --more--, the inventory, "Goodbye" with the scores: Continue each time.
+  for (let i = 0; i < 8 && !(await launcher.isVisible()); i++) {
+    const context = await dcssContext(page);
+    if (context === 'more' || context === 'game-over') {
+      await dock.getByRole('button', { name: /^Continue/ }).tap();
+      if (context === 'game-over') await page.waitForTimeout(300);
+    }
+    await page.waitForTimeout(700);
+  }
+  await expect(launcher).toBeVisible();
+  await expect(launcher.getByRole('status')).toContainText('abandoned');
+});

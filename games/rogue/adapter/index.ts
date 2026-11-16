@@ -338,7 +338,7 @@ class RogueAdapter implements GameAdapter {
   }
 
   /** The start screen: continue a saved game or start a new character. */
-  #showStart(notice?: string): void {
+  #showStart(notice?: string, scores?: string): void {
     const mount = this.#mount;
     if (!mount) return;
     this.#playing = false;
@@ -350,7 +350,7 @@ class RogueAdapter implements GameAdapter {
       onNew: (name) => this.#launch(name, false),
       onContinue: (name) => this.#launch(name, true),
     });
-    this.#start.show(this.#entries(), notice);
+    this.#start.show(this.#entries(), notice, scores);
     this.#publishContext(true);
   }
 
@@ -622,7 +622,7 @@ class RogueAdapter implements GameAdapter {
         const notice = message.saved
           ? `Game saved. Continue ${this.#name} below when you're ready.`
           : `${this.#name}'s game is over.`;
-        this.#showStart(notice);
+        this.#showStart(notice, message.saved ? undefined : message.scores);
         break;
       }
       case 'saves':

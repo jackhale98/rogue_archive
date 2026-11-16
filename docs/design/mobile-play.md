@@ -2,6 +2,19 @@
 
 Decided with the project owner: on phones, **split Brogue's screen into native-feeling pieces**, move with a **floating thumb pad**, and act with a **context-aware dock** whose buttons fan out related actions on long-press. Desktop and tablets keep the original screen.
 
+## Starting and ending a game
+
+The screens players see most are the start of a game (title, character creation, the first pages) and its end (death or quitting, the tombstone, the scores, back to the start). On phones every step is a labelled button or a tappable line, none needs the keyboard, and each screen has one lead (highlighted) button:
+
+- **Start screens** (`packages/start-screen`, DCSS's launcher): the name field starts with a random name (or the last one used), so Start is one tap; **Random name** picks another.
+- **Questions that want a word typed** are buttons: DCSS's "(Confirm with "quit".)" is **Abandon character**; Sil-Q's and Angband's "verify … by typing the '@' sign" are **Kill character** and **Retire character**.
+- **The end of a game** leads with the way on: Continue through each screen, then **Back to title** (Sil-Q) or **New game** (Angband, HyperRogue). What the game printed after closing its screen (the scores Rogue and NetHack print as they exit, as on a terminal) is shown on the start screen under "game is over".
+- A dead character's savefile, which starts a new character from it, is labelled **New from *name* (dead)** (Angband's savefile menu says so; Sil-Q remembers the tombstone's name), not "Continue".
+- Full-screen text pages (Sil-Q's title, creation and tombstone; Angband's pages) are fitted by the part of the screen in use (`usedRect`), so their text is larger, and start below the shell's tools on an upright phone.
+- Every game has a way to give up by touch in its command list (More): Brogue *Abandon game*, DCSS *Quit*, Sil-Q *Kill character*, Rogue *Quit*, NetHack *Quit without saving*, Angband *Retire*; HyperRogue's *New game* is in Quest's fan.
+
+The e2e specs (`e2e/*.mobile.spec.ts`) play each game's new game and its end by touch alone.
+
 ## When the phone layout applies
 
 The shell is in *compact* mode when touch controls are shown and the viewport's shorter side is under 600 CSS px. It hides the header bar and tells the adapter through `setPresentation({ compact, insets, topRightReserve })`. The adapter decides how to use the space; the title screen always shows Brogue's original screen.
@@ -119,7 +132,8 @@ DCSS shows upstream's WebTiles client in a frame (see [games/dcss/PORTING.md](..
    | Yes/no question | Yes, No, **Always** `A` when the question offers it, Cancel |
    | Level-up stat increase | Str `S`, Int `I`, Dex `D`, Type (the game re-asks on Escape) |
    | Item prompt ("Quaff which item?") | Choices (`?` lists them), Type, OK, Cancel |
-   | Text field | Type, OK, Cancel |
+   | Text field | Type, OK, Cancel; a prompt asking for a word ("Confirm with "quit"") offers it as one button (**Abandon character**), and Cancel |
+   | The end of a game (after the morgue file is written: the inventory, then "Goodbye" with the scores) | **Continue** (Page ▲/▼ in the inventory), back to the start screen |
    | Aiming (fire, throw, cast at a target; `TARGET_PATH`) | Fire (or *Stop here* `.`), Next (or Previous, Info), Quiver ▸ `)` (or ◂ `(`), Cancel, plus the pad |
    | Looking (`x`, or a spot to target; `TARGET`) | Select (or *Stop here*), Next (or Previous), Info `v`, Cancel, plus the pad |
    | A direction (`TARGET_DIR`) | The pad, Cancel |
@@ -154,6 +168,8 @@ Sil-Q draws an 80×24 text screen (`games/sil-q/adapter/index.ts`, drawn with `p
 | Song prompt ("Sing which song") | The songs offered, by name (the one being sung lit); Stop singing (`s`); Exchange themes (`x`) when weaving themes; Cancel |
 | Menus and lists | The lettered lines as buttons, Close, Select, Choices, Type; the pad (abilities and smithing screens use arrow keys) |
 | `-more-` · yes/no | Continue, Skip · Yes, No, Cancel |
+| "Please verify ABORTING by typing the '@' sign" (Kill character, `Q`) | **Kill character** (`@`), Cancel |
+| The tombstone and the menu after death (files.c `final_menu`) | In reading order: Scores, Inventory, Dungeon, Messages, Character, Add a note, Save character sheet, then the lead **Back to title** (`h`) |
 | Aim ("'f' for closest") | The pad; **Nearest** (`f`; **Target** once one is set), **Choose target** (`*`; Re-target), Cancel |
 | Direction (open, close, bash, tunnel, disarm) | The pad and Cancel only: these prompts take no target |
 | Look / target | The pad; what the prompt offers: Target (`t`), Next (Space; **More** when the prompt says `-more-`), Recall (`r`) for a monster; Cancel |
@@ -178,7 +194,7 @@ Rogue's 80×24 screen is drawn with `packages/term-view` in monochrome (curses s
 | Map | Search (fan: rest, search ×10, rest ×10, run, careful run, pick up, step over, identify trap) · Fight (fan: fight in a chosen direction, fight to the death, throw, zap, again) · Pack (fan: eat, quaff, read, wield, wear, take off, ring on/off, drop, call, one item, again) · Stairs (fan: up) · Look (fan: discoveries, last message, weapon, armor, rings, help) · More, plus the pad with Search in the centre. Leads from the snapshot and the map: an object underfoot → Pick up; a monster next to the hero → "Fight ↖B" (`f` and the direction, one tap; only the direction while hallucinating); only a floating eye next to the hero → "Throw →E"; an aquator in sight with armour worn → Take off; Hungry → Eat; on the stairs → Down >; with the Amulet → Up <. A latched Run (⇧) or careful run (⌃, Ctrl+direction) turns the next pad direction into a run; any other action lets go |
 | `--More--` | By default not shown: Menu → `--More--` prompts → Continue automatically (the default) sends Space as soon as Rogue shows it; the message stays in the band and the log. With Wait for a key (original): Continue, plus the pad: a move or search continues first, then acts (Rogue ignores every key but Space at `--More--`, which in a fight comes after almost every blow) |
 | "Press space to continue", or `--More--` over another window (lists, help, Discoveries, detection overlays; `ST_OVERLAY`) | Close; never continued automatically. A list opened from an item prompt (`*`) offers its items: a tap sends Space (closing the list) and the letter (answering the prompt). In the plain inventory, a tapped line offers that item's actions (Eat, Quaff, Read, Zap, Wield, Wear or Take off, Put on or Remove, Throw, Drop, Call; the likely one first and highlighted): Rogue's lists take only Space, so an action sends Space, the command, and answers the command's item prompt with the letter when it comes (after the direction, for Throw) |
-| Tombstone and scores ("Press return") | Continue (Enter) |
+| Tombstone and scores ("Press return") | Continue (Enter); the top ten Rogue then prints (on a terminal, after its screen closes) is shown on the start screen |
 | "which direction?" | The pad; Cancel |
 | Item prompt ("(* for list)") | Show items, Cancel, Type; with the list shown, its items. A command from the dock or the command list shows the list at once (`*`) |
 | Busy (running, resting, a repeat count) | Nothing: Rogue reads no keys until it is done |
@@ -196,7 +212,8 @@ HyperRogue draws its own interface with WebGL (upstream's web build), so the pho
 |---|---|
 | Map | What applies, first: Aim (a ranged orb is held) · Fire (crossbow mode; lit while aiming, with the reload count) · Wind jump `t` (strong wind) · Drop Dead Orb `g` (Dead Orbs carried) · Orbs `i` (Orb Strategy) · Mark (in or next to the Minefield). Then Centre (fan: rotate either way) · Overview `o` (fan: Inspect) · Quest (fan: help, new game, menu; "Cancel fire" while the crossbow aims, as Esc does) · More, plus the pad (vi keys, Wait in the centre) |
 | Menus, help, quest screen | Back (Esc), OK (Enter); the game's own lines are tappable |
-| Caught (game over) | Options (the quest screen), New game, Menu |
+| Caught (game over): the quest screen the game opens | **New game** (F5), Back (look at the scene), OK |
+| Caught, looking at the scene | **New game**, Quest (the score), Menu |
 
 What a tap on the map does can be switched from the dock (lit while on):
 
@@ -233,7 +250,10 @@ NetHack's interface is its window port (`games/nethack/adapter/windowport.ts`), 
 | Position (travel, farlook, jump…) | Select (also the pad's centre; the pad moves the cursor), Monster (fan: objects, doors, altars, anything, unexplored), Stairs (fan: up, traps), Yourself, Cancel; or tap the cell |
 | Menu | Choosing one: a button per line when there are five or fewer, else its Random line (`*`); Accept and All (several to choose), pages, Cancel, Type; a menu to read: pages and Close |
 | Text window, `--More--` | Next or Continue, Close |
+| The end of a game ("Do you want your possessions identified?" and the questions after it) | Yes, No, **Skip to the end** (`q`); the lists after them: Continue; the tombstone and "Goodbye": Continue; then NetHack's scores on the start screen |
 | Typed line, extended command | Elbereth when engraving (with strategy shortcuts on), Type (the keyboard), OK, Cancel |
+
+The window port tells NetHack its windows are up (`iflags.window_inited`, as tty does), so the end of a game shows the tombstone and the "Goodbye" summary, and the scores NetHack prints after closing its windows reach the start screen.
 
 Character creation: "Shall I pick a character for you?" answers as Pick for me, Let me choose, Pick, no questions, Quit; the role, race, gender and alignment menus have a Random button; "Is this ok?" has a button per choice.
 
@@ -267,7 +287,10 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 | Aim ("Direction ('*' or <click> to target, "'" for closest…)") | The pad; **Closest** (`'`), **At target** (`t`) once one is set, Choose target (`*`), Cancel; or tap the map |
 | Direction (open, close, disarm, tunnel) | The pad and Cancel; or tap the map |
 | Look / target | The pad; Next (Space), Target (`t`), Recall (`r`), Close |
-| Text field (name, quantities, rest count, inscriptions) | Type, OK, Back |
+| Text field (name, quantities, rest count, inscriptions) | Type, OK, Back; the character's name: OK, **Random name** (`*`), Type, Back |
+| The last step of creation ("'ESC' to step back, 'S' to start over") | **Start playing**, Back, Start over |
+| "Please verify RETIRING THIS CHARACTER by typing the '@' sign" | **Retire character** (`@`), Cancel |
+| The death menu beside the tombstone (ui-death.c) | In reading order: Scores, Information, Messages, Examine items, History, File dump, Quit, then the lead **New game** (then "Start a new game?") |
 
 `games/angband/tests/conformance/key-coverage.ts` checks that each command sends, in both keysets, the key `ui-game.c`'s tables bind to that command and that no keymap takes first; the conformance replays send the same keys and clicks as the dock and the map gestures.
 

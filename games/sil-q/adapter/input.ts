@@ -383,6 +383,14 @@ export const SIL_COMMANDS: readonly SilCommand[] = [
   },
   { id: 'options', label: 'Options', shortLabel: 'Options', shortcut: 'O', keys: k('O'), category: 'Game' },
   { id: 'note', label: 'Take a note', shortLabel: 'Note', shortcut: ':', keys: k(':'), category: 'Game' },
+  {
+    id: 'suicide',
+    label: 'Kill character (the game ends)',
+    shortLabel: 'Kill character',
+    shortcut: 'Q',
+    keys: k('Q'),
+    category: 'Game',
+  },
 
   {
     id: 'confirm',
@@ -571,7 +579,11 @@ export type SilContext =
   | 'menu'
   | 'text'
   | 'screen'
-  | 'busy';
+  | 'busy'
+  /** The menu after death, under the tombstone (files.c final_menu). */
+  | 'death'
+  /** "Please verify ABORTING by typing the '@' sign:" (killing the character). */
+  | 'verify';
 
 const a = (command: string, extra: Omit<TouchAction, 'command'> = {}): TouchAction => ({ command, ...extra });
 
@@ -796,9 +808,12 @@ export function controlsFor(
   choices: { key: string; label: string }[] = [],
   item: { canShow: boolean; switchTo: string | null; floor: boolean } | null = null,
   saves: readonly string[] = [],
+  dead: ReadonlySet<string> = new Set(),
 ): TouchControlLayout {
   const saveButtons = (label: (name: string) => string) =>
     saves.slice(0, 4).map((name) => a(`${LOAD}${name}`, { label: label(name), wide: true }));
+  // A dead character's savefile starts a new character (Sil asks for one).
+  const continueLabel = (name: string) => (dead.has(name) ? `New from ${name} (dead)` : `Continue ${name}`);
   const choiceButtons = choices
     .slice(0, 8)
     .map((choice) =>
@@ -823,7 +838,7 @@ export function controlsFor(
         directionPad: MENU_PAD,
         actions: [
           ...(choices.some((choice) => /Open saved character/.test(choice.label))
-            ? saveButtons((name) => `Continue ${name}`)
+            ? saveButtons(continueLabel)
             : []),
           ...choiceButtons,
           a('confirm', { label: 'OK', emphasis: 'primary' }),
@@ -831,6 +846,37 @@ export function controlsFor(
           a(SHELL_COMMAND.keyboard, { label: 'Type' }),
         ],
         reading: true,
+        palette: PALETTE,
+      };
+    case 'death': {
+      // After death: a look back at the game in the menu's order, then the
+      // way back to the title menu (h), which leads (last: nearest the thumb).
+      const labels: Record<string, string> = {
+        a: 'Scores',
+        b: 'Inventory',
+        c: 'Dungeon',
+        d: 'Messages',
+        e: 'Character',
+        f: 'Add a note',
+        g: 'Save character sheet',
+      };
+      return {
+        actions: [
+          ...choices
+            .filter((choice) => choice.key !== 'h')
+            .map((choice) => a(`${CHOOSE}${choice.key}`, { label: labels[choice.key] ?? choice.label })),
+          a(`${CHOOSE}h`, { label: 'Back to title', emphasis: 'primary', wide: true }),
+        ],
+        reading: true,
+        palette: [],
+      };
+    }
+    case 'verify':
+      return {
+        actions: [
+          a(`${CHOOSE}@`, { label: 'Kill character', emphasis: 'primary' }),
+          a('cancel', { label: 'Cancel' }),
+        ],
         palette: PALETTE,
       };
     case 'load':

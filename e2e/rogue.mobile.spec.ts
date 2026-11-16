@@ -213,3 +213,32 @@ test('Rogue phone: counts and the careful run in the Search fan, one-gesture fig
   await dock.getByRole('button', { name: /^Cancel/ }).tap();
   await waitForContext(page, 'map');
 });
+
+test('Rogue phone: a new game and its end, by touch alone', async ({ page }) => {
+  await page.goto('?debug=1#/play/rogue');
+  const start = page.locator('.ra-start');
+  await expect(start).toBeVisible({ timeout: 120_000 });
+  // A name is ready (no keyboard needed); Random name picks another.
+  const name = start.getByLabel('New character');
+  await expect(name).toHaveValue(/^[A-Z][a-z]+$/);
+  await start.getByRole('button', { name: 'Random name' }).tap();
+  await expect(name).toHaveValue(/^[A-Z][a-z]+$/);
+  await start.getByRole('button', { name: 'Start' }).tap();
+  await waitForContext(page, 'map');
+
+  // Quit from the command list: Rogue's "really quit?", then its last screen.
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await settleMap(page);
+  await page.waitForTimeout(300);
+  await dock.getByRole('button', { name: 'More', exact: true }).tap();
+  await page.getByRole('dialog').getByRole('button', { name: /^Quit/ }).tap();
+  await waitForContext(page, 'yesno');
+  await dock.getByRole('button', { name: /^Yes/ }).tap();
+  await waitForContext(page, 'enter');
+  await expect.poll(() => screenText(page)).toMatch(/You quit with \d+ gold pieces/);
+  await dock.getByRole('button', { name: /^Continue/ }).tap();
+  // Back at the start screen, ready for another game.
+  await expect(start).toBeVisible();
+  await expect(start.getByRole('status')).toContainText('game is over');
+  await expect(start.getByRole('button', { name: 'Start' })).toBeEnabled();
+});
