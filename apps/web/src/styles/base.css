@@ -176,6 +176,26 @@ main {
   height: 2.75rem;
   flex: none;
 }
+/* The light theme's mark has no navy disc: the art alone, as tall as the wordmark. */
+.wordmark__mark--light {
+  display: none;
+  width: auto;
+  height: 2.4rem;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) .wordmark__mark--dark {
+    display: none;
+  }
+  :root:not([data-theme='dark']) .wordmark__mark--light {
+    display: block;
+  }
+}
+:root[data-theme='light'] .wordmark__mark--dark {
+  display: none;
+}
+:root[data-theme='light'] .wordmark__mark--light {
+  display: block;
+}
 /* After the logo's lockup: ROGUE in the display serif, ARCHIVE in spaced amber capitals below. */
 .wordmark__text {
   display: grid;

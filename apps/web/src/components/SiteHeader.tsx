@@ -13,7 +13,16 @@ export function SiteHeader({ route }: { route: Route }) {
         Skip to content
       </a>
       <a className="wordmark" href={href('/')} aria-label="Rogue Archive">
-        <img className="wordmark__mark" src={`${import.meta.env.BASE_URL}icons/mark-144.png`} alt="" />
+        <img
+          className="wordmark__mark wordmark__mark--dark"
+          src={`${import.meta.env.BASE_URL}icons/mark-144.png`}
+          alt=""
+        />
+        <img
+          className="wordmark__mark wordmark__mark--light"
+          src={`${import.meta.env.BASE_URL}icons/mark-light-144.png`}
+          alt=""
+        />
         <span className="wordmark__text" aria-hidden="true">
           <span className="wordmark__rogue">Rogue</span>
           <span className="wordmark__archive">Archive</span>
