@@ -136,6 +136,11 @@ RSP="$OBJ/rogue-archive-link.rsp"
   echo "$PORT_OBJ"
   for symbol in "${WRAPPED[@]}"; do echo "-Wl,--wrap=$symbol"; done
   echo "--pre-js=$WORK/cataclysm-data.js"
+  # Link-time optimisation level (the objects keep upstream's -Os). Upstream
+  # links with -Os; with the pinned Emscripten, the optimisation after the
+  # Asyncify pass then needs more than 14 GB of memory (killed) after two
+  # hours of Asyncify. -O1 keeps the link within a CI runner's memory.
+  echo "-O1"
   echo "-sMODULARIZE=1"
   echo "-sEXPORT_ES6=1"
   echo "-sEXPORT_NAME=createCataclysm"

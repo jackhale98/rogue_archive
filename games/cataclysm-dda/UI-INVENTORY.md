@@ -432,7 +432,7 @@ grab/drag)
   effects, proficiencies) or Tab, up/down in a tab, `p` proficiencies, `s`
   body status, `m` morale, `W` armor sprite; mouse: click (registered).
   Related: medical `N` (`MEDICAL`, `A` use item), body status `{`
-  (`BODYSTATUS`/same window), morale (`MORALE`), bionics `p` (`BIONICS`:
+  (`BODYGRAPH`), morale (`MORALE`), bionics `p` (`BIONICS`:
   letters activate, `!` toggle examine mode, `=` reassign, `s` sort, `R`
   refuel), mutations `[` (`MUTATIONS`), martial arts `_`
   (`MELEE_STYLE_PICKER`, `MA_DETAILS_UI`), missions `M` (ImGui), factions
