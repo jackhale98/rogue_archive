@@ -12,14 +12,14 @@ Upstream maintains an Emscripten build of the tiles version:
 - `.github/workflows/emscripten.yml`: CI runs both on pull requests; `build-data/web/index.html` is its page.
 - In the source: `#if defined(EMSCRIPTEN)` blocks mount the user directory on IndexedDB (`main.cpp mount_idbfs`) and sync it after writes, yield once per redraw (`ui_manager.cpp`), skip JSON verification at load (`SKIP_VERIFICATION`), drop "Quit" from the main menu and fullscreen toggling.
 
-The port runs that build unmodified (no patches) with the pinned Emscripten 6.0.13 instead of 3.1.51: the compiler wrapper turns `-Werror` off and the linker is `em++`; nothing else needed changing.
+The port runs that build unmodified (no patches) with the pinned Emscripten 6.0.13 instead of 3.1.51. Four adjustments were needed, all in the build scripts: `-DEMSCRIPTEN` (Emscripten 6 no longer defines the legacy macro upstream's web code tests), `-Wno-error`, `em++` as the linker, and the optimisation level (upstream's `-Os` link ran out of memory after two hours; the port links at `-O1` and runs `wasm-opt -O2` separately), plus `-sDYNAMIC_EXECUTION=0` for the site's content security policy.
 
 ## Findings
 
 | Question | Answer |
 |---|---|
 | Newest stable release | `0.I-1` (point release of 0.I; `0.I` and `0.H` were earlier; development builds are `cdda-experimental-*`) |
-| Build time | About 45 minutes on four cores for the ~430 translation units; the Asyncify link (wasm-opt) about 30 minutes, single-threaded |
+| Build time | About 45 minutes on four cores for the ~430 translation units; link about a minute; `wasm-opt -O2` about 9 minutes (5.3 GB) |
 | Threads / SharedArrayBuffer | Not used (single-threaded, Asyncify) |
 | Runs on the page or in a worker | On the page: SDL2 draws with WebGL into the page's canvas; upstream's code calls `window.*` |
 | Saves | Upstream's own IDBFS mount (config, worlds, saves) |

@@ -10,6 +10,14 @@ Sources: the pinned upstream checkout (`src/`, `data/raw/keybindings.json`,
 WebAssembly build. Where a statement comes from the source rather than from
 watching the running game, it says so.
 
+**Checked in the running build** (headless Chromium, through the debug hook
+and screenshots): the main menu (curses, context `MAIN_MENU`, its New Game
+sub-menu), Play Now! (an ImGui window titled "Loading…" while the world is
+made), the map with the sidebar (`DEFAULTMODE`, the inventory registered),
+walking into someone or something (a question first), the inventory (curses,
+`INVENTORY`), and Save and quit (`YESNO`, "Save and quit? (Case
+Sensitive)"). Everything else below is from the source.
+
 **How to read each entry**
 
 - **For / how often** — what the screen is for, and how often a player meets
