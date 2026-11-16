@@ -22,6 +22,8 @@
  *   raBridge.focusShell()       hand keyboard focus back to the page
  *   raBridge.mapContext(ctx)    monsters in view and what is underfoot, read
  *                               from the client's map (map_context_reader)
+ *   raBridge.zoom               phones: the map's remembered zoom (1 = upstream's size)
+ *   raBridge.zoomChanged(zoom)  phones: a pinch ended at this zoom (to remember it)
  */
 (function () {
   'use strict';
@@ -572,6 +574,139 @@
   }
 
   /**
+   * Phones: pinch to zoom the map and drag to look around, as in the other
+   * games, with the client's own drawing (the tiles are drawn at the new size,
+   * not stretched):
+   * - The zoom multiplies the cell size upstream's fit_to chooses (its tile
+   *   size, shrunk so the line of sight fits), so zooming in shows less than
+   *   the line of sight; in text mode it scales the glyphs' font instead.
+   *   Upstream's own size is zoom 1; the level map (X) keeps its own scale.
+   * - A drag moves the view's centre over the client's map knowledge (what
+   *   has been seen), as upstream's minimap "farview" does; the game's next
+   *   view update (the player moves) centres it on the player again.
+   * - Taps and long presses keep working (the view's position is the
+   *   client's, so a tap still lands on the cell under the finger).
+   */
+  function map_gestures(renderer, options, minimap, enums) {
+    var MIN_ZOOM = 0.5;
+    var MAX_ZOOM = 4;
+    var SLOP_PX = 12;
+    var zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(bridge.zoom) || 1));
+    function compact() {
+      return document.documentElement.classList.contains('compact');
+    }
+    function zooming() {
+      return compact() && zoom !== 1 && renderer.ui_state !== enums.ui.VIEW_MAP;
+    }
+    var fit_to = renderer.fit_to;
+    renderer.fit_to = function (width, height, min_diameter) {
+      if (!zooming() || options.get('tile_display_mode') === 'glyphs') return fit_to.apply(this, arguments);
+      // Upstream's sizing (dungeon_renderer.js fit_to), then the zoom.
+      var tile = Math.floor((options.get('tile_cell_pixels') * options.get('tile_viewport_scale')) / 100);
+      var fit = Math.min(1, width / (min_diameter * tile), height / (min_diameter * tile));
+      var size = Math.max(4, Math.floor(tile * fit * zoom));
+      this.set_cell_size(size, size);
+      this.set_size(Math.max(1, Math.floor(width / size)), Math.max(1, Math.floor(height / size)));
+    };
+    var font_name = renderer.glyph_mode_font_name;
+    renderer.glyph_mode_font_name = function (scale) {
+      var name = font_name.apply(this, arguments);
+      if (scale || !zooming()) return name;
+      // "<size>px <font>": the size (in device pixels when asked) times the zoom.
+      return name.replace(/^(\d+(?:\.\d+)?)px/, function (_, px) {
+        return Math.max(4, Math.floor(Number(px) * zoom)) + 'px';
+      });
+    };
+
+    // The client re-lays out on a resize only when the window's size changed;
+    // its options listener (game.js) forces it, so set an option to itself.
+    var relayout_pending = false;
+    function relayout() {
+      if (relayout_pending) return;
+      relayout_pending = true;
+      requestAnimationFrame(function () {
+        relayout_pending = false;
+        options.set('tile_viewport_scale', options.get('tile_viewport_scale'));
+      });
+    }
+
+    var pinch = null;
+    var drag = null;
+    function distance(touches) {
+      return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+    }
+    function on_map(event) {
+      return compact() && event.target === document.getElementById('dungeon');
+    }
+    document.addEventListener(
+      'touchstart',
+      function (event) {
+        if (!on_map(event)) return;
+        if (event.touches.length === 2) {
+          drag = null;
+          pinch = { distance: distance(event.touches), zoom: zoom };
+        } else if (event.touches.length === 1) {
+          var touch = event.touches[0];
+          drag = {
+            x: touch.clientX,
+            y: touch.clientY,
+            center: { x: renderer.view_center.x, y: renderer.view_center.y },
+            moving: false,
+          };
+        }
+      },
+      { passive: true },
+    );
+    document.addEventListener(
+      'touchmove',
+      function (event) {
+        if (pinch && event.touches.length === 2) {
+          event.preventDefault();
+          var next = Math.min(
+            MAX_ZOOM,
+            Math.max(MIN_ZOOM, (pinch.zoom * distance(event.touches)) / pinch.distance),
+          );
+          // Snap to upstream's own size near it, so it can be found again.
+          if (Math.abs(next - 1) < 0.06) next = 1;
+          if (next !== zoom) {
+            zoom = next;
+            relayout();
+          }
+          return;
+        }
+        if (!drag || event.touches.length !== 1) return;
+        var touch = event.touches[0];
+        var dx = touch.clientX - drag.x;
+        var dy = touch.clientY - drag.y;
+        if (!drag.moving && Math.hypot(dx, dy) <= SLOP_PX) return;
+        drag.moving = true;
+        event.preventDefault();
+        // Cell size in CSS pixels (cell_width is in CSS pixels; the canvas is scaled for the device).
+        var x = drag.center.x - Math.round(dx / renderer.cell_width);
+        var y = drag.center.y - Math.round(dy / renderer.cell_height);
+        if (x !== renderer.view_center.x || y !== renderer.view_center.y) {
+          renderer.set_view_center(x, y);
+          minimap.update_overlay();
+        }
+      },
+      { passive: false },
+    );
+    function end(event) {
+      if (pinch && event.touches.length < 2) {
+        pinch = null;
+        if (bridge.zoomChanged) bridge.zoomChanged(zoom);
+      }
+      if (drag && drag.moving) {
+        // A drag is not a tap: no click on the cell where it ended.
+        event.preventDefault();
+      }
+      if (event.touches.length === 0) drag = null;
+    }
+    document.addEventListener('touchend', end, { passive: false });
+    document.addEventListener('touchcancel', end, { passive: false });
+  }
+
+  /**
    * Context for the touch controls, read (never written) from the client's
    * own map knowledge, the way upstream's monster_list.js reads it:
    * - hostile monsters in view (attitude ATT_HOSTILE, monster_list.js's
@@ -707,8 +842,11 @@
           'game/player',
           'game/tileinfo-dngn',
           'game/tileinfo-feat',
-        ], function (game, minimap, enums, display, map_knowledge, player, dngn, feat) {
+          'game/dungeon_renderer',
+          'game/options',
+        ], function (game, minimap, enums, display, map_knowledge, player, dngn, feat, renderer, options) {
           attach_long_press();
+          map_gestures(renderer, options, minimap, enums);
           order_newgame_choices();
           preview_newgame_choices($);
           var read_map_context = map_context_reader(map_knowledge, player, enums, dngn, feat);

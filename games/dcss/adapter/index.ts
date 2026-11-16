@@ -65,6 +65,10 @@ interface ClientBridge {
   ready(api: ClientApi): void;
   /** What the client host reads from the client's map (monsters in view, underfoot). */
   mapContext(context: MapContext): void;
+  /** Phones: the map's remembered zoom (1 = upstream's own size). */
+  zoom: number;
+  /** Phones: a pinch ended at this zoom. */
+  zoomChanged(zoom: number): void;
 }
 
 export interface DcssDebugState {
@@ -253,6 +257,11 @@ class DcssAdapter implements GameAdapter {
         mapContext: (context) => {
           this.#map = context;
           this.#publishContext();
+        },
+        zoom: Number(this.#settings.mapZoom) || 1,
+        zoomChanged: (zoom) => {
+          this.#settings = { ...this.#settings, mapZoom: zoom };
+          this.#host?.emit({ type: 'setting-changed', key: 'mapZoom', value: zoom });
         },
       };
       (frame as HTMLIFrameElement & { raBridge?: ClientBridge }).raBridge = bridge;

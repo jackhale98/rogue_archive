@@ -218,3 +218,77 @@ test('DCSS phone: a new character and its end by touch alone', async ({ page }) 
   await expect(launcher).toBeVisible();
   await expect(launcher.getByRole('status')).toContainText('abandoned');
 });
+
+test('DCSS phone: pinch zooms the map (drawn at the new size), a drag looks around, a move recentres', async ({
+  page,
+}) => {
+  await startCharacter(page, 'Zoomer');
+  await createByTaps(page);
+  const frame = page.frameLocator('iframe.dcss-client');
+  /** The client's own view of the map: cell size, the view's centre, the player. */
+  const view = () =>
+    frame.locator('body').evaluate(() => {
+      const req = (window as unknown as { require: (name: string) => Record<string, unknown> }).require;
+      const renderer = req('game/dungeon_renderer') as {
+        cell_width: number;
+        view_center: { x: number; y: number };
+      };
+      const player = req('game/player') as { pos: { x: number; y: number } };
+      return {
+        cell: renderer.cell_width,
+        center: { ...renderer.view_center },
+        player: { ...player.pos },
+      };
+    });
+  await expect.poll(async () => (await view()).cell).toBeGreaterThan(0);
+  const before = await view();
+  const canvas = (await frame.locator('#dungeon').boundingBox())!;
+  const cx = canvas.x + canvas.width / 2;
+  const cy = canvas.y + canvas.height / 2;
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', points: { x: number; y: number }[]) =>
+    cdp.send('Input.dispatchTouchEvent', {
+      type,
+      touchPoints: points.map((point, id) => ({ ...point, id })),
+    });
+
+  // Two fingers apart from 60 to 150 px: the cells grow about 2.5 times, redrawn by the client.
+  await touch('touchStart', [
+    { x: cx - 30, y: cy },
+    { x: cx + 30, y: cy },
+  ]);
+  for (let gap = 40; gap <= 75; gap += 5)
+    await touch('touchMove', [
+      { x: cx - gap, y: cy },
+      { x: cx + gap, y: cy },
+    ]);
+  await touch('touchEnd', []);
+  await expect.poll(async () => (await view()).cell).toBeGreaterThan(before.cell * 2);
+  const zoomed = await view();
+  expect(zoomed.center).toEqual(before.center);
+
+  // One finger drags the map four cells to the right: the view looks four cells to the left.
+  await touch('touchStart', [{ x: cx, y: cy }]);
+  for (let step = 1; step <= 8; step++)
+    await touch('touchMove', [{ x: cx + (step * 4 * zoomed.cell) / 8 + 0.5, y: cy }]);
+  await touch('touchEnd', []);
+  await expect.poll(async () => (await view()).center.x).toBe(zoomed.center.x - 4);
+  expect((await view()).center.y).toBe(zoomed.center.y);
+
+  // The player moves (whichever way is open): the view is on the player again.
+  for (const key of ['h', 'l', 'j', 'k', 'y', 'u', 'b', 'n']) {
+    const at = (await view()).player;
+    await page.keyboard.press(key);
+    await page.waitForTimeout(400);
+    const now = await view();
+    if (now.player.x !== at.x || now.player.y !== at.y) break;
+  }
+  await expect
+    .poll(async () => {
+      const now = await view();
+      return now.center.x === now.player.x && now.center.y === now.player.y;
+    })
+    .toBe(true);
+  // The zoom stays.
+  expect((await view()).cell).toBe(zoomed.cell);
+});
