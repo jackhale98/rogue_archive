@@ -296,7 +296,16 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 
 ## Cataclysm: DDA (pending design)
 
-**Not designed yet.** Phase 1 of the port (`games/cataclysm-dda`) runs upstream's own web build on the page and gives phones only a placeholder: the canvas at the game's smallest terminal (80×24 cells, 640×384 CSS px, so an upright phone shows its left part), the thumb pad (vi keys, wait in the centre) on the map and at direction prompts, and a dock of Inventory (`i`), Look (`;`), Actions (the game's action menu, Enter) on the map, OK/Back in menus, and More and Keyboard everywhere. Taps reach the game as clicks (SDL2), which upstream already uses on the map (route, then walk), in look and targeting, and in every menu.
+**Not designed yet.** Phase 1 of the port (`games/cataclysm-dda`) runs upstream's own web build on the page and gives phones only a placeholder: the canvas at the game's smallest terminal (80×24 cells, 640×384 CSS px, so an upright phone shows its left part), the thumb pad (vi keys, wait in the centre) on the map and at direction prompts, and a dock of Inventory (`i`), Look (`;`), Actions (the game's action menu, Enter) on the map, and More and Keyboard everywhere. Taps reach the game as clicks (SDL2), which upstream already uses on the map (route, then walk), in look and targeting, and in every menu.
+
+Enough to start and play a game by touch (`adapter/input.ts controlsFor`, by the game's keybinding context; these keys are not map actions, so they are kept out of the command list the key coverage check holds to upstream's bindings):
+
+| Screen | Controls |
+|---|---|
+| Main menu (`MAIN_MENU`) | **Play Now!** (`n`, then the New Game sub-menu's `d`: the default scenario and character, the quickest way into a game) leads; New game (`n`), Load (`a`), Random start (`n` `o`), Back; the pad moves along the menu with the arrow keys, Enter in its centre |
+| Yes/no questions (`YESNO`, `YESNOQUIT`, `YES_NO_ALWAYS_NEVER`) | **Yes** (a capital `Y`: `FORCE_CAPITAL_YN` is on by default) and No; Cancel for `YESNOQUIT` |
+| Character creation (`NEW_CHAR_*`) | ← Tab, Tab →, Random (`*`), Back, Keyboard, and OK, or **Finish** (`>`) on the description tab; the pad sends arrow keys |
+| Other menus and popups | the pad (arrow keys, Page up/down on the diagonals, Enter in the centre), Back, More, Keyboard, **OK** |
 
 The design is the next phase, to be agreed with the project owner. Its input is [`games/cataclysm-dda/UI-INVENTORY.md`](../../games/cataclysm-dda/UI-INVENTORY.md): every screen a player meets, how upstream drives and labels it (keybinding context ids), how the adapter detects it, what upstream's Android port does (quick-shortcuts bar per context, virtual joystick, gestures, native dialogs), the pain points, and a ranked list of candidate helpers.
 

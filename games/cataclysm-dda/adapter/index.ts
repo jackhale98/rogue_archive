@@ -515,8 +515,8 @@ class CataclysmAdapter implements GameAdapter {
         context: { textEntry: context === 'text', mode: context },
       });
     }
-    const layout = controlsFor(context);
-    const signature = `${context}|${JSON.stringify(layout.actions)}`;
+    const layout = controlsFor(context, state.context);
+    const signature = `${context}|${state.context}|${JSON.stringify(layout.actions)}`;
     if (signature !== this.#layoutSignature) {
       this.#layoutSignature = signature;
       this.#host?.emit({ type: 'touch-layout', layout, context });
