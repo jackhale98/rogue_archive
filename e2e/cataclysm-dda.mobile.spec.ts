@@ -48,3 +48,32 @@ test('Cataclysm: DDA phone: Play Now! by touch, questions as buttons, the map do
   await dock.getByRole('button', { name: /^Yes/ }).tap();
   await expect.poll(async () => (await cddaDebug(page))?.context, { timeout: 120_000 }).toBe('title');
 });
+
+test('Cataclysm: DDA phone: the Display setting plays in text (less memory)', async ({ page }) => {
+  // The game's menu (the gear) holds its settings; Display applies the next time the game starts.
+  await openCataclysm(page);
+  await page.getByRole('button', { name: 'Menu' }).tap();
+  await page.getByRole('dialog').getByLabel('Display').selectOption('text');
+  // Settings are stored in IndexedDB: let the write land before the game starts again.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await openCataclysm(page);
+  const dock = page.getByRole('group', { name: 'Actions' });
+  await dock.getByRole('button', { name: /^Play Now!/ }).tap();
+  await expect
+    .poll(
+      async () => {
+        const d = await cddaDebug(page);
+        if (d?.context === 'map') return 'map';
+        if (d?.waiting && d.context === 'menu') {
+          const answer = dock.getByRole('button', { name: /^(Yes|OK|Back)\b/ }).first();
+          if (await answer.isVisible().catch(() => false)) await answer.tap();
+        }
+        return d?.inputContext ?? null;
+      },
+      { timeout: 600_000, intervals: [2_000], message: 'waiting for the map in text mode' },
+    )
+    .toBe('map');
+  // In text mode the map is drawn as characters (curses text): the player is an @.
+  await expect.poll(async () => (await cddaDebug(page))?.screen ?? '').toContain('@');
+});

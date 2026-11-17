@@ -307,6 +307,8 @@ Enough to start and play a game by touch (`adapter/input.ts controlsFor`, by the
 | Character creation (`NEW_CHAR_*`) | ← Tab, Tab →, Random (`*`), Back, Keyboard, and OK, or **Finish** (`>`) on the description tab; the pad sends arrow keys |
 | Other menus and popups | the pad (arrow keys, Page up/down on the diagonals, Enter in the centre), Back, More, Keyboard, **OK** |
 
+The game's **Display** setting (Tiles, or Text for less memory) is in its menu (the gear); it sets the game's own Use tiles options at the next start. Text is the one to try when a phone closes the page while the world is made.
+
 The design is the next phase, to be agreed with the project owner. Its input is [`games/cataclysm-dda/UI-INVENTORY.md`](../../games/cataclysm-dda/UI-INVENTORY.md): every screen a player meets, how upstream drives and labels it (keybinding context ids), how the adapter detects it, what upstream's Android port does (quick-shortcuts bar per context, virtual joystick, gestures, native dialogs), the pain points, and a ranked list of candidate helpers.
 
 ## Shared touch components (`apps/web/src/features/game-shell/TouchControls.tsx`)

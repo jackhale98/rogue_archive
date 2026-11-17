@@ -24,6 +24,7 @@ import {
   type GameHost,
   type GameInput,
   type GameModule,
+  type GameSettingDescriptor,
   type InitializeOptions,
   type LogEntry,
   type Presentation,
@@ -241,6 +242,21 @@ class CataclysmAdapter implements GameAdapter {
   };
   readonly commands = CDDA_COMMANDS;
   readonly touchLayout = CDDA_TOUCH_LAYOUT;
+  readonly settings: GameSettingDescriptor[] = [
+    {
+      key: 'display',
+      label: 'Display',
+      description:
+        "Tiles draws the world with Cataclysm's own tileset. Text is the classic character screen, which needs much less memory: try it if the game closes on a phone. Sets the game's Use tiles options each time it starts.",
+      options: [
+        { value: 'tiles', label: 'Tiles' },
+        { value: 'text', label: 'Text (less memory)' },
+      ],
+      default: 'tiles',
+      appliesOn: 'next-launch',
+    },
+  ];
+  #display = 'tiles';
   readonly resumeHint =
     'As in Cataclysm itself, a game continues from its last save: save and quit (S, or Save and leave here) before you go. Worlds, characters and options stay in this browser.';
   readonly debug: CddaDebugState;
@@ -287,6 +303,7 @@ class CataclysmAdapter implements GameAdapter {
   async initialize(host: GameHost, options: InitializeOptions): Promise<void> {
     this.#host = host;
     const { runtime, runtimeBaseUrl, signal } = options;
+    this.#display = options.settings.display === 'text' ? 'text' : 'tiles';
     signal.addEventListener('abort', () => void this.shutdown(), { once: true });
 
     const files = [
@@ -391,6 +408,8 @@ class CataclysmAdapter implements GameAdapter {
               // SDL reads its hints from the environment: keys only from our element.
               mod.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = `#${KEY_ELEMENT_ID}`;
               mod.ENV.LANG = 'en_US.UTF-8';
+              // The Display setting (port/rogue-archive-web.cpp applies it to the game's options).
+              mod.ENV.RA_DISPLAY = this.#display;
             },
           ],
         }),

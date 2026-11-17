@@ -378,9 +378,20 @@ void __real__ZN15options_manager4loadEv( options_manager *self );
 //                         1.1 GB the heap reached during Play Now!. With the
 //                         WebGL renderer the textures live on the GPU. If it
 //                         cannot start, the game falls back to software itself.
+//
+// And on every start, the page's Display setting (environment RA_DISPLAY,
+// "tiles" or "text"): Graphics > Use tiles and Use tiles to display overmap.
+// Text needs far less memory (no tile textures), for phones that close the
+// page while the world is made. The page's setting decides; it is offered
+// there because changing it in the game's own Options needs a restart.
 void __wrap__ZN15options_manager4loadEv( options_manager *self )
 {
     __real__ZN15options_manager4loadEv( self );
+    if( const char *display = std::getenv( "RA_DISPLAY" ) ) {
+        const std::string tiles = std::string( display ) == "text" ? "false" : "true";
+        self->get_option( "USE_TILES" ).setValue( tiles );
+        self->get_option( "USE_OVERMAP_TILES" ).setValue( tiles );
+    }
     const cata_path marker = PATH_INFO::config_dir_path() / "rogue-archive-defaults.json";
     if( file_exist( marker ) ) {
         return;

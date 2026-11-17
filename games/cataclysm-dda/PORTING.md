@@ -91,6 +91,8 @@ The page's first run on an iPhone (Safari) was reset during Play Now!'s world ge
 
 In Playwright's WebKit for Linux (Safari's engine, JavaScriptCore; WebGL in software inside the web process, so the textures count there), the web process peaked at 2.13 GB instead of 2.53 GB, 1.76 GB with `Use tiles` off (`BUILDING.md`). What is left is upstream-level: the game data once loaded (about 450 MB of the heap's 512 MB in play), and in Chromium the baseline compiler's memory for the large Asyncify-instrumented functions while the data loads (a transient of about 1.3 GB; `BUILDING.md`).
 
+- **Display setting (the page's, in the game's menu and on its page once it is playable):** Tiles or Text (less memory). The port applies it to upstream's Graphics options `USE_TILES` and `USE_OVERMAP_TILES` on every start (environment `RA_DISPLAY`, read in the `options_manager::load` wrapper), so the page's choice decides. Text needs no tile textures (measured with Use tiles off: WebKit's page process 1.76 GB instead of 2.13 GB at its peak; BUILDING.md), for phones that close the page while the world is made: on an iPhone 15 Pro (iOS Safari), Play Now! with tiles closed the page during world generation.
+
 ## Known limitations (phase 1)
 
 - Phone controls are a placeholder; an upright phone shows only part of the 80-column screen.
