@@ -1,0 +1,94 @@
+{
+  "fpcvalkyrie/src/vcursesio.pas": {
+    "sha256": "5914cac76e81f7080edfe28863a11c4caba7565daccb41dc42ac9f074c26dfda",
+    "review": "the curses calls port/ncurses.pas implements (initscr, nodelay, wgetch, ungetch...), and CursesToKeyCode, which adapter/input.ts and key-coverage.ts follow"
+  },
+  "fpcvalkyrie/src/vcursesconsole.pas": {
+    "sha256": "d25d7c99d25f1619eaac46cde78072f981f3afbcc35e30d9f123816361c48c68",
+    "review": "how the console is drawn through curses (init_pair numbering, A_BOLD, the alternate character set for line drawing): port/ncurses.pas, adapter/worker.ts present(), adapter/state.ts glyph() and the palette"
+  },
+  "fpcvalkyrie/src/viorl.pas": {
+    "sha256": "91bf7a09a66c9f11371d45fec99c16afd434dc1c8e2c3e3b91713989b89a5004",
+    "review": "CreateTerminalDriver: the curses driver for Unix builds (-dUNIX), 80x25"
+  },
+  "fpcvalkyrie/src/vio.pas": {
+    "sha256": "efca421d61c1d4af7f9af1a109e3a32d2d81e53249f04bbe8ffcf2f4d8d299d4",
+    "review": "the frame loop (WaitForLayer, Delay: Sleep and FullUpdate), which the worker's idle sleeps follow"
+  },
+  "fpcvalkyrie/src/vlibrary.pas": {
+    "sha256": "28c9b11e49b07951c5abc59f9c647e0fbac7b02e39203263ca68af0cdc1003dd",
+    "review": "the Unix units it uses (unix, dl, dynlibs): port/wasm/"
+  },
+  "fpcvalkyrie/src/vlog.pas": {
+    "sha256": "585804b11ba15ea73acb3b37855fbd8f3d3facf326a9961eb3f994902ffd76f4",
+    "review": "the Unix units it uses (BaseUnix/Unix FpFsync): port/wasm/"
+  },
+  "fpcvalkyrie/libs/vsdl3library.pas": {
+    "sha256": "99820bdb55289c2b26a9c92cfc6614a4dbee560453e82b0ed4db33c498cc9be5",
+    "review": "the Unix units its uses clause lists (pthreads, baseunix, unix, x, xlib) and their names: port/wasm/"
+  },
+  "fpcvalkyrie/libs/vsdl3mixerlibrary.pas": {
+    "sha256": "37a2259e51341dc5567851ce436d6b09f7aeb7f29f0018853eb1fcefed5bfc89",
+    "review": "the Unix units its uses clause lists: port/wasm/"
+  },
+  "fpcvalkyrie/libs/vlualibrary.pas": {
+    "sha256": "794bea75f21755836d38c47745a74c27491d0807ab9a89f761d46795bff817b7",
+    "review": "Lua linked statically on Unix, and the varargs functions (luaL_error, lua_pushfstring) the compiler patch makes callable"
+  },
+  "fpcvalkyrie/libs/vluatypes.inc": {
+    "sha256": "341d5c251f31fd7eee8c81f3cacff531fe59efd541d3bd791bedc0f7aac3a679",
+    "review": "lua_Integer (Int64): patches/lua's 64-bit LUA_INTEGER must match it"
+  },
+  "fpcvalkyrie/src/vutil.pas": {
+    "sha256": "1ea6445c5d4141481611407087483a7fb25e386659849474f001b960f9f4ceb5",
+    "review": "patches/fpcvalkyrie (TAnsiStringArray)"
+  },
+  "fpcvalkyrie/src/vapp.pas": {
+    "sha256": "a7358898df32fa270d7350517dfc2176468876bdd0f9de94e4dc80be39118cd3",
+    "review": "paths and options (--config, --data-path, --write-path; config.lua, settings.lua and the log relative to the working directory or the write path): adapter/worker.ts"
+  },
+  "fpcvalkyrie/src/vioevent.pas": {
+    "sha256": "359c20f8473e150fdf468872adcee7c827d95c1021a44d5896b984b94f949f78",
+    "review": "PrintableToIOEvent, Unshift, VKEY_SCANSET, the modifier masks: key-coverage.ts"
+  },
+  "drl/build.lua": {
+    "sha256": "4be5855fce09468184b7283891d97c10f6d9719d827406c11cc632aec216a29d",
+    "review": "the WAD manifest port/console-manifest.lua filters (images, sounds, music left out)"
+  },
+  "drl/makefile.lua": {
+    "sha256": "3a1234f0ff48a1e01158c1895f76e5b6df431aecb94343862350b41941ea1534",
+    "review": "source_files (drl.pas, drlwad.pas) and the unit paths and options scripts/build.sh uses"
+  },
+  "drl/bin/config.lua": {
+    "sha256": "4842a1b686f65bf657497864db29e543eb4908a18f6b6201f4ef2ed48b3c1f4b",
+    "review": "shipped as the game's config.lua"
+  },
+  "drl/src/drlapplication.pas": {
+    "sha256": "eed1d3e33106d40d72ef077345ec984c3efdde8bb03484c46fda88661ed38118",
+    "review": "options (--console, --no-sound), the module and user paths (user/<module>/), settings: adapter/worker.ts"
+  },
+  "drl/src/drlbase.pas": {
+    "sha256": "5960b34ab5aa0bee8f4ef5c1b9454f5093755d81f6bd5368479e62d97366d937",
+    "review": "the save file (user/drl/save) and when it is written and removed: adapter/worker.ts, exitWith, the resume hint"
+  },
+  "drl/src/drlkeybindings.pas": {
+    "sha256": "04ffacea79db12817370a38756cfcef2f210be610a20a57c5e7cb7a8abc163f4",
+    "review": "default key bindings: adapter/input.ts commands, key-coverage.ts"
+  },
+  "drl/src/drlio.pas": {
+    "sha256": "52a81656bee43371d6be5a8f632d07f2303c0d257ec5d01dd605adf2346f0695",
+    "review": "the console HUD (DrawHud: rows, labels) and the message rows: adapter/state.ts parseHud, messageLines"
+  },
+  "drl/src/drlhudviews.pas": {
+    "sha256": "8dafd85768cd897f647e5f63b66bafee4ab80ee1d46efafd7942088d72ebaf26",
+    "review": "prompts and modes ([more], choose direction, LOOK MODE, targeting's action on row 2): adapter/state.ts detectContext"
+  },
+  "drl/src/drlingamemenuview.pas": {
+    "sha256": "1be3ba868143bceb6b264c06ac10f00c4d6f7467c2849a19f80a4c01ef3c02a1",
+    "review": "the game menu's entries and order (Save & Quit last): adapter/index.ts exitWith"
+  },
+  "drl/src/drlmainmenuview.pas": {
+    "sha256": "d0eed6e743ab25b9d1405f36d9b3ec22d250ce23e6a8f6c5ca2d1bfa0fe663f1",
+    "review": "the main menu (New game, Continue game), drl.prc: adapter/worker.ts KEPT, e2e tests"
+  }
+}

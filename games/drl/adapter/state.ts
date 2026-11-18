@@ -138,7 +138,27 @@ function promptText(grid: Grid): string {
   return [0, 1, 2].map((y) => rowText(grid, y)).join('\n');
 }
 
-/** What the game is waiting for, from its screen and the terminal cursor. */
+/**
+ * Targeting (TTargetModeView) writes its action ("Fire pistol"...) at the
+ * start of row 2 in yellow; the map's own row 2 has no text there, and DRL's
+ * hints on that row are right-aligned.
+ */
+function targeting(grid: Grid): boolean {
+  const row = PROMPT_ROW * grid.cols;
+  let letters = 0;
+  let first = -1;
+  for (let x = 0; x < 12; x++) {
+    const code = grid.cells[(row + x) * 2]!;
+    const colour = grid.cells[(row + x) * 2 + 1]!;
+    const yellow = colour === 3 || colour === 11;
+    const letter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    if (first < 0 && code !== 32 && code !== 0) first = x;
+    if (letter && yellow) letters++;
+  }
+  return first >= 0 && first <= 1 && letters >= 3;
+}
+
+/** What the game is waiting for, from its screen. */
 export function detectContext(grid: Grid): DrlContext {
   const text = screenText(grid);
   const hud = parseHud(grid);
@@ -151,8 +171,7 @@ export function detectContext(grid: Grid): DrlContext {
   if (box) return 'menu';
   if (hud) {
     if (/= LOOK MODE =/.test(prompts)) return 'look';
-    // Targeting draws its action on row 2 and puts the cursor on the target.
-    if (grid.cursor?.visible) return 'look';
+    if (targeting(grid)) return 'look';
     return 'map';
   }
   // Full screens: the main menu, DRL's choices before a game, its texts.

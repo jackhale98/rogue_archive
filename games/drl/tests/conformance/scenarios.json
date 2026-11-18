@@ -1,0 +1,71 @@
+[
+  {
+    "name": "seeded-game-save-and-quit",
+    "description": "A first run (the welcome, the credits), a seeded game (DRL's own: the same dungeon from the same seed), the marine and the first trait, the intro, walking, waiting, the inventory, the equipment, look mode, then Save & Quit and Exit from the main menu. Both builds write a saved game.",
+    "keys": [
+      "Enter",
+      "Enter",
+      "Enter",
+      "Down*2",
+      "Enter",
+      "text:4242",
+      "Enter",
+      "Enter",
+      "Enter",
+      "Enter",
+      "Enter",
+      "text:Replay",
+      "Enter",
+      "Escape*3",
+      "Right*3",
+      "Down*2",
+      "w*3",
+      "Left*2",
+      "Up*2",
+      "i",
+      "Escape",
+      "e",
+      "Escape",
+      "l",
+      "Right",
+      "Escape",
+      "Escape",
+      "Up",
+      "Enter",
+      "Up",
+      "Enter"
+    ],
+    "expectText": [
+      "Replay",
+      "Health:",
+      "Inventory",
+      "LOOK MODE",
+      "Continue game"
+    ],
+    "expectSave": true
+  },
+  {
+    "name": "continue-saved-game",
+    "description": "From the first scenario's DRL folder (each build its own save): the credits, Continue game, walking and waiting in the same seeded dungeon, then Save & Quit and Exit.",
+    "from": "seeded-game-save-and-quit",
+    "keys": [
+      "Enter",
+      "Enter",
+      "Right*2",
+      "w*2",
+      "Down*2",
+      "Left",
+      "Escape",
+      "Up",
+      "Enter",
+      "Up",
+      "Enter"
+    ],
+    "expectText": [
+      "Replay",
+      "Health:",
+      "Continue game"
+    ],
+    "expectSave": true
+  }
+]
