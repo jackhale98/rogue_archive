@@ -13,6 +13,7 @@ const ADAPTERS: Record<string, () => Promise<GameModule>> = {
   hyperrogue: () => import('@rogue-archive/game-hyperrogue').then((m) => m.default),
   nethack: () => import('@rogue-archive/game-nethack').then((m) => m.default),
   angband: () => import('@rogue-archive/game-angband').then((m) => m.default),
+  drl: () => import('@rogue-archive/game-drl').then((m) => m.default),
   'cataclysm-dda': () => import('@rogue-archive/game-cataclysm-dda').then((m) => m.default),
 };
 

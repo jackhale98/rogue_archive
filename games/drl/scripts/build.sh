@@ -173,7 +173,7 @@ rm -rf "$OUT" && mkdir -p "$OUT"
 
 mapfile -t objects < <(pascal_objects drl)
 emcc "${objects[@]}" "$OBJ/start.o" "$OBJ/lua/liblua5.1.a" "${COMMON_LDFLAGS[@]}" \
-  -Os \
+  -O2 \
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createDrl \
   -sENVIRONMENT=worker -lidbfs.js \
   -sEXPORTED_RUNTIME_METHODS=FS,IDBFS,ccall \

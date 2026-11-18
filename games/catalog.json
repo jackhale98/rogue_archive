@@ -915,19 +915,106 @@
         "repository": "https://github.com/chaosforgeorg/drl"
       },
       "license": {
-        "code": "GPL-2.0 (source repository)",
-        "assets": "Separate binary game data, graphics and audio; audit pending"
+        "code": "GPL-2.0 (DRL); MIT (FPC Valkyrie, Lua 5.1); FreePascal's run-time library (LGPL with a static-linking exception)",
+        "assets": "The console mode's data from upstream's repository (Lua scripts, help, ASCII art; GPL-2.0). Upstream's sprites (CC BY-SA 4.0) are not used by the console mode and not shipped; music and sounds are not in upstream's repository and are not shipped.",
+        "report": "games/drl/LICENSES.md"
       },
-      "interface": ["ascii", "graphical"],
+      "interface": ["ascii"],
       "input": {
         "keyboard": true,
-        "mouse": true,
-        "touch": false
+        "mouse": false,
+        "touch": true
       },
       "tags": ["Action", "Turn-based"],
       "glyph": "D",
+      "version": "0.10.12c",
+      "sourceRevision": "501db3060829e89610f5880079e0d5791df6999a",
+      "renderMode": "terminal-fit",
+      "saves": {
+        "local": true,
+        "export": true
+      },
+      "offline": true,
+      "adapter": "drl",
+      "runtimeManifest": "runtime/drl/runtime-manifest.json",
       "about": [
-        "Kornel Kisielewicz of ChaosForge began DoomRL in 2002 as a turn-based fan game of the 1993 shooter, written in FreePascal. It was renamed DRL in 2016 and its source released under the GPL. ChaosForge went on to make Jupiter Hell, a 3D spiritual successor, and has since returned to DRL itself; the game stays free. Its own feature list starts with “corner-shooting, shotgun-scouting, gift-dropping, weapon unloading and of course, DIAGONAL MOVEMENT”."
+        "Kornel Kisielewicz of ChaosForge began DoomRL in 2002 as a turn-based fan game of the 1993 shooter, written in FreePascal. It was renamed DRL in 2016 and its source released under the GPL. ChaosForge went on to make Jupiter Hell, a 3D spiritual successor, and has since returned to DRL itself; the game stays free. Its own feature list starts with “corner-shooting, shotgun-scouting, gift-dropping, weapon unloading and of course, DIAGONAL MOVEMENT”.",
+        "This port compiles DRL 0.10.12c and ChaosForge's FPC Valkyrie library from their source to WebAssembly with FreePascal's development compiler, and Lua 5.1 with Emscripten; DRL's own code is unchanged. It plays DRL's console mode, as in a terminal (\"drl --console\"), without sound. It runs entirely in your browser: no server and no account."
+      ],
+      "controlsSummary": [
+        {
+          "keys": "Arrow keys · Home/End/PgUp/PgDn (numpad with NumLock off)",
+          "action": "Move or attack, eight directions"
+        },
+        {
+          "keys": "w · W · , then a direction",
+          "action": "Wait a turn, wait until something happens, run"
+        },
+        {
+          "keys": "f · F · t · Tab",
+          "action": "Fire, alternative fire, target, next target"
+        },
+        {
+          "keys": "r · R · z · u",
+          "action": "Reload, alternative reload, swap weapons, unload"
+        },
+        {
+          "keys": "Space · g · G",
+          "action": "Action (doors, stairs, buttons), pick up, use or wear from the ground"
+        },
+        {
+          "keys": "i · e · y · p · a",
+          "action": "Inventory, equipment, traits, player, assemblies"
+        },
+        {
+          "keys": "l · m · s · h",
+          "action": "Look, more about the target, message history, help"
+        },
+        {
+          "keys": "1–9 · x",
+          "action": "Quick slots, active skill"
+        },
+        {
+          "keys": "Escape",
+          "action": "DRL's game menu (Settings, Save & Quit)"
+        },
+        {
+          "keys": "Phone",
+          "action": "Dock that follows the screen (map, targeting, menus, prompts, typing), thumb pad, the map zoomed around you (pinch, drag), DRL's menus over the map as sheets, status band from DRL's HUD with its latest messages; More lists every command"
+        },
+        {
+          "keys": "Menu → Save files for desktop",
+          "action": "Download the DRL folder (save, scores, player record, mortems, settings)"
+        }
+      ],
+      "knownLimitations": [
+        "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
+        "Console (ASCII) mode only: DRL's graphical mode (sprites, OpenGL) is not built. No music or sound (upstream does not publish them in its repository).",
+        "As in a terminal, the console reads no Shift or Ctrl with the arrow keys: Shift+direction (run) and Ctrl+direction (move the target) do nothing, as in upstream's Linux console; use , then a direction to run, and targeting mode to aim. DRL's console has no mouse.",
+        "Built with FreePascal's development branch (its WebAssembly target is not in a release yet), with one compiler fix of ours (patches/fpc).",
+        "\"Buy JHC on Steam!\" in the main menu opens nothing (DRL runs a shell command for it)."
+      ],
+      "compatibility": [
+        {
+          "environment": "Chromium desktop (automated, Playwright)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chromium with touch emulation (automated)",
+          "result": "untested"
+        },
+        {
+          "environment": "Firefox desktop",
+          "result": "untested"
+        },
+        {
+          "environment": "Safari (macOS / iOS)",
+          "result": "untested"
+        },
+        {
+          "environment": "Chrome for Android",
+          "result": "untested"
+        }
       ]
     },
     {

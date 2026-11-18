@@ -71,6 +71,9 @@ importers:
       '@rogue-archive/game-dcss':
         specifier: workspace:*
         version: link:../../games/dcss
+      '@rogue-archive/game-drl':
+        specifier: workspace:*
+        version: link:../../games/drl
       '@rogue-archive/game-hyperrogue':
         specifier: workspace:*
         version: link:../../games/hyperrogue
@@ -135,6 +138,15 @@ importers:
       '@rogue-archive/start-screen':
         specifier: workspace:*
         version: link:../../packages/start-screen
+
+  games/drl:
+    dependencies:
+      '@rogue-archive/game-api':
+        specifier: workspace:*
+        version: link:../../packages/game-api
+      '@rogue-archive/term-view':
+        specifier: workspace:*
+        version: link:../../packages/term-view
 
   games/hyperrogue:
     dependencies:

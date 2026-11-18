@@ -7,7 +7,8 @@
  *
  * Emscripten's errno values are WASI's, so an FS error's `errno` is returned
  * as it is. Paths are resolved against the directory stream the RTL passes
- * (the one preopened directory, "/", reserved as fd 3 on first use).
+ * (a preopened directory: `Module.raPreopens`, opened as fds 3, 4... on
+ * first use; the first is the program's working directory).
  *
  * Also: the program's arguments (`Module.raArgs`), sleeping (`poll_oneoff`
  * with clock subscriptions, through the host's `Module.raSleep(ms)`, which
@@ -17,13 +18,22 @@
 addToLibrary({
   $raWasi__deps: ['$FS', '$PATH'],
   $raWasi: {
-    root: null,
-    /** Reserves fd 3 for the preopened root directory, as the RTL expects. */
+    /** fd -> path of the preopened directories. */
+    preopens: null,
+    /**
+     * Opens the preopened directories as fds 3, 4... as the RTL expects (it
+     * asks from fd 3 until one is not a preopen): `Module.raPreopens`, by
+     * default only "/". The first is the program's working directory.
+     */
     preopen() {
-      if (raWasi.root) return;
-      const stream = FS.open('/', 0);
-      if (stream.fd !== 3) throw new Error(`the WASI root directory got fd ${stream.fd}, not 3`);
-      raWasi.root = stream;
+      if (raWasi.preopens) return;
+      raWasi.preopens = {};
+      for (const path of Module['raPreopens'] ?? ['/']) {
+        const stream = FS.open(path, 0);
+        const expected = 3 + Object.keys(raWasi.preopens).length;
+        if (stream.fd !== expected) throw new Error(`the WASI directory ${path} got fd ${stream.fd}, not ${expected}`);
+        raWasi.preopens[stream.fd] = path;
+      }
     },
     resolve(dirfd, path, len) {
       const rel = UTF8ToString(path, len);
@@ -70,18 +80,23 @@ addToLibrary({
   },
 
   fd_prestat_get__deps: ['$raWasi'],
+  fd_prestat_get__deps: ['$raWasi', '$lengthBytesUTF8'],
   fd_prestat_get: (fd, buf) => {
     raWasi.preopen();
-    if (fd !== raWasi.root.fd) return {{{ cDefs.EBADF }}};
+    const path = raWasi.preopens[fd];
+    if (path === undefined) return {{{ cDefs.EBADF }}};
     {{{ makeSetValue('buf', 0, '0', 'i8') }}};
-    {{{ makeSetValue('buf', 4, '1', 'i32') }}};
+    {{{ makeSetValue('buf', 4, 'lengthBytesUTF8(path)', 'i32') }}};
     return 0;
   },
-  fd_prestat_dir_name__deps: ['$raWasi'],
-  fd_prestat_dir_name: (fd, path, len) => {
+  fd_prestat_dir_name__deps: ['$raWasi', '$stringToUTF8Array', '$lengthBytesUTF8'],
+  fd_prestat_dir_name: (fd, buf, len) => {
     raWasi.preopen();
-    if (fd !== raWasi.root.fd) return {{{ cDefs.EBADF }}};
-    if (len >= 1) {{{ makeSetValue('path', 0, '47', 'i8') }}};
+    const path = raWasi.preopens[fd];
+    if (path === undefined) return {{{ cDefs.EBADF }}};
+    const bytes = [];
+    stringToUTF8Array(path, bytes, 0, lengthBytesUTF8(path) + 1);
+    HEAPU8.set(bytes.slice(0, Math.min(len, bytes.length - 1)), buf);
     return 0;
   },
 
