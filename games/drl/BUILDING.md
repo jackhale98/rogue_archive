@@ -26,21 +26,33 @@ The first build installs the pinned Emscripten SDK (`tools/toolchain.env`) and b
 | `-sMALLOC=none` | | One allocator: the Pascal heap (`port/wasm/ramalloc.pas` implements `malloc` on it). |
 | `-sASYNCIFY=1` | `ASYNCIFY_STACK_SIZE=524288` | DRL's sleeps and key waits suspend the module. |
 | `-sSTACK_SIZE` | 4 MB | FreePascal's own default for WASI is 8 MB; 4 MB is ample for DRL (strings and records on the stack, Lua's C stack). |
-| `-sINITIAL_MEMORY` / `MAXIMUM_MEMORY` | 32 MB / 512 MB | Grows as the Pascal heap needs; capped well under a phone's limit. |
+| `-sINITIAL_MEMORY` / `MAXIMUM_MEMORY` | 16 MB / 512 MB | DRL fits in 16 MB (measured: it never grows); it can grow as the Pascal heap needs, capped well under a phone's limit. |
 | `-O2` | | `-Os` would be 0.2 MB smaller, but with it Emscripten 6.0.13's import minification left the WASI imports from FreePascal's objects without functions ("function import requires a callable" at instantiation). |
 
 ## Sizes and memory
 
-Measured on build `7310fa23ccb7fc04`:
+Measured on build `2456ef53f9294108` (the same settings as the current one; sizes within a few KB):
 
 | File | Size | gzip -9 |
 |---|---|---|
-| `drl.wasm` | 4.53 MB | 1.19 MB |
+| `drl.wasm` | 4.72 MB | 1.15 MB |
 | `drl-data.data` | 0.38 MB | 0.37 MB |
-| `drl.mjs` | 78 KB | 22 KB |
+| `drl.mjs` | 81 KB | 22 KB |
 
-Memory is in the section below, measured as Cataclysm: DDA's (`games/cataclysm-dda/tests/memory-profile.mjs`).
+About 1.5 MB to download compressed. From navigation to DRL's first screen, cold, on a local server (`vite preview`, no network latency): 0.59–0.61 s in Chromium, 0.63–0.70 s in WebKit (three runs each).
+
+**Memory**, measured with `tests/memory-profile.mjs` (the method of `games/cataclysm-dda/tests/memory-profile.mjs`: headless, production build, twice a second from Linux's `/proc` for the page's process, which runs the game's worker too; the module's memory from the worker). It opens DRL, goes through its main menu to a new game, walks and waits, opens the inventory and the help, then Save & Quit. Each figure is the phase's maximum, MB:
+
+| Phase | Chromium: renderer (peak) | WebKit (WPE): web process (peak), anonymous | Module memory |
+|---|---|---|---|
+| The library page alone, no game (for comparison) | 141 (147) | 352 (368) | — |
+| Download, compile, start, DRL's main menu | 242 (245) | 445 (457), 262 | 16 |
+| New game (menus, intro) to the map | 198 | 440, 256 | 16 |
+| Playing, inventory, help | 198 | 437, 254 | 16 |
+| Save & Quit, back to the main menu | 199 | 445, 261 | 16 |
+
+The game adds about 60 MB to Chromium's renderer and about 90 MB to WebKit's process; DRL's own memory (the module's linear memory: the Pascal heap with Lua's, the stack, the data) stays at its initial 16 MB (`-sINITIAL_MEMORY=16777216`) through a game: it never grows. For scale, Cataclysm: DDA's WebKit process reached 1.6–2.5 GB. WebKit for Linux (WPE) is Safari's engine but not iOS; the port has not been measured on a physical iPhone yet.
 
 ## Reproducibility
 
-Every input is pinned: the toolchains, the upstream commits, Lua's hash, the patches, the scripts. A rebuild gives the same `buildId`.
+Every input is pinned: the toolchains, the upstream commits, Lua's hash, the patches, the scripts. FreePascal embeds the compile date and time (DRL's log prints them); the build sets them to the upstream commit's (`-DD`, `-DT`). Two consecutive builds gave the same `buildId` (`4521d1e207ffcd34`).

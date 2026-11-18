@@ -97,6 +97,12 @@ jobs:
         with:
           path: games/angband/dist
           key: runtime-angband-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/angband/upstream.env', 'games/angband/scripts/**', 'games/angband/port/**', 'games/angband/patches/**', 'games/angband/licenses/**', 'games/angband/tests/conformance/**', 'games/angband/adapter/input.ts', '!games/angband/**/*.md') }}
+      - name: Restore DRL runtime
+        id: drl
+        uses: actions/cache/restore@v4
+        with:
+          path: games/drl/dist
+          key: runtime-drl-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/drl/upstream.env', 'games/drl/toolchain.env', 'games/drl/scripts/**', 'games/drl/port/**', 'games/drl/patches/**', 'games/drl/licenses/**', 'games/drl/tests/conformance/**', 'games/drl/adapter/input.ts', '!games/drl/**/*.md') }}
       - name: Restore Cataclysm DDA runtime
         id: cdda
         uses: actions/cache/restore@v4
@@ -104,7 +110,7 @@ jobs:
           path: games/cataclysm-dda/dist
           key: runtime-cataclysm-dda-${{ runner.os }}-${{ hashFiles('tools/toolchain.env', 'tools/ensure-emsdk.sh', 'tools/write-runtime-manifest.mjs', 'games/cataclysm-dda/upstream.env', 'games/cataclysm-dda/scripts/**', 'games/cataclysm-dda/port/**', 'games/cataclysm-dda/patches/**', 'games/cataclysm-dda/tests/conformance/**', 'games/cataclysm-dda/adapter/input.ts', '!games/cataclysm-dda/**/*.md') }}
       - name: Cache Emscripten SDK
-        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true' || steps.angband.outputs.cache-hit != 'true' || steps.cdda.outputs.cache-hit != 'true'
+        if: steps.brogue.outputs.cache-hit != 'true' || steps.dcss.outputs.cache-hit != 'true' || steps.sil.outputs.cache-hit != 'true' || steps.rogue.outputs.cache-hit != 'true' || steps.hyperrogue.outputs.cache-hit != 'true' || steps.nethack.outputs.cache-hit != 'true' || steps.angband.outputs.cache-hit != 'true' || steps.cdda.outputs.cache-hit != 'true' || steps.drl.outputs.cache-hit != 'true'
         uses: actions/cache@v4
         with:
           path: ~/.cache/rogue-archive/emsdk
@@ -207,6 +213,30 @@ jobs:
         with:
           path: games/angband/dist
           key: ${{ steps.angband.outputs.cache-primary-key }}
+      - name: Install FreePascal to build the pinned one from (DRL)
+        if: steps.drl.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fpc
+      - name: Cache FreePascal (DRL)
+        if: steps.drl.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          # The pinned compiler, native and wasm32-wasip1, with its units; about 5 minutes to build.
+          path: |
+            ~/.cache/rogue-archive/fpc
+            !~/.cache/rogue-archive/fpc/src-*
+          key: fpc-${{ runner.os }}-${{ hashFiles('games/drl/toolchain.env', 'games/drl/patches/fpc/**', 'games/drl/scripts/ensure-fpc.sh') }}
+      - name: Build DRL runtime
+        if: steps.drl.outputs.cache-hit != 'true'
+        run: pnpm build:drl
+      - name: DRL engine conformance (key coverage, upstream drift, native vs WASM replay)
+        if: steps.drl.outputs.cache-hit != 'true'
+        run: pnpm test:engine:drl
+      - name: Save DRL runtime (built and verified)
+        if: steps.drl.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: games/drl/dist
+          key: ${{ steps.drl.outputs.cache-primary-key }}
       - name: Cache Cataclysm DDA build tree
         if: steps.cdda.outputs.cache-hit != 'true'
         uses: actions/cache@v4

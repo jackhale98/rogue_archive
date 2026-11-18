@@ -29,6 +29,8 @@ export type FromWorker =
       /** Two bytes per cell: character, attribute (port/ncurses.pas). */
       cells: Uint8Array;
       cursor: { x: number; y: number; visible: boolean };
+      /** The module's memory size (its high-water mark). */
+      memoryBytes: number;
     }
   /** DRL ended (Exit from its main menu); `restarted`: started again at its main menu. */
   | { type: 'exit'; status: number; restarted: boolean }

@@ -45,6 +45,13 @@ Status: **port implemented** (catalog status `planned` until the definition of d
 - **Console mode is keyboard-only and has no modifiers** (upstream's curses driver ignores them: Shift+direction to run and Ctrl+direction to move the target do nothing in a Linux terminal either). Running and targeting remain available through `,` (repeat move) and the targeting mode.
 - **DRL's console redraws every frame** (an immediate-mode UI, about 90 frames per second, with two sleeps per frame); the worker lets the game sleep until a key when the screen has not changed for a while.
 - **Data:** upstream's `build.lua` minus images, sounds and music: `drl.wad` 288 KB instead of 2.6 MB.
+- **Saves are word-size dependent.** Valkyrie writes Lua userdata into the save as raw bytes with their size, and a native (64-bit) and a WebAssembly (32-bit) save of the same seeded game differ at the first such value (a 4-byte size against 8). Each build loads its own saves and continues identically (the replay checks it); saves do not move between this port and desktop DRL.
+
+## Verification
+
+- `pnpm test:engine:drl`: key coverage (45 default bindings reached, 16 shown unreachable from a terminal), upstream drift (23 files), and native vs WebAssembly replay: a seeded game from the first run through the intro, walking, the inventory, the equipment, look mode, Save & Quit and Exit (50 screens), and continuing each build's save (15 screens), every screen identical (characters and colours).
+- End-to-end tests (Playwright): desktop and phone emulation, including landscape; see the catalog's compatibility table.
+- Memory and load time in Chromium and WebKit: [`games/drl/BUILDING.md`](../../games/drl/BUILDING.md).
 
 ## Risks
 

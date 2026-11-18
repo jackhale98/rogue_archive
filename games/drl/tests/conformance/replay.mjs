@@ -140,7 +140,8 @@ for (const scenario of scenarios) {
   rmSync(dir, { recursive: true, force: true });
   for (const side of ['native', 'wasm']) {
     mkdirSync(join(dir, side, 'home'), { recursive: true });
-    if (scenario.from) cpSync(join(runs, scenario.from, side, 'home'), join(dir, side, 'home'), { recursive: true });
+    if (scenario.from)
+      cpSync(join(runs, scenario.from, side, 'home'), join(dir, side, 'home'), { recursive: true });
   }
   const keysFile = join(dir, 'keys.txt');
   writeFileSync(keysFile, `${keys.join('\n')}\n`);
@@ -158,7 +159,8 @@ for (const scenario of scenarios) {
   }
   const sa = saved(join(dir, 'native', 'home'));
   const sb = saved(join(dir, 'wasm', 'home'));
-  if (scenario.expectSave && (!sa || !sb)) problems.push(`no saved game (native ${Boolean(sa)}, wasm ${Boolean(sb)})`);
+  if (scenario.expectSave && (!sa || !sb))
+    problems.push(`no saved game (native ${Boolean(sa)}, wasm ${Boolean(sb)})`);
   for (const text of scenario.expectText ?? [])
     if (!a.includes(text)) problems.push(`the screens never show "${text}"`);
   const screens = a.split('\n== ').length;

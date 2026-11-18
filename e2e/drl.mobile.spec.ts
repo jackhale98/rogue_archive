@@ -5,7 +5,9 @@ test.describe.configure({ timeout: 240_000 });
 // A tap that cannot happen fails at that step instead of at the test timeout.
 test.use({ actionTimeout: 15_000 });
 
-test('DRL phone: a game started by taps, status band, pad, dock, sheets, Save & Quit by taps', async ({ page }) => {
+test('DRL phone: a game started by taps, status band, pad, dock, sheets, Save & Quit by taps', async ({
+  page,
+}) => {
   await openDrl(page);
   const dock = page.getByRole('group', { name: 'Actions' });
   const pad = page.getByRole('group', { name: 'Movement' });

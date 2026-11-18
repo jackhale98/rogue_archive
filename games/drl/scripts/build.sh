@@ -101,8 +101,12 @@ cc -O2 -std=gnu17 -w -DLUA_USE_POSIX -o "$HOST_LUA" "$LUA_SRC/src/lua.c" \
 # makefile.lua passes it). -Sgic is FreePascal's default configuration
 # (fpc.cfg), which upstream builds with; -n leaves out any local fpc.cfg.
 FPC_UNITS="$FPC_DIR/lib/fpc/$FPC_VERSION/units/wasm32-wasip1"
+# The compile date and time FreePascal embeds ({$I %DATE%}, which DRL's log
+# prints): the upstream commit's, so that a rebuild gives the same bytes.
+COMMIT_TIME="$(git -C "$SRC" log -1 --format=%ct)"
 FPC_FLAGS=(
   -n -Twasip1 -CTbfexceptions -O2 -Sgic -v0 -dUNIX
+  -DD"$(date -u -d "@$COMMIT_TIME" +%Y/%m/%d)" -DT"$(date -u -d "@$COMMIT_TIME" +%H:%M:%S)"
   -Fu"$GAME_DIR/port" -Fu"$GAME_DIR/port/wasm"
 )
 for package in rtl rtl-objpas rtl-extra rtl-generics fcl-base fcl-xml paszlib hash; do
@@ -130,7 +134,7 @@ COMMON_LDFLAGS=(
   -sASYNCIFY=1
   -sASYNCIFY_STACK_SIZE=524288
   -sSTACK_SIZE=4194304
-  -sINITIAL_MEMORY=33554432
+  -sINITIAL_MEMORY=16777216
   -sMAXIMUM_MEMORY=536870912
   -sALLOW_MEMORY_GROWTH=1
   -sINVOKE_RUN=0

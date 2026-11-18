@@ -19,15 +19,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue, nethack, angband, cataclysm-dda]
+        game: [brogue-ce, dcss, sil-q, rogue, hyperrogue, nethack, angband, cataclysm-dda, drl]
         ref: [latest-release, master]
         # NetHack has no master branch: its development branch for 5.0 is NetHack-5.0.
+        # DRL's development branch is development (and FPC Valkyrie's follows it).
         exclude:
           - game: nethack
+            ref: master
+          - game: drl
             ref: master
         include:
           - game: nethack
             ref: NetHack-5.0
+          - game: drl
+            ref: development
     env:
       ROGUE_ARCHIVE_UPSTREAM_REF: ${{ matrix.ref }}
       ROGUE_ARCHIVE_BASE: /${{ github.event.repository.name }}/
@@ -49,6 +54,16 @@ jobs:
       - name: Host libraries (HyperRogue native harness)
         if: matrix.game == 'hyperrogue'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libsdl1.2-dev libgl-dev zlib1g-dev
+      - name: FreePascal (DRL)
+        if: matrix.game == 'drl'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fpc
+      - uses: actions/cache@v4
+        if: matrix.game == 'drl'
+        with:
+          path: |
+            ~/.cache/rogue-archive/fpc
+            !~/.cache/rogue-archive/fpc/src-*
+          key: fpc-${{ runner.os }}-${{ hashFiles('games/drl/toolchain.env', 'games/drl/patches/fpc/**', 'games/drl/scripts/ensure-fpc.sh') }}
       - name: Build against upstream ${{ matrix.ref }}
         run: games/${{ matrix.game }}/scripts/build.sh
       - name: Engine conformance and upstream drift

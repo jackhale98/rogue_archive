@@ -26,7 +26,8 @@ for (const match of read(valkyrieRoot, 'src/vioevent.inc').matchAll(/\b(VKEY_\w+
   vkey.set(match[1]!, Number(match[2]));
 const vioevent = read(valkyrieRoot, 'src/vioevent.pas');
 const masks: Record<string, number> = {};
-for (const match of vioevent.matchAll(/\b(IOKeyCode\w+Mask)\s*=\s*%([01]+)\s*;/g)) masks[match[1]!] = parseInt(match[2]!, 2);
+for (const match of vioevent.matchAll(/\b(IOKeyCode\w+Mask)\s*=\s*%([01]+)\s*;/g))
+  masks[match[1]!] = parseInt(match[2]!, 2);
 const scanSetText = /VKEY_SCANSET\s*=\s*\[([^\]]*)\]/s.exec(vioevent)?.[1] ?? '';
 const scanSet = new Set<number>();
 for (const part of scanSetText.split(',').map((s) => s.trim())) {
@@ -57,15 +58,25 @@ let unshiftTable = '';
     } else at++;
   }
 }
-if (unshiftTable.length !== 126 - 31) throw new Error(`Keys32_126 parsed to ${unshiftTable.length} characters`);
+if (unshiftTable.length !== 126 - 31)
+  throw new Error(`Keys32_126 parsed to ${unshiftTable.length} characters`);
 
 // vcursesio.pas CursesToKeyCode: "nCurses.KEY_X : Result := VKEY_Y;" and "13 : Result := VKEY_Y;".
 const cursesIo = read(valkyrieRoot, 'src/vcursesio.pas');
-const cursesBody = cursesIo.slice(cursesIo.indexOf('function CursesToKeyCode'), cursesIo.indexOf('function TCursesIODriver.PollEvent'));
+const cursesBody = cursesIo.slice(
+  cursesIo.indexOf('function CursesToKeyCode'),
+  cursesIo.indexOf('function TCursesIODriver.PollEvent'),
+);
 const cursesMap = new Map<number, number>();
 const cursesKey = KEY as Record<string, number>;
-for (const match of cursesBody.matchAll(/^\s*(?:nCurses\.KEY_(\w+)|(\d+))\s*:\s*Result\s*:=\s*(VKEY_\w+)/gm)) {
-  const code = match[1] ? (match[1].startsWith('F') && /^F\d+$/.test(match[1]) ? KEY.F0 + Number(match[1].slice(1)) : cursesKey[match[1]]) : Number(match[2]);
+for (const match of cursesBody.matchAll(
+  /^\s*(?:nCurses\.KEY_(\w+)|(\d+))\s*:\s*Result\s*:=\s*(VKEY_\w+)/gm,
+)) {
+  const code = match[1]
+    ? match[1].startsWith('F') && /^F\d+$/.test(match[1])
+      ? KEY.F0 + Number(match[1].slice(1))
+      : cursesKey[match[1]]
+    : Number(match[2]);
   if (code !== undefined) cursesMap.set(code, vkey.get(match[3]!)!);
 }
 if (!cursesMap.size) throw new Error('could not read CursesToKeyCode from vcursesio.pas');
@@ -177,7 +188,9 @@ for (const command of DRL_COMMANDS) {
   }
   const sent = drlKeyCode(command.keys[0]!);
   if (sent !== binding)
-    problems.push(`${command.id}: key ${command.keys[0]} reaches DRL as ${sent}, but ${id} is bound to ${binding}`);
+    problems.push(
+      `${command.id}: key ${command.keys[0]} reaches DRL as ${sent}, but ${id} is bound to ${binding}`,
+    );
   covered.add(id);
 }
 for (const [id, value] of bindings) {
@@ -190,7 +203,8 @@ for (const [id, value] of bindings) {
   }
   problems.push(`${id} (default ${value}) has no command`);
 }
-for (const id of UNREACHABLE) if (!bindings.has(id)) problems.push(`${id} is no longer in drlkeybindings.pas`);
+for (const id of UNREACHABLE)
+  if (!bindings.has(id)) problems.push(`${id} is no longer in drlkeybindings.pas`);
 
 if (problems.length) {
   console.error(problems.join('\n'));

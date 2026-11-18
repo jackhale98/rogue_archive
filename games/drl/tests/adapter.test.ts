@@ -63,7 +63,13 @@ describe('keys as a terminal sends them', () => {
 describe('reading the screen', () => {
   it('reads the HUD', () => {
     const hud = parseHud(grid(HUD));
-    expect(hud).toMatchObject({ name: 'Tester', armor: 'none', health: 100, healthText: '100%', level: 'Phobos Base Entry' });
+    expect(hud).toMatchObject({
+      name: 'Tester',
+      armor: 'none',
+      health: 100,
+      healthText: '100%',
+      level: 'Phobos Base Entry',
+    });
     expect(hud?.weapon).toBe('pistol (2d4) [6/6] (40)');
     expect(parseHud(grid({}))).toBeNull();
   });
@@ -76,15 +82,26 @@ describe('reading the screen', () => {
 
   it('tells the map, menus, prompts and full screens apart', () => {
     expect(detectContext(grid({ ...HUD, 11: ' ...@...' }))).toBe('map');
-    const menu = { ...HUD, 7: '                         ──────────────────────────────', 9: '                            Continue', 17: '                         ──────────────────────────────' };
+    const menu = {
+      ...HUD,
+      7: '                         ──────────────────────────────',
+      9: '                            Continue',
+      17: '                         ──────────────────────────────',
+    };
     expect(detectContext(grid(menu))).toBe('menu');
     expect(boxRect(grid(menu))).toEqual({ x: 25, y: 7, width: 30, height: 11 });
-    expect(detectContext(grid({ ...HUD, 1: '                                                                 = LOOK MODE =' }))).toBe('look');
+    expect(
+      detectContext(
+        grid({ ...HUD, 1: '                                                                 = LOOK MODE =' }),
+      ),
+    ).toBe('look');
     // Targeting: its action in yellow at the start of row 2.
     expect(detectContext(grid({ ...HUD, 2: 'Fire pistol' }, { 2: 11 }))).toBe('look');
     expect(detectContext(grid({ ...HUD, 2: '   [more] press <Enter>...' }))).toBe('pager');
     expect(detectContext(grid({ ...HUD, 2: 'Open door, choose direction...' }))).toBe('direction');
-    expect(detectContext(grid({ 13: '                        Type a name for your character' }))).toBe('text');
+    expect(detectContext(grid({ 13: '                        Type a name for your character' }))).toBe(
+      'text',
+    );
     expect(detectContext(grid({ 15: '                              ----- New game -----' }))).toBe('title');
     expect(detectContext(grid({}))).toBe('busy');
   });
@@ -108,9 +125,17 @@ describe('the dock', () => {
 
   it('answers menus, prompts and typing', () => {
     expect(controlsFor('menu').actions[0]).toMatchObject({ command: 'ok', label: 'Select' });
-    expect(controlsFor('menu', { health: null, panels: true }).actions.map((a) => (typeof a === 'string' ? a : a.command))).toContain('right');
+    expect(
+      controlsFor('menu', { health: null, panels: true }).actions.map((a) =>
+        typeof a === 'string' ? a : a.command,
+      ),
+    ).toContain('right');
     expect(controlsFor('pager').actions[0]).toMatchObject({ command: 'ok', wide: true });
-    expect(controlsFor('yesno').actions.map((a) => (typeof a === 'string' ? a : a.command))).toEqual(['yes', 'no', 'escape']);
+    expect(controlsFor('yesno').actions.map((a) => (typeof a === 'string' ? a : a.command))).toEqual([
+      'yes',
+      'no',
+      'escape',
+    ]);
     expect(controlsFor('text').actions[0]).toMatchObject({ command: 'ok', label: 'Done' });
   });
 });

@@ -35,37 +35,15 @@
       "Up",
       "Enter"
     ],
-    "expectText": [
-      "Replay",
-      "Health:",
-      "Inventory",
-      "LOOK MODE",
-      "Continue game"
-    ],
+    "expectText": ["Replay", "Health:", "Inventory", "LOOK MODE", "Continue game"],
     "expectSave": true
   },
   {
     "name": "continue-saved-game",
     "description": "From the first scenario's DRL folder (each build its own save): the credits, Continue game, walking and waiting in the same seeded dungeon, then Save & Quit and Exit.",
     "from": "seeded-game-save-and-quit",
-    "keys": [
-      "Enter",
-      "Enter",
-      "Right*2",
-      "w*2",
-      "Down*2",
-      "Left",
-      "Escape",
-      "Up",
-      "Enter",
-      "Up",
-      "Enter"
-    ],
-    "expectText": [
-      "Replay",
-      "Health:",
-      "Continue game"
-    ],
+    "keys": ["Enter", "Enter", "Right*2", "w*2", "Down*2", "Left", "Escape", "Up", "Enter", "Up", "Enter"],
+    "expectText": ["Replay", "Health:", "Continue game"],
     "expectSave": true
   }
 ]

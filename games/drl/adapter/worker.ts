@@ -93,6 +93,8 @@ let lastChange = -Infinity;
 let syncChain: Promise<void> = Promise.resolve();
 let lastHasSave: boolean | null = null;
 let lastKept = -Infinity;
+/** The module's memory (its size is the high-water mark: it never shrinks). */
+let memory: WebAssembly.Memory | null = null;
 
 function wakeGame(): void {
   const resolve = wake;
@@ -165,7 +167,8 @@ async function fetchVerified(url: string, file: RuntimeFile, onProgress: (n: num
     loaded += value.length;
     onProgress(loaded);
   }
-  if (loaded !== file.size) throw Object.assign(new Error(`${file.path} is incomplete.`), { kind: 'integrity' });
+  if (loaded !== file.size)
+    throw Object.assign(new Error(`${file.path} is incomplete.`), { kind: 'integrity' });
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
   const hex = Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('');
   if (hex !== file.sha256)
@@ -190,7 +193,10 @@ function reportFatal(error: unknown): void {
     crash:
       'Return to the library and launch the game again. DRL saves with Save & Quit (Escape on the map), and on each new level.',
   };
-  post({ type: 'error', error: { kind, message: error instanceof Error ? error.message : text, action: actions[kind] } });
+  post({
+    type: 'error',
+    error: { kind, message: error instanceof Error ? error.message : text, action: actions[kind] },
+  });
 }
 
 /** A screen from port/ncurses.pas: characters (the alternate character set as 128 + its letter) and foreground colours. */
@@ -209,7 +215,17 @@ function present(raw: Uint8Array | null, cols: number, rows: number, cx: number,
     lastKept = lastChange;
     keepFiles();
   }
-  post({ type: 'frame', cols, rows, cells, cursor: { x: cx, y: cy, visible: cursor !== 0 } }, [cells.buffer]);
+  post(
+    {
+      type: 'frame',
+      cols,
+      rows,
+      cells,
+      cursor: { x: cx, y: cy, visible: cursor !== 0 },
+      memoryBytes: memory?.buffer.byteLength ?? 0,
+    },
+    [cells.buffer],
+  );
   postSaves();
 }
 
@@ -220,7 +236,11 @@ async function instantiate(): Promise<void> {
   keys.length = 0;
   mod = await factory({
     instantiateWasm(imports: WebAssembly.Imports, success: (instance: WebAssembly.Instance) => void) {
-      WebAssembly.instantiate(module, imports).then(success, reportFatal);
+      WebAssembly.instantiate(module, imports).then((instance) => {
+        for (const value of Object.values(instance.exports))
+          if (value instanceof WebAssembly.Memory) memory = value;
+        success(instance);
+      }, reportFatal);
       return {};
     },
     locateFile: (path: string) => path,
@@ -241,7 +261,8 @@ async function instantiate(): Promise<void> {
           }),
     raSleep(ms: number): Promise<void> | undefined {
       if (keys.length) return undefined;
-      if (performance.now() - lastChange < IDLE_AFTER_MS) return new Promise((resolve) => setTimeout(resolve, ms));
+      if (performance.now() - lastChange < IDLE_AFTER_MS)
+        return new Promise((resolve) => setTimeout(resolve, ms));
       return new Promise<void>((resolve) => {
         wake = resolve;
         setTimeout(wakeGame, IDLE_POLL_MS);
@@ -270,7 +291,11 @@ function exportFiles(): SaveFile[] {
     const path = `${HOME}/${name}`;
     if (!mod.FS.analyzePath(path).exists) continue;
     const stat = mod.FS.stat(path);
-    files.push({ path: name, bytes: mod.FS.readFile(path), modifiedAt: Number(stat.mtime instanceof Date ? stat.mtime.getTime() : stat.mtime) });
+    files.push({
+      path: name,
+      bytes: mod.FS.readFile(path),
+      modifiedAt: Number(stat.mtime instanceof Date ? stat.mtime.getTime() : stat.mtime),
+    });
   }
   return files;
 }
@@ -320,9 +345,10 @@ function run(): void {
   mod.ccall('ra_start', null, [], [], { async: true }).then(
     () => void exited(0),
     (error: unknown) => {
-      const status = (error as { name?: string; status?: number } | null)?.name === 'ExitStatus'
-        ? ((error as { status?: number }).status ?? 0)
-        : null;
+      const status =
+        (error as { name?: string; status?: number } | null)?.name === 'ExitStatus'
+          ? ((error as { status?: number }).status ?? 0)
+          : null;
       if (status === null) {
         running = false;
         reportFatal(error);
@@ -422,7 +448,9 @@ scope.onmessage = (event: MessageEvent<ToWorker>) => {
     case 'export':
       syncFs()
         .then(() => post({ type: 'exported', id: message.id, files: exportFiles() }))
-        .catch((error: unknown) => post({ type: 'exported', id: message.id, files: [], error: String(error) }));
+        .catch((error: unknown) =>
+          post({ type: 'exported', id: message.id, files: [], error: String(error) }),
+        );
       break;
     case 'import':
       void importFiles(message.id, message.files);

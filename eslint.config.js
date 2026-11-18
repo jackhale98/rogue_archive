@@ -47,6 +47,32 @@ export default tseslint.config(
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
+    // Emscripten --js-library files (functions the WebAssembly module imports),
+    // in plain JavaScript: Emscripten's runtime names are in scope there.
+    files: ['games/*/port/**/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        ...globals.browser,
+        addToLibrary: 'readonly',
+        Module: 'readonly',
+        FS: 'readonly',
+        PATH: 'readonly',
+        Asyncify: 'readonly',
+        HEAP8: 'readonly',
+        HEAP16: 'readonly',
+        HEAP32: 'readonly',
+        HEAP64: 'readonly',
+        HEAPU8: 'readonly',
+        UTF8ToString: 'readonly',
+        stringToUTF8: 'readonly',
+        stringToUTF8Array: 'readonly',
+        lengthBytesUTF8: 'readonly',
+        updateMemoryViews: 'readonly',
+      },
+    },
+  },
+  {
     // Emscripten --pre-js code for Node test harnesses.
     files: ['games/*/tests/**/*-hooks.js'],
     languageOptions: {

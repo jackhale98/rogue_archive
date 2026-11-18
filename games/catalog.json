@@ -984,24 +984,32 @@
         },
         {
           "keys": "Menu → Save files for desktop",
-          "action": "Download the DRL folder (save, scores, player record, mortems, settings)"
+          "action": "Download the DRL folder (save, scores, player record, mortems, settings) as a backup, to import here again"
         }
       ],
       "knownLimitations": [
         "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
         "Console (ASCII) mode only: DRL's graphical mode (sprites, OpenGL) is not built. No music or sound (upstream does not publish them in its repository).",
         "As in a terminal, the console reads no Shift or Ctrl with the arrow keys: Shift+direction (run) and Ctrl+direction (move the target) do nothing, as in upstream's Linux console; use , then a direction to run, and targeting mode to aim. DRL's console has no mouse.",
+        "Saved games do not move to or from desktop DRL: DRL's save format records word-sized values, which differ between 64-bit desktops and WebAssembly (32-bit). The DRL folder can be exported and imported back here.",
         "Built with FreePascal's development branch (its WebAssembly target is not in a release yet), with one compiler fix of ours (patches/fpc).",
         "\"Buy JHC on Steam!\" in the main menu opens nothing (DRL runs a shell command for it)."
       ],
       "compatibility": [
         {
           "environment": "Chromium desktop (automated, Playwright)",
-          "result": "untested"
+          "result": "pass",
+          "notes": "A new game through DRL's menus, the map, inventory, look mode, Save & Quit, reload and continue, export verified by end-to-end tests."
         },
         {
           "environment": "Chromium with touch emulation (automated)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "A game started, played, saved and continued by taps alone; band, pad, dock, sheets, landscape rails exercised by end-to-end tests; not a substitute for a real device."
+        },
+        {
+          "environment": "WebKit (Playwright, Linux)",
+          "result": "partial",
+          "notes": "Loads and plays in Safari's engine (memory measured, BUILDING.md); not iOS."
         },
         {
           "environment": "Firefox desktop",

@@ -294,6 +294,27 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 
 `games/angband/tests/conformance/key-coverage.ts` checks that each command sends, in both keysets, the key `ui-game.c`'s tables bind to that command and that no keymap takes first; the conformance replays send the same keys and clicks as the dock and the map gestures.
 
+## DRL
+
+DRL plays its console mode (`games/drl/adapter/index.ts`, drawn with `packages/term-view`): an 80×25 screen of characters, drawn in a VGA text-mode palette with the curses line characters as box drawing. The console has no mouse (as in a terminal), so taps never reach the game: everything is the dock, the pad and gestures. Everything is read from DRL's own screen (`adapter/state.ts`): its HUD (rows 22-24), its message rows (0-1), its prompts on row 2 and the boxes it draws.
+
+- **Layout on phones:** a status band from DRL's HUD: health (with a bar; DRL shows a percentage, or current/maximum), the weapon and its ammunition, armour, experience, the level's name; then DRL's latest message lines (and a prompt on row 2, such as `[more]`). Tapping it opens the message log. The map (rows 2-21) follows the player at a readable cell size; pinch to zoom, drag to look around (it recentres when the player moves). A box DRL draws over the map (its game menu) is lifted into a sheet over the dimmed map; tap outside to close it (Escape). Full screens (the main menu, the choices before a game, the inventory, equipment, help, the mortem) fit the screen whole, as their text is laid out for 80 columns.
+- **Starting and ending a game:** DRL's own main menu is the start screen (New game, Continue game, scores, settings, Exit) and its choices before a game (game type, a seed, difficulty, class, trait) are full screens; Select, ↓ Next and ↑ Previous answer them all, Back is Escape. The name is typed with the device keyboard (the dock offers it). Leaving uses DRL's Save & Quit. Death goes through DRL's own screens (the mortem, the scores) back to its main menu.
+- **Long-press** on the map opens DRL's look mode (`l`).
+- **No modifiers:** the console reads none (as upstream's Linux console), so there is no Run toggle; Run is DRL's own `,` then a direction, in Action's fan.
+
+| Context | Dock |
+|---|---|
+| Map (`map`) | **Fire** (`f`; fan: Target `t`, Alt fire `F`, Alt target `T`, Next target Tab) · Action (Space: doors, stairs, buttons; fan: Pick up `g`, Use here `G`, Run `,`, Rest `W`) · Reload (`r`; fan: Alt reload `R`, Swap `z`, Unload `u`, Skill `x`) · Inventory (`i`; fan: Equipment, Traits, Player, Assemblies) · Look (`l`; fan: Info `m`, Self `M`, Messages `s`, Help `h`) · Menu (Escape: DRL's game menu); the pad with Wait (`w`) in the centre. At 30% health or less, **Heal?** (the inventory) leads. |
+| Look and targeting (`look`) | **Fire** (Enter), Next (Tab), Info (`m`), Cancel; the pad moves the cursor |
+| Direction (`direction`) | The pad; Cancel |
+| Menus and boxes (`menu`), full screens (`title`) | **Select** (Enter), ↓ Next, ↑ Previous, Panel → (when the footer offers panels; fan: ←), Back (Escape; fan: Backspace, which drops in the inventory) |
+| `[more]` and "Press <Enter>" over the map (`pager`) | **Continue** (Enter), wide |
+| Yes/no (`yesno`) | Yes, No, Cancel |
+| Typing (`text`: the name, a seed) | **Done** (Enter), Keyboard, Delete, Cancel |
+
+`games/drl/tests/conformance/key-coverage.ts` checks that each command reaches, through the console's input path, the binding DRL gives its action by default.
+
 ## Cataclysm: DDA (pending design)
 
 **Not designed yet.** Phase 1 of the port (`games/cataclysm-dda`) runs upstream's own web build on the page and gives phones only a placeholder: the canvas at the game's smallest terminal (80×24 cells, 640×384 CSS px, so an upright phone shows its left part), the thumb pad (vi keys, wait in the centre) on the map and at direction prompts, and a dock of Inventory (`i`), Look (`;`), Actions (the game's action menu, Enter) on the map, and More and Keyboard everywhere. Taps reach the game as clicks (SDL2), which upstream already uses on the map (route, then walk), in look and targeting, and in every menu.

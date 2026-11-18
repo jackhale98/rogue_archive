@@ -36,7 +36,7 @@ Valkyrie's driver polls: `nodelay` on, a 1 ms sleep before each `wgetch`, and DR
 
 DRL is started as `drl --console --no-sound --config=/drl/config.lua --data-path=/drl/ --write-path=/home/`. `/home` is the first preopened directory, so it is DRL's working directory, where Valkyrie puts `settings.lua`.
 
-**Saves** are DRL's own: Save & Quit in the game menu (Escape on the map) writes `user/drl/save` and returns to the main menu, whose Continue game loads it (and DRL removes it, as on the desktop). Leaving the site's game uses Save & Quit (the shell's exit prompt). The whole DRL folder can be exported and imported ("Save files for desktop"); a lone file goes to `user/drl/`, where desktop DRL keeps it.
+**Saves** are DRL's own: Save & Quit in the game menu (Escape on the map) writes `user/drl/save` and returns to the main menu, whose Continue game loads it (and DRL removes it, as on the desktop). Leaving the site's game uses Save & Quit (the shell's exit prompt). The whole DRL folder can be exported and imported ("Save files for desktop"), as a backup; a lone file goes to `user/drl/`, where DRL keeps it. The saves themselves do not move to or from desktop DRL: Valkyrie writes Lua userdata into them as raw bytes with their size, so a 64-bit desktop's save and this port's (wasm32) differ; scores and settings are text or word-size independent but have not been checked against a desktop build.
 
 **Exit** in DRL's main menu ends the program; the worker starts a fresh module instance, at the main menu again.
 

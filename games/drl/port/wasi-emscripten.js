@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
+/* global raWasi */
 /**
  * The WASI calls FreePascal's wasip1 run-time library makes that Emscripten
  * does not provide outside its standalone mode, implemented over
@@ -31,7 +32,8 @@ addToLibrary({
       for (const path of Module['raPreopens'] ?? ['/']) {
         const stream = FS.open(path, 0);
         const expected = 3 + Object.keys(raWasi.preopens).length;
-        if (stream.fd !== expected) throw new Error(`the WASI directory ${path} got fd ${stream.fd}, not ${expected}`);
+        if (stream.fd !== expected)
+          throw new Error(`the WASI directory ${path} got fd ${stream.fd}, not ${expected}`);
         raWasi.preopens[stream.fd] = path;
       }
     },
@@ -39,7 +41,7 @@ addToLibrary({
       const rel = UTF8ToString(path, len);
       if (rel.startsWith('/')) return PATH.normalize(rel);
       const dir = FS.getStream(dirfd);
-      if (!dir) throw new FS.ErrnoError({{{ cDefs.EBADF }}});
+      if (!dir) throw new FS.ErrnoError(8 /* EBADF */);
       return PATH.normalize(`${dir.path}/${rel}`);
     },
     errno(e) {
@@ -47,31 +49,39 @@ addToLibrary({
       return e.errno;
     },
     filestat(buf, stat) {
-      const type = FS.isDir(stat.mode) ? 3 : FS.isFile(stat.mode) ? 4 : FS.isLink(stat.mode) ? 7 : FS.isChrdev(stat.mode) ? 2 : 0;
+      const type = FS.isDir(stat.mode)
+        ? 3
+        : FS.isFile(stat.mode)
+          ? 4
+          : FS.isLink(stat.mode)
+            ? 7
+            : FS.isChrdev(stat.mode)
+              ? 2
+              : 0;
       const ns = (t) => BigInt(Math.floor((t instanceof Date ? t.getTime() : Number(t)) || 0)) * 1000000n;
-      {{{ makeSetValue('buf', 0, 'BigInt(stat.dev)', 'i64') }}};
-      {{{ makeSetValue('buf', 8, 'BigInt(stat.ino)', 'i64') }}};
-      {{{ makeSetValue('buf', 16, 'type', 'i8') }}};
-      {{{ makeSetValue('buf', 24, 'BigInt(stat.nlink)', 'i64') }}};
-      {{{ makeSetValue('buf', 32, 'BigInt(stat.size)', 'i64') }}};
-      {{{ makeSetValue('buf', 40, 'ns(stat.atime)', 'i64') }}};
-      {{{ makeSetValue('buf', 48, 'ns(stat.mtime)', 'i64') }}};
-      {{{ makeSetValue('buf', 56, 'ns(stat.ctime)', 'i64') }}};
+      HEAP64[buf >> 3] = BigInt(stat.dev);
+      HEAP64[(buf + 8) >> 3] = BigInt(stat.ino);
+      HEAP8[buf + 16] = type;
+      HEAP64[(buf + 24) >> 3] = BigInt(stat.nlink);
+      HEAP64[(buf + 32) >> 3] = BigInt(stat.size);
+      HEAP64[(buf + 40) >> 3] = BigInt(ns(stat.atime));
+      HEAP64[(buf + 48) >> 3] = BigInt(ns(stat.mtime));
+      HEAP64[(buf + 56) >> 3] = BigInt(ns(stat.ctime));
     },
   },
 
   args_sizes_get__deps: ['$lengthBytesUTF8'],
   args_sizes_get: (pargc, pbufsize) => {
     const args = Module['raArgs'] ?? ['program'];
-    {{{ makeSetValue('pargc', 0, 'args.length', 'i32') }}};
-    {{{ makeSetValue('pbufsize', 0, 'args.reduce((n, a) => n + lengthBytesUTF8(a) + 1, 0)', 'i32') }}};
+    HEAP32[pargc >> 2] = args.length;
+    HEAP32[pbufsize >> 2] = args.reduce((n, a) => n + lengthBytesUTF8(a) + 1, 0);
     return 0;
   },
   args_get__deps: ['$stringToUTF8', '$lengthBytesUTF8'],
   args_get: (argv, buf) => {
     const args = Module['raArgs'] ?? ['program'];
     args.forEach((arg, i) => {
-      {{{ makeSetValue('argv', 'i * 4', 'buf', 'i32') }}};
+      HEAP32[(argv + i * 4) >> 2] = buf;
       const n = lengthBytesUTF8(arg) + 1;
       stringToUTF8(arg, buf, n);
       buf += n;
@@ -79,21 +89,20 @@ addToLibrary({
     return 0;
   },
 
-  fd_prestat_get__deps: ['$raWasi'],
   fd_prestat_get__deps: ['$raWasi', '$lengthBytesUTF8'],
   fd_prestat_get: (fd, buf) => {
     raWasi.preopen();
     const path = raWasi.preopens[fd];
-    if (path === undefined) return {{{ cDefs.EBADF }}};
-    {{{ makeSetValue('buf', 0, '0', 'i8') }}};
-    {{{ makeSetValue('buf', 4, 'lengthBytesUTF8(path)', 'i32') }}};
+    if (path === undefined) return 8; /* EBADF */
+    HEAP8[buf] = 0;
+    HEAP32[(buf + 4) >> 2] = lengthBytesUTF8(path);
     return 0;
   },
   fd_prestat_dir_name__deps: ['$raWasi', '$stringToUTF8Array', '$lengthBytesUTF8'],
   fd_prestat_dir_name: (fd, buf, len) => {
     raWasi.preopen();
     const path = raWasi.preopens[fd];
-    if (path === undefined) return {{{ cDefs.EBADF }}};
+    if (path === undefined) return 8; /* EBADF */
     const bytes = [];
     stringToUTF8Array(path, bytes, 0, lengthBytesUTF8(path) + 1);
     HEAPU8.set(bytes.slice(0, Math.min(len, bytes.length - 1)), buf);
@@ -117,10 +126,10 @@ addToLibrary({
       if (fdflags & 1) flags |= 1024; // O_APPEND
       if (oflags & 2) {
         const node = FS.lookupPath(full).node;
-        if (!FS.isDir(node.mode)) return {{{ cDefs.ENOTDIR }}};
+        if (!FS.isDir(node.mode)) return 54; /* ENOTDIR */
       }
       const stream = FS.open(full, flags, 0o666);
-      {{{ makeSetValue('pfd', 0, 'stream.fd', 'i32') }}};
+      HEAP32[pfd >> 2] = stream.fd;
       return 0;
     } catch (e) {
       return raWasi.errno(e);
@@ -131,7 +140,7 @@ addToLibrary({
   fd_filestat_get: (fd, buf) => {
     try {
       const stream = FS.getStream(fd);
-      if (!stream) return {{{ cDefs.EBADF }}};
+      if (!stream) return 8; /* EBADF */
       raWasi.filestat(buf, stream.node.node_ops.getattr ? FS.fstat(fd) : FS.stat(stream.path));
       return 0;
     } catch (e) {
@@ -165,7 +174,7 @@ addToLibrary({
   fd_filestat_set_times: (fd, atim, mtim, flags) => {
     try {
       const stream = FS.getStream(fd);
-      if (!stream) return {{{ cDefs.EBADF }}};
+      if (!stream) return 8; /* EBADF */
       // Flags: ATIM 1, ATIM_NOW 2, MTIM 4, MTIM_NOW 8.
       const now = Date.now();
       const st = FS.stat(stream.path);
@@ -196,8 +205,8 @@ addToLibrary({
   fd_tell__deps: ['$raWasi'],
   fd_tell: (fd, poffset) => {
     const stream = FS.getStream(fd);
-    if (!stream) return {{{ cDefs.EBADF }}};
-    {{{ makeSetValue('poffset', 0, 'BigInt(stream.position)', 'i64') }}};
+    if (!stream) return 8; /* EBADF */
+    HEAP64[poffset >> 3] = BigInt(stream.position);
     return 0;
   },
   fd_readdir__i53abi: true,
@@ -206,7 +215,7 @@ addToLibrary({
   fd_readdir: (fd, buf, len, cookie, pused) => {
     try {
       const stream = FS.getStream(fd);
-      if (!stream) return {{{ cDefs.EBADF }}};
+      if (!stream) return 8; /* EBADF */
       const names = FS.readdir(stream.path);
       let used = 0;
       for (let i = cookie; i < names.length && used < len; i++) {
@@ -218,7 +227,9 @@ addToLibrary({
         try {
           const st = FS.lstat(PATH.join2(stream.path, name));
           type = FS.isDir(st.mode) ? 3 : FS.isFile(st.mode) ? 4 : FS.isLink(st.mode) ? 7 : 0;
-        } catch {}
+        } catch {
+          // Unknown type (WASI's 0), as for an entry gone since the listing.
+        }
         const entry = new Uint8Array(24 + bytes.length);
         const view = new DataView(entry.buffer);
         view.setBigUint64(0, BigInt(i + 1), true);
@@ -229,7 +240,7 @@ addToLibrary({
         HEAPU8.set(entry.subarray(0, n), buf + used);
         used += n;
       }
-      {{{ makeSetValue('pused', 0, 'used', 'i32') }}};
+      HEAP32[pused >> 2] = used;
       return 0;
     } catch (e) {
       return raWasi.errno(e);
@@ -271,7 +282,7 @@ addToLibrary({
       bytes.pop();
       const n = Math.min(bytes.length, buflen);
       HEAPU8.set(bytes.slice(0, n), buf);
-      {{{ makeSetValue('pused', 0, 'n', 'i32') }}};
+      HEAP32[pused >> 2] = n;
       return 0;
     } catch (e) {
       return raWasi.errno(e);
@@ -294,26 +305,26 @@ addToLibrary({
       let ms = 0;
       for (let i = 0; i < n; i++) {
         const sub = subs + i * 48;
-        if ({{{ makeGetValue('sub', 8, 'i8') }}} !== 0) continue;
-        const timeout = Number({{{ makeGetValue('sub', 24, 'i64') }}}) / 1e6;
+        if (HEAP8[sub + 8] !== 0) continue;
+        const timeout = Number(HEAP64[(sub + 24) >> 3]) / 1e6;
         ms = Math.max(ms, timeout);
       }
       const done = () => {
         for (let i = 0; i < n; i++) {
           const sub = subs + i * 48;
           const ev = events + i * 32;
-          {{{ makeSetValue('ev', 0, makeGetValue('sub', 0, 'i64'), 'i64') }}};
-          {{{ makeSetValue('ev', 8, '0', 'i16') }}};
-          {{{ makeSetValue('ev', 10, makeGetValue('sub', 8, 'i8'), 'i8') }}};
+          HEAP64[ev >> 3] = HEAP64[sub >> 3];
+          HEAP16[(ev + 8) >> 1] = 0;
+          HEAP8[ev + 10] = HEAP8[sub + 8];
         }
-        {{{ makeSetValue('pcount', 0, 'n', 'i32') }}};
+        HEAP32[pcount >> 2] = n;
         wakeUp(0);
       };
       const wait = Module['raSleep'] ? Module['raSleep'](ms) : new Promise((r) => setTimeout(r, ms));
       Promise.resolve(wait).then(done);
     }),
 
-  ra_memory_grown: (pages) => {
+  ra_memory_grown: () => {
     updateMemoryViews();
   },
 });

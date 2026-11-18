@@ -97,6 +97,8 @@ export interface DrlDebugState {
   state: DrlHud | null;
   /** A saved game exists (user/drl/save). */
   hasSave: boolean;
+  /** The WebAssembly module's memory size, in bytes. */
+  memoryBytes(): number;
   screenText(): string;
   rowText(y: number): string;
   views(): string[];
@@ -125,7 +127,7 @@ class DrlAdapter implements GameAdapter {
   readonly touchLayout = DRL_TOUCH_LAYOUT;
   readonly nativeSaveExtensions = [] as const;
   readonly resumeHint =
-    "DRL saves with Save & Quit in its game menu (Escape on the map); Continue game in its main menu goes on from there. A saved game is removed when you continue it, as in DRL.";
+    'DRL saves with Save & Quit in its game menu (Escape on the map); Continue game in its main menu goes on from there. A saved game is removed when you continue it, as in DRL.';
 
   #host: GameHost | null = null;
   #worker: Worker | null = null;
@@ -147,6 +149,7 @@ class DrlAdapter implements GameAdapter {
   #logId = 0;
   #lastMessages: string[] = [];
   #cleanup: (() => void)[] = [];
+  #memoryBytes = 0;
   readonly debug: DrlDebugState;
 
   constructor() {
@@ -155,6 +158,7 @@ class DrlAdapter implements GameAdapter {
       inGame: false,
       state: null,
       hasSave: false,
+      memoryBytes: () => this.#memoryBytes,
       rowText: (y) => (this.#grid ? screenRow(this.#grid, y).trimEnd() : ''),
       screenText: () => (this.#grid ? screenText(this.#grid) : ''),
       views: () => this.#renderer?.views.map((view) => view.name) ?? [],
@@ -190,7 +194,9 @@ class DrlAdapter implements GameAdapter {
       };
       worker.onerror = (event) => {
         event.preventDefault();
-        reject(Object.assign(new Error(event.message || 'The game worker failed to start.'), { kind: 'crash' }));
+        reject(
+          Object.assign(new Error(event.message || 'The game worker failed to start.'), { kind: 'crash' }),
+        );
       };
     });
     signal.addEventListener('abort', () => void this.shutdown(), { once: true });
@@ -275,7 +281,11 @@ class DrlAdapter implements GameAdapter {
     }
     if (this.#context !== 'map') throw new Error('DRL is not ready for a command.');
     this.#send([27]);
-    await waitUntil(() => this.#context === 'menu' && /Save & Quit/.test(this.debug.screenText()), 5000, "DRL's game menu");
+    await waitUntil(
+      () => this.#context === 'menu' && /Save & Quit/.test(this.debug.screenText()),
+      5000,
+      "DRL's game menu",
+    );
     // The menu opens on Continue; Up wraps to Save & Quit, its last entry.
     this.#send([KEY.UP]);
     await waitUntil(() => this.#selectedLine() === 'Save & Quit', 3000, 'Save & Quit');
@@ -290,7 +300,9 @@ class DrlAdapter implements GameAdapter {
     if (!grid) return null;
     for (let y = 0; y < grid.rows; y++) {
       const text = rowText(grid, y);
-      const match = /(Continue|Help|Settings|Message history|Assemblies|Abandon Run|Save & Quit)\s*$/.exec(text);
+      const match = /(Continue|Help|Settings|Message history|Assemblies|Abandon Run|Save & Quit)\s*$/.exec(
+        text,
+      );
       if (!match) continue;
       const x = text.indexOf(match[1]!);
       const colour = grid.cells[(y * grid.cols + x) * 2 + 1]!;
@@ -306,7 +318,8 @@ class DrlAdapter implements GameAdapter {
   }
 
   setVisible(visible: boolean): void {
-    if (!visible) void this.persist().catch((error: unknown) => this.#host?.logger.warn('persist failed', error));
+    if (!visible)
+      void this.persist().catch((error: unknown) => this.#host?.logger.warn('persist failed', error));
   }
 
   setPresentation(presentation: Presentation): void {
@@ -321,7 +334,10 @@ class DrlAdapter implements GameAdapter {
   }
 
   async importSaves(files: SaveFile[]): Promise<void> {
-    const reply = await this.#request<'imported'>((id) => ({ type: 'import', id, files }), FLUSH_TIMEOUT_MS * 2);
+    const reply = await this.#request<'imported'>(
+      (id) => ({ type: 'import', id, files }),
+      FLUSH_TIMEOUT_MS * 2,
+    );
     if (reply.error) throw new Error(reply.error);
   }
 
@@ -347,7 +363,8 @@ class DrlAdapter implements GameAdapter {
     this.#band = null;
     this.#renderer?.destroy();
     this.#renderer = null;
-    for (const resolve of this.#pending.values()) resolve({ type: 'flushed', id: -1, error: 'Game stopped.' });
+    for (const resolve of this.#pending.values())
+      resolve({ type: 'flushed', id: -1, error: 'Game stopped.' });
     this.#pending.clear();
   }
 
@@ -381,15 +398,22 @@ class DrlAdapter implements GameAdapter {
         this.debug.hasSave = message.hasSave;
         break;
       case 'frame': {
-        const grid: Grid = { cols: message.cols, rows: message.rows, cells: message.cells, cursor: message.cursor };
+        const grid: Grid = {
+          cols: message.cols,
+          rows: message.rows,
+          cells: message.cells,
+          cursor: message.cursor,
+        };
         this.#grid = grid;
+        this.#memoryBytes = message.memoryBytes;
         const hud = parseHud(grid);
         if (!hud && this.#hud) this.#lastMessages = [];
         this.#hud = hud;
         this.debug.state = hud;
         this.debug.inGame = Boolean(hud);
         const player = hud ? playerCell(grid) : null;
-        if (player?.x !== this.#lastPlayer?.x || player?.y !== this.#lastPlayer?.y) this.#pan = { x: 0, y: 0 };
+        if (player?.x !== this.#lastPlayer?.x || player?.y !== this.#lastPlayer?.y)
+          this.#pan = { x: 0, y: 0 };
         this.#lastPlayer = player;
         this.#renderer?.setGrid(grid);
         this.#logMessages(grid);
@@ -538,7 +562,9 @@ class DrlAdapter implements GameAdapter {
       band.className = 'drl-band';
       band.style.cssText =
         "position:absolute;top:0;left:0;right:0;z-index:1;box-sizing:border-box;padding:6px 10px;display:grid;gap:3px;background:rgba(10,9,7,.94);border-bottom:1px solid rgba(236,227,207,.12);color:#ece3cf;font:13px/1.3 'Inter Variable',system-ui,sans-serif;cursor:pointer";
-      band.addEventListener('click', () => this.#host?.emit({ type: 'shell-command', command: SHELL_COMMAND.log }));
+      band.addEventListener('click', () =>
+        this.#host?.emit({ type: 'shell-command', command: SHELL_COMMAND.log }),
+      );
       mount.append(band);
       this.#band = band;
     }
@@ -573,7 +599,10 @@ class DrlAdapter implements GameAdapter {
         row.textContent = line;
         this.#band.append(row);
       }
-      this.#band.setAttribute('aria-label', `${text.textContent}. ${messages.join(' ')}. Open the message log`);
+      this.#band.setAttribute(
+        'aria-label',
+        `${text.textContent}. ${messages.join(' ')}. Open the message log`,
+      );
     }
     return this.#band.getBoundingClientRect().height;
   }
@@ -587,7 +616,8 @@ class DrlAdapter implements GameAdapter {
   /** Long press on the map: DRL's look mode. */
   #longPress(clientX: number, clientY: number): void {
     const hit = this.#renderer?.hitTest(clientX, clientY);
-    if (hit?.kind === 'cell' && hit.view === 'map' && this.#context === 'map') this.#send(['l'.charCodeAt(0)]);
+    if (hit?.kind === 'cell' && hit.view === 'map' && this.#context === 'map')
+      this.#send(['l'.charCodeAt(0)]);
   }
 
   #panBy(dx: number, dy: number): void {
@@ -610,4 +640,3 @@ export function createAdapter(): GameAdapter & { readonly debug: DrlDebugState }
 
 const module: GameModule = { createAdapter };
 export default module;
-

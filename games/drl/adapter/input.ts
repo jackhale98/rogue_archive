@@ -11,7 +11,12 @@
  * Commands carry the keys DRL binds by default (drlkeybindings.pas); the
  * key-coverage check compares the two (tests/conformance/key-coverage.ts).
  */
-import type { GameCommandDescriptor, GameInput, TouchAction, TouchControlLayout } from '@rogue-archive/game-api';
+import type {
+  GameCommandDescriptor,
+  GameInput,
+  TouchAction,
+  TouchControlLayout,
+} from '@rogue-archive/game-api';
 import { SHELL_COMMAND } from '@rogue-archive/game-api';
 
 /** curses key codes (FreePascal's ncurses unit, port/ncurses.pas). */
@@ -107,10 +112,42 @@ export const DRL_COMMANDS: readonly DrlCommand[] = [
   command('move-s', 'Move down', '↓', [KEY.DOWN], '↓', 'Movement'),
   command('move-se', 'Move down-right', '↘', [KEY.NPAGE], 'PgDn', 'Movement'),
   command('wait', 'Wait a turn', 'Wait', [ch('w')], 'w', 'Movement'),
-  command('multi-wait', 'Wait several turns', 'Rest', [ch('W')], 'W', 'Movement', 'Until an enemy comes into view.'),
-  command('run', 'Repeat move (run)', 'Run', [ch(',')], ',', 'Movement', 'Then a direction: move until something comes into view.'),
-  command('action', 'Action', 'Action', [SPACE], 'Space', 'Actions', 'Open or close a door, take the stairs, press a button.'),
-  command('fire', 'Fire', 'Fire', [ch('f')], 'f', 'Actions', 'Fire the wielded weapon at the current target.'),
+  command(
+    'multi-wait',
+    'Wait several turns',
+    'Rest',
+    [ch('W')],
+    'W',
+    'Movement',
+    'Until an enemy comes into view.',
+  ),
+  command(
+    'run',
+    'Repeat move (run)',
+    'Run',
+    [ch(',')],
+    ',',
+    'Movement',
+    'Then a direction: move until something comes into view.',
+  ),
+  command(
+    'action',
+    'Action',
+    'Action',
+    [SPACE],
+    'Space',
+    'Actions',
+    'Open or close a door, take the stairs, press a button.',
+  ),
+  command(
+    'fire',
+    'Fire',
+    'Fire',
+    [ch('f')],
+    'f',
+    'Actions',
+    'Fire the wielded weapon at the current target.',
+  ),
   command('alt-fire', 'Alternative fire', 'Alt fire', [ch('F')], 'F', 'Actions'),
   command('target', 'Target', 'Target', [ch('t')], 't', 'Actions', 'Pick a target, then fire.'),
   command('alt-target', 'Alternative target', 'Alt target', [ch('T')], 'T', 'Actions'),
@@ -134,7 +171,14 @@ export const DRL_COMMANDS: readonly DrlCommand[] = [
   command('help', 'Help', 'Help', [ch('h')], 'h', 'Screens'),
   command('menu', 'Game menu (save and quit)', 'Menu', [ESCAPE], 'Esc', 'Screens'),
   ...Array.from({ length: 9 }, (_, i) =>
-    command(`quick-${i + 1}`, `Quick slot ${i + 1}`, `Slot ${i + 1}`, [ch(String(i + 1))], String(i + 1), 'Quick slots'),
+    command(
+      `quick-${i + 1}`,
+      `Quick slot ${i + 1}`,
+      `Slot ${i + 1}`,
+      [ch(String(i + 1))],
+      String(i + 1),
+      'Quick slots',
+    ),
   ),
   command('ok', 'OK / select', 'OK', [ENTER], 'Enter', 'Keys'),
   command('escape', 'Escape / cancel', 'Esc', [ESCAPE], 'Esc', 'Keys'),
@@ -159,15 +203,7 @@ export function findCommand(id: string): DrlCommand | undefined {
  * texts); `pager` DRL's [more] prompt over the map.
  */
 export type DrlContext =
-  | 'title'
-  | 'map'
-  | 'look'
-  | 'direction'
-  | 'menu'
-  | 'text'
-  | 'yesno'
-  | 'pager'
-  | 'busy';
+  'title' | 'map' | 'look' | 'direction' | 'menu' | 'text' | 'yesno' | 'pager' | 'busy';
 
 const PAD = {
   nw: 'move-nw',
@@ -197,12 +233,19 @@ export interface MapSituation {
 }
 
 /** The dock for a context: tap the main action; long-press fans its related actions. */
-export function controlsFor(context: DrlContext, situation: MapSituation = { health: null }): TouchControlLayout {
+export function controlsFor(
+  context: DrlContext,
+  situation: MapSituation = { health: null },
+): TouchControlLayout {
   const palette = [...PALETTE, SHELL_COMMAND.keyboard, SHELL_COMMAND.log];
   switch (context) {
     case 'map': {
       const actions: (string | TouchAction)[] = [
-        { command: 'fire', emphasis: 'primary', alternates: ['target', 'alt-fire', 'alt-target', 'next-target'] },
+        {
+          command: 'fire',
+          emphasis: 'primary',
+          alternates: ['target', 'alt-fire', 'alt-target', 'next-target'],
+        },
         { command: 'action', alternates: ['pickup', 'alt-pickup', 'run', 'multi-wait'] },
         { command: 'reload', alternates: ['alt-reload', 'swap', 'unload', 'active'] },
         { command: 'inventory', alternates: ['equipment', 'traits', 'player', 'assemblies'] },
