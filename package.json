@@ -25,6 +25,8 @@
     "build:hyperrogue": "bash games/hyperrogue/scripts/build.sh",
     "build:angband": "bash games/angband/scripts/build.sh",
     "test:engine:angband": "bash games/angband/scripts/test-engine.sh",
+    "build:drl": "bash games/drl/scripts/build.sh",
+    "test:engine:drl": "bash games/drl/scripts/test-engine.sh",
     "build:cataclysm-dda": "bash games/cataclysm-dda/scripts/build.sh",
     "test:engine:cataclysm-dda": "bash games/cataclysm-dda/scripts/test-engine.sh",
     "stage:runtimes": "node tools/stage-runtimes.mjs",
@@ -44,6 +46,7 @@
     "canary:hyperrogue": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/hyperrogue/scripts/build.sh && bash games/hyperrogue/scripts/test-engine.sh\"",
     "canary:nethack": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/nethack/scripts/build.sh && bash games/nethack/scripts/test-engine.sh\"",
     "canary:angband": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/angband/scripts/build.sh && bash games/angband/scripts/test-engine.sh\"",
+    "canary:drl": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/drl/scripts/build.sh && bash games/drl/scripts/test-engine.sh\"",
     "canary:cataclysm-dda": "ROGUE_ARCHIVE_UPSTREAM_REF=${ROGUE_ARCHIVE_UPSTREAM_REF:-latest-release} sh -c \"bash games/cataclysm-dda/scripts/build.sh && bash games/cataclysm-dda/scripts/test-engine.sh\""
   },
   "devDependencies": {

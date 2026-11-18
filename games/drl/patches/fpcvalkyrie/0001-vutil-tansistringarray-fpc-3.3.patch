@@ -1,0 +1,16 @@
+--- a/src/vutil.pas
++++ b/src/vutil.pas
+@@ -44,7 +44,13 @@
+ // Translation table of Printable characters
+      TPrintableCharToByte = array[33..126] of Byte;
+ //
++{$IF FPC_FULLVERSION >= 30301}
++     // FreePascal 3.3's SysUtils has its own TAnsiStringArray: the same type
++     // under both names, or units that use both see two incompatible types.
++     TAnsiStringArray = SysUtils.TAnsiStringArray;
++{$ELSE}
+      TAnsiStringArray = array of AnsiString;
++{$ENDIF}
+ //
+      TVersion     = array [1..4] of Byte;
+      // Log levels. LOGNONE means no logging.
