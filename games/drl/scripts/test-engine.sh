@@ -48,7 +48,7 @@ for object in "${LUA_OBJECTS[@]}"; do
   while [ "$(jobs -rp | wc -l)" -ge "$(nproc)" ]; do wait -n; done
 done
 wait
-ar rcs "$NATIVE/lua/lua5.1.a" "${LUA_OBJECTS[@]/#/$NATIVE/lua/}"
+ar rcs "$NATIVE/lua/liblua5.1.a" "${LUA_OBJECTS[@]/#/$NATIVE/lua/}"
 FPC_UNITS="$FPC_DIR/lib/fpc/$FPC_VERSION/units/x86_64-linux"
 # The packages the WebAssembly build uses, and those Valkyrie's Linux code
 # paths need (x11, pthreads, rtl-console); not ncurses: port/ncurses.pas is the curses.
@@ -60,7 +60,7 @@ NATIVE_FLAGS+=(-Fu"$VSRC/src" -Fu"$VSRC/libs" -Fl"$NATIVE/lua" -FU"$NATIVE/obj" 
 "$FPC_NATIVE" "${NATIVE_FLAGS[@]}" "$GAME_DIR/tests/conformance/rareplay.pas"
 (cd "$SRC" && "$FPC_NATIVE" "${NATIVE_FLAGS[@]}" -Farareplay src/drl.pas)
 (cd "$SRC" && "$FPC_NATIVE" "${NATIVE_FLAGS[@]}" src/drlwad.pas)
-cc -O2 -std=gnu17 -w -DLUA_USE_POSIX -o "$NATIVE/lua/lua-host" "$LUA_SRC/src/lua.c" "$NATIVE/lua/lua5.1.a" -lm
+cc -O2 -std=gnu17 -w -DLUA_USE_POSIX -o "$NATIVE/lua/lua-host" "$LUA_SRC/src/lua.c" "$NATIVE/lua/liblua5.1.a" -lm
 "$NATIVE/lua/lua-host" "$GAME_DIR/port/console-manifest.lua" "$SRC" "$SRC" "$NATIVE/data" > "$NATIVE/manifest.lua"
 (cd "$NATIVE" && ./drlwad "$NATIVE/manifest.lua")
 cp "$SRC/bin/config.lua" "$NATIVE/data/config.lua"

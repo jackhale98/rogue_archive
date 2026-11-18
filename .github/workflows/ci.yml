@@ -213,9 +213,9 @@ jobs:
         with:
           path: games/angband/dist
           key: ${{ steps.angband.outputs.cache-primary-key }}
-      - name: Install FreePascal to build the pinned one from (DRL)
+      - name: Install FreePascal to build the pinned one from, and X11 for the native reference (DRL)
         if: steps.drl.outputs.cache-hit != 'true'
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fpc
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fpc libx11-dev
       - name: Cache FreePascal (DRL)
         if: steps.drl.outputs.cache-hit != 'true'
         uses: actions/cache@v4

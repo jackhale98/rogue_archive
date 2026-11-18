@@ -1,7 +1,7 @@
 # Building DRL for Rogue Archive
 
 ```sh
-sudo apt-get install fpc clang     # a released FreePascal (3.2.x) to build the pinned one from; a C compiler
+sudo apt-get install fpc clang libx11-dev   # a released FreePascal (3.2.x) to build the pinned one from; a C compiler; X11 for the native reference build (test:engine:drl)
 pnpm build:drl                     # games/drl/dist: drl.mjs, drl.wasm, drl-data.data, licenses/, runtime-manifest.json
 pnpm test:engine:drl               # conformance: upstream drift, key coverage, native vs WebAssembly replay
 pnpm stage:runtimes                # copies it into the site
