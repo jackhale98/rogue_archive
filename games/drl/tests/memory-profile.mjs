@@ -35,7 +35,19 @@ const browser = isWebKit
     )
   : await chromium.launch({ args: ['--enable-precise-memory-info'] });
 const PAGE_PROCESS = isWebKit ? 'WPEWebProcess' : 'chrom.*--type=renderer';
-const page = await browser.newPage({ viewport: { width: viewWidth, height: viewHeight } });
+const context = await browser.newContext({ viewport: { width: viewWidth, height: viewHeight } });
+if (tiles) {
+  // The Display setting, in the game's settings (it applies when DRL next
+  // starts), on a page of its own that is closed before measuring.
+  const setup = await context.newPage();
+  await setup.goto(`${base}?debug=1#/play/drl`);
+  await setup.getByRole('button', { name: 'Menu', exact: true }).click();
+  await setup.getByRole('dialog').getByLabel('Display').selectOption('tiles');
+  await setup.waitForTimeout(1000);
+  await setup.close();
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+}
+const page = await context.newPage();
 
 const t0 = Date.now();
 const secs = () => ((Date.now() - t0) / 1000).toFixed(1);
@@ -113,16 +125,12 @@ const press = async (key, pause = 400) => {
   await page.keyboard.press(key);
   await page.waitForTimeout(pause);
 };
+/** Escape until the map (the graphical mode ignores keys while a screen fades in or out). */
+const backToMap = async () => {
+  for (let i = 0; i < 8 && (await debug()).context !== 'map'; i++) await press('Escape', 700);
+  await waitFor((d) => d.context === 'map');
+};
 
-if (tiles) {
-  // The Display setting, in the game's settings: it applies when DRL next starts.
-  await page.goto(`${base}?debug=1#/play/drl`);
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('dialog').getByLabel('Display').selectOption('tiles');
-  await page.waitForTimeout(500);
-  await page.goto('about:blank');
-  await page.waitForTimeout(2000);
-}
 enter('page load and start (to the main menu)');
 await page.goto(`${base}?debug=1#/play/drl`);
 await waitFor((d) => /Press <Enter> to continue|New game|Continue game/.test(d.text));
@@ -141,11 +149,9 @@ for (const key of ['ArrowRight', 'ArrowRight', 'ArrowDown', 'w', 'w', 'ArrowLeft
   await press(key, 300);
 await press('i', 800);
 await waitFor((d) => /Inventory/.test(d.text));
-await press('Escape', 500);
-await waitFor((d) => d.context === 'map');
+await backToMap();
 await press('h', 800);
-await press('Escape', 500);
-await waitFor((d) => d.context === 'map');
+await backToMap();
 enter('Save & Quit, back to the main menu');
 await press('Escape', 600);
 await waitFor((d) => /Save & Quit/.test(d.text));

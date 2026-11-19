@@ -94,6 +94,8 @@ export interface TilesPage {
    */
   beginInstance(): void;
   instanceStarted(): void;
+  /** DRL drew a frame (its GL console uploaded its cells). */
+  frameDrawn(): void;
   endInstance(): void;
 }
 
@@ -281,6 +283,7 @@ export function createHost({ post, tiles }: HostOptions): {
   /** The graphical mode's text (Valkyrie's GL console cells, port/webgl.js), when it changed. */
   function presentConsole(raw: Uint32Array): void {
     if (!lastConsole) tiles?.instanceStarted();
+    tiles?.frameDrawn();
     if (lastConsole && lastConsole.length === raw.length && lastConsole.every((v, i) => v === raw[i])) return;
     lastConsole = raw.slice();
     const grid = consoleGrid(raw);

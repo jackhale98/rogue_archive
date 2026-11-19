@@ -148,7 +148,7 @@ class DrlAdapter implements GameAdapter {
       key: 'display',
       label: 'Display',
       description:
-        "Text is DRL's console screen, as in a terminal. Tiles is DRL's own graphical mode: its sprites and lighting, and its mouse (tap to walk, long-press to fire). Tiles downloads about 4 MB more and needs WebGL 2. Takes effect the next time DRL starts.",
+        "Text is DRL's console screen, as in a terminal. Tiles is DRL's own graphical mode: its sprites and lighting, and its mouse (tap to walk, long-press to fire). Tiles needs WebGL 2 and downloads about 4 MB (Text: 1.5 MB). Takes effect the next time DRL starts.",
       options: [
         { value: 'text', label: 'Text' },
         { value: 'tiles', label: 'Tiles' },

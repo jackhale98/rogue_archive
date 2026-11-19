@@ -12,9 +12,9 @@
  *   Each run of the program gets a fresh canvas and context.
  * - Keys: SDL listens on a private element (SDL_EMSCRIPTEN_KEYBOARD_ELEMENT),
  *   not the page, so the shell decides what reaches the game. A key is held
- *   for a few display frames: DRL reads keys as pressed and released states
- *   once a frame (vio.pas), and a press and release in the same frame would
- *   be lost.
+ *   for two of DRL's frames: DRL reads keys as pressed and released states
+ *   once a frame (vioeventstate.pas), and a press and release between two of
+ *   its frames is lost.
  * - Touch: a tap is a left click and a long press a right click, as DRL's
  *   mouse (drlbase.pas HandleMouseEvent: left walks to or travels to a
  *   cell, uses or picks up what the player stands on; right fires at it;
@@ -113,10 +113,8 @@ const CANVAS_ID = 'ra-drl-canvas';
 const LONG_PRESS_MS = 500;
 const SLOP_PX = 12;
 
-const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-const frames = async (n: number) => {
-  for (let i = 0; i < n; i++) await nextFrame();
-};
+/** Longest wait for one of DRL's frames (it may not draw: a hidden tab, a long load). */
+const FRAME_TIMEOUT_MS = 400;
 
 /** Records listeners added to window and document while a module instance starts, to remove them when it ends. */
 class ListenerTracker {
@@ -182,6 +180,9 @@ export class TilesSurface implements TilesPage {
   #sending = false;
   #touch: { id: number; x: number; y: number; moved: boolean; long: boolean; timer: number } | null = null;
   #observer: MutationObserver | null = null;
+  /** DRL's frames drawn (its GL console's uploads, one a frame), and who waits for the next. */
+  #drawn = 0;
+  #frameWaiters: (() => void)[] = [];
   /** Called when the canvas is replaced (a new run). */
   onCanvas: ((canvas: HTMLCanvasElement) => void) | null = null;
 
@@ -196,6 +197,16 @@ export class TilesSurface implements TilesPage {
     root.append(keys);
     for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel'] as const)
       root.addEventListener(type, (event) => this.#onTouch(event), { capture: true, passive: false });
+    // SDL 3 reads pointer events, a touch's too (as a left click): those stop
+    // here; a mouse's go on to SDL (desktops, and the clicks below).
+    for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointercancel'] as const)
+      root.addEventListener(
+        type,
+        (event) => {
+          if (event.pointerType !== 'mouse') event.stopPropagation();
+        },
+        { capture: true },
+      );
     mount.append(root);
     this.root = root;
     this.#keys = keys;
@@ -251,6 +262,28 @@ export class TilesSurface implements TilesPage {
 
   beginInstance(): void {
     this.#listeners.start();
+  }
+
+  frameDrawn(): void {
+    this.#drawn++;
+    for (const resolve of this.#frameWaiters.splice(0)) resolve();
+  }
+
+  /**
+   * Waits until DRL has drawn `n` more frames (each at most FRAME_TIMEOUT_MS):
+   * a key or button held across DRL's frames, however fast it draws (its
+   * event loop draws only when 16 ms have passed, and slowly in software).
+   */
+  async #frames(n: number): Promise<void> {
+    const until = this.#drawn + n;
+    while (this.#drawn < until) {
+      const before = this.#drawn;
+      await new Promise<void>((resolve) => {
+        this.#frameWaiters.push(resolve);
+        setTimeout(resolve, FRAME_TIMEOUT_MS);
+      });
+      if (this.#drawn === before) return;
+    }
   }
 
   instanceStarted(): void {
@@ -328,11 +361,11 @@ export class TilesSurface implements TilesPage {
         if (key.ctrl) this.#dispatchKey('keydown', { key: 'Control', code: 'ControlLeft' }, 17);
         this.#dispatchKey('keydown', key);
         if (key.key.length === 1 && !key.ctrl) this.#dispatchKey('keypress', key);
-        await frames(3);
+        await this.#frames(2);
         this.#dispatchKey('keyup', key);
         if (key.ctrl) this.#dispatchKey('keyup', { key: 'Control', code: 'ControlLeft' }, 17);
         if (key.shift) this.#dispatchKey('keyup', { key: 'Shift', code: 'ShiftLeft' }, 16);
-        await frames(1);
+        await this.#frames(1);
       }
     } finally {
       this.#sending = false;
@@ -362,16 +395,28 @@ export class TilesSurface implements TilesPage {
   async click(clientX: number, clientY: number, button = 0): Promise<void> {
     const canvas = this.#canvas;
     if (!canvas) return;
-    const init = { clientX, clientY, screenX: clientX, screenY: clientY, bubbles: true, cancelable: true };
-    canvas.dispatchEvent(new MouseEvent('mousemove', { ...init, buttons: 0 }));
-    await frames(1);
-    canvas.dispatchEvent(new MouseEvent('mousedown', { ...init, button, buttons: button === 2 ? 2 : 1 }));
-    await frames(3);
-    canvas.dispatchEvent(new MouseEvent('mouseup', { ...init, button, buttons: 0 }));
+    // SDL 3 reads pointer events (a mouse's: SDL's mouse); held for a few
+    // frames, as keys are.
+    const init = {
+      clientX,
+      clientY,
+      screenX: clientX,
+      screenY: clientY,
+      pointerId: 1,
+      pointerType: 'mouse',
+      isPrimary: true,
+      bubbles: true,
+      cancelable: true,
+    };
+    canvas.dispatchEvent(new PointerEvent('pointermove', { ...init, button: -1, buttons: 0 }));
+    await this.#frames(1);
+    canvas.dispatchEvent(new PointerEvent('pointerdown', { ...init, button, buttons: button === 2 ? 2 : 1 }));
+    await this.#frames(2);
+    canvas.dispatchEvent(new PointerEvent('pointerup', { ...init, button, buttons: 0 }));
   }
 
   #onTouch(event: TouchEvent): void {
-    // SDL turns every touch into a left click: taps and long presses are ours.
+    // SDL would turn every touch into a left click: taps and long presses are ours.
     event.stopPropagation();
     if (event.cancelable) event.preventDefault();
     const touch = event.changedTouches[0];

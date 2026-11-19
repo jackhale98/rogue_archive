@@ -5,7 +5,6 @@ import {
   newGame,
   openDrl,
   screenText,
-  settle,
   waitForContext,
   waitForText,
 } from './drl-helpers.ts';
@@ -23,6 +22,35 @@ test.describe('DRL, Tiles display', () => {
     const canvas = page.locator('canvas.drl-canvas');
     await canvas.focus();
     const press = (key: string) => page.keyboard.press(key);
+    // DRL's mouse: a click on an entry of its menus chooses it (here the challenge games).
+    for (let i = 0; i < 4 && /Press <Enter> to continue/.test(await screenText(page)); i++) {
+      await press('Enter');
+      await page.waitForTimeout(800);
+    }
+    await waitForText(page, /New game/);
+    await press('Enter');
+    await waitForText(page, /Challenge game/);
+    const challenge = await page.evaluate(() => {
+      const d = (
+        window as unknown as {
+          __rogueArchive: {
+            adapter: {
+              debug: {
+                screenText(): string;
+                cellToClient(x: number, y: number): { x: number; y: number } | null;
+              };
+            };
+          };
+        }
+      ).__rogueArchive.adapter.debug;
+      const rows = d.screenText().split('\n');
+      const y = rows.findIndex((row) => row.includes('Challenge game'));
+      return d.cellToClient(rows[y]!.indexOf('Challenge game') + 2, y);
+    });
+    await page.mouse.click(challenge!.x, challenge!.y);
+    await waitForText(page, /Angel Game/);
+    await press('Escape');
+    await waitForText(page, /New game/);
     await newGame(page, 'Sprites', press);
 
     const state = await drl(page);
@@ -46,12 +74,16 @@ test.describe('DRL, Tiles display', () => {
       await press(key);
       await page.waitForTimeout(300);
     }
-    await settle(page, press);
+    // Keys reach DRL a frame or two later than in the console (held across its
+    // frames): wait for each screen rather than pressing again.
+    await waitForContext(page, 'map');
     await press('i');
     await waitForText(page, /Inventory/);
     await waitForContext(page, 'menu');
     await press('Escape');
-    await settle(page, press);
+    await waitForContext(page, 'map');
+    await page.waitForTimeout(1000);
+    await waitForContext(page, 'map');
 
     // DRL's game menu: Save & Quit (its last entry) ends at the main menu.
     await press('Escape');
