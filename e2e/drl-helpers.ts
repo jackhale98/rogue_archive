@@ -137,3 +137,27 @@ export async function newGameByTaps(page: Page, name: string): Promise<void> {
   }
   await waitForContext(page, 'map');
 }
+
+/**
+ * Chooses DRL's Display (the game's settings, in the shell's menu) and starts
+ * DRL again with it: the setting applies at the next launch.
+ */
+export async function chooseDisplay(page: Page, display: 'text' | 'tiles', tap = false): Promise<void> {
+  const menu = page.getByRole('button', { name: 'Menu', exact: true });
+  if (tap) await menu.tap();
+  else await menu.click();
+  await page.getByRole('dialog').getByLabel('Display').selectOption(display);
+  // Settings are stored in IndexedDB: let the write land before the game starts again.
+  await page.waitForTimeout(500);
+  await page.reload();
+  await waitForText(page, /Press <Enter> to continue|New game|Continue game/, 120_000);
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          (window as unknown as { __rogueArchive?: { adapter: { debug: { display: string } } } })
+            .__rogueArchive?.adapter.debug.display,
+      ),
+    )
+    .toBe(display);
+}

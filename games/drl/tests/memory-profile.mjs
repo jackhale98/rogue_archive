@@ -9,6 +9,13 @@
 //
 //   node games/drl/tests/memory-profile.mjs <base URL>       (Chromium)
 //   RA_BROWSER=webkit node games/drl/tests/memory-profile.mjs <base URL>   (WebKit: Safari's engine)
+//   RA_DISPLAY=tiles ...      DRL's Tiles display (chosen in the game's settings first)
+//   RA_VIEWPORT=390x844 ...   the page's size (default 1280x800)
+//   RA_LP_THREADS=0 ...       WebKit: Mesa's llvmpipe without its rasterizer
+//                             threads (on Linux, WebKit's WebGL renders in the
+//                             page's process with Mesa's software GL; each of
+//                             its threads keeps its own bins, a few hundred MB
+//                             when a level is first drawn: not the game's)
 //
 // Opens DRL on a production build (vite preview), goes through its main menu
 // to a new game, walks, opens the inventory and the help, then Save & Quit.
@@ -20,11 +27,15 @@ const [base] = process.argv.slice(2);
 if (!base) throw new Error('usage: memory-profile.mjs <base URL>');
 const MB = 1048576;
 const isWebKit = process.env.RA_BROWSER === 'webkit';
+const tiles = process.env.RA_DISPLAY === 'tiles';
+const [viewWidth, viewHeight] = (process.env.RA_VIEWPORT ?? '1280x800').split('x').map(Number);
 const browser = isWebKit
-  ? await webkit.launch()
+  ? await webkit.launch(
+      process.env.RA_LP_THREADS ? { env: { ...process.env, LP_NUM_THREADS: process.env.RA_LP_THREADS } } : {},
+    )
   : await chromium.launch({ args: ['--enable-precise-memory-info'] });
 const PAGE_PROCESS = isWebKit ? 'WPEWebProcess' : 'chrom.*--type=renderer';
-const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const page = await browser.newPage({ viewport: { width: viewWidth, height: viewHeight } });
 
 const t0 = Date.now();
 const secs = () => ((Date.now() - t0) / 1000).toFixed(1);
@@ -103,6 +114,15 @@ const press = async (key, pause = 400) => {
   await page.waitForTimeout(pause);
 };
 
+if (tiles) {
+  // The Display setting, in the game's settings: it applies when DRL next starts.
+  await page.goto(`${base}?debug=1#/play/drl`);
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('dialog').getByLabel('Display').selectOption('tiles');
+  await page.waitForTimeout(500);
+  await page.goto('about:blank');
+  await page.waitForTimeout(2000);
+}
 enter('page load and start (to the main menu)');
 await page.goto(`${base}?debug=1#/play/drl`);
 await waitFor((d) => /Press <Enter> to continue|New game|Continue game/.test(d.text));
@@ -129,7 +149,12 @@ await waitFor((d) => d.context === 'map');
 enter('Save & Quit, back to the main menu');
 await press('Escape', 600);
 await waitFor((d) => /Save & Quit/.test(d.text));
-await press('ArrowUp', 300);
+// The graphical mode's menu fades in, ignoring keys meanwhile.
+for (let i = 0; i < 12; i++) {
+  const selected = await page.evaluate(() => window.__rogueArchive.adapter.debug.selectedEntry());
+  if (selected === 'Save & Quit') break;
+  await press('ArrowUp', 700);
+}
 await press('Enter', 300);
 await waitFor((d) => /Continue game/.test(d.text), 30_000);
 await page.waitForTimeout(2000);
@@ -137,7 +162,9 @@ running = false;
 await sampler;
 await browser.close();
 
-console.log(`\n${isWebKit ? 'WebKit (WPE)' : 'Chromium'}: maxima per phase, MB`);
+console.log(
+  `\n${isWebKit ? 'WebKit (WPE)' : 'Chromium'}, ${tiles ? 'Tiles' : 'Text'}, ${viewWidth}x${viewHeight}: maxima per phase, MB`,
+);
 console.log('phase | rss | peak (VmHWM) | anonymous | module memory | JS heap');
 for (const { name, max } of phases)
   console.log(

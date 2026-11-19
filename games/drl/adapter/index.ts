@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /**
- * Rogue Archive adapter for DRL.
+ * Rogue Archive adapter for DRL, in either of DRL's displays (the Display
+ * setting, applied at the next launch):
  *
- * DRL runs in a Web Worker in its console mode, on a small curses
- * (port/ncurses.pas) that sends its 80x25 screen on each refresh. The screen
- * is drawn with the shared terminal renderer (@rogue-archive/term-view):
- * whole on desktop; on phones the map is zoomed and follows the player, a
- * box DRL draws over the map (its menus, the inventory) is lifted into a
- * sheet, full screens fit the screen, and the HUD becomes a status band.
+ * - Text (the default): DRL runs in a Web Worker in its console mode, on a
+ *   small curses (port/ncurses.pas) that sends its 80x25 screen on each
+ *   refresh. The screen is drawn with the shared terminal renderer
+ *   (@rogue-archive/term-view): whole on desktop; on phones the map is
+ *   zoomed and follows the player, a box DRL draws over the map (its menus,
+ *   the inventory) is lifted into a sheet, full screens fit the screen, and
+ *   the HUD becomes a status band.
+ * - Tiles: DRL's own graphical mode (sprites, lighting, its mouse) runs on
+ *   the page with WebGL 2 (adapter/tiles.ts, adapter/host.ts); the text it
+ *   draws over the graphics is read back in the same 80x25 form, so the
+ *   contexts, the dock, the status band on phones and Save & Quit work the
+ *   same way.
  *
  * DRL has its own launcher: its main menu starts, continues and ends games,
  * and shows the scores. Leaving a game in progress uses its Save & Quit.
@@ -21,6 +28,7 @@ import {
   type GameHost,
   type GameInput,
   type GameModule,
+  type GameSettingDescriptor,
   type InitializeOptions,
   type LogEntry,
   type Presentation,
@@ -47,6 +55,8 @@ import {
   type DrlContext,
 } from './input.ts';
 import type { FromWorker, ToWorker } from './protocol.ts';
+import { createHost } from './host.ts';
+import { TilesSurface } from './tiles.ts';
 import {
   MAP_BOTTOM,
   MAP_TOP,
@@ -65,6 +75,8 @@ export const GAME_ID = 'drl';
 const FLUSH_TIMEOUT_MS = 8000;
 const BUSY_DELAY_MS = 350;
 const DEFAULT_MAP_CELL_CSS = 20;
+
+type Display = 'text' | 'tiles';
 /**
  * The terminal's colours, by curses number (black, red, green, yellow, blue,
  * magenta, cyan, white), then bold: a VGA text-mode palette, as DRL's
@@ -90,6 +102,8 @@ const PALETTE = [
 ];
 
 export interface DrlDebugState {
+  /** The display this run uses (the Display setting when it started). */
+  display: Display;
   context: DrlContext | null;
   /** DRL's HUD is on screen (a game in progress). */
   inGame: boolean;
@@ -102,6 +116,10 @@ export interface DrlDebugState {
   rowText(y: number): string;
   views(): string[];
   cellToClient(x: number, y: number): { x: number; y: number } | null;
+  /** Tiles: DRL's window (canvas pixels). */
+  tilesWindow(): { width: number; height: number } | null;
+  /** The highlighted entry of DRL's game menu, or null. */
+  selectedEntry(): string | null;
 }
 
 function findFile(files: RuntimeFile[], path: string): RuntimeFile {
@@ -113,15 +131,32 @@ function findFile(files: RuntimeFile[], path: string): RuntimeFile {
 class DrlAdapter implements GameAdapter {
   readonly apiVersion = GAME_API_VERSION;
   readonly gameId = GAME_ID;
-  readonly capabilities = {
-    keyboard: true,
-    pointer: false,
-    touch: true,
-    save: true,
-    saveExport: true,
-    offline: true,
-    audio: false,
-  };
+  get capabilities() {
+    return {
+      keyboard: true,
+      // DRL's graphical mode has its mouse; its console has none.
+      pointer: this.#display === 'tiles',
+      touch: true,
+      save: true,
+      saveExport: true,
+      offline: true,
+      audio: false,
+    };
+  }
+  readonly settings: GameSettingDescriptor[] = [
+    {
+      key: 'display',
+      label: 'Display',
+      description:
+        "Text is DRL's console screen, as in a terminal. Tiles is DRL's own graphical mode: its sprites and lighting, and its mouse (tap to walk, long-press to fire). Tiles downloads about 4 MB more and needs WebGL 2. Takes effect the next time DRL starts.",
+      options: [
+        { value: 'text', label: 'Text' },
+        { value: 'tiles', label: 'Tiles' },
+      ],
+      default: 'text',
+      appliesOn: 'next-launch',
+    },
+  ];
   readonly commands = DRL_COMMANDS;
   readonly touchLayout = DRL_TOUCH_LAYOUT;
   readonly nativeSaveExtensions = [] as const;
@@ -129,7 +164,12 @@ class DrlAdapter implements GameAdapter {
     'DRL saves with Save & Quit in its game menu (Escape on the map); Continue game in its main menu goes on from there. A saved game is removed when you continue it, as in DRL.';
 
   #host: GameHost | null = null;
+  #display: Display = 'text';
   #worker: Worker | null = null;
+  /** Tiles: the page's surface and the host running DRL on this page. */
+  #tiles: TilesSurface | null = null;
+  #tilesHost: ReturnType<typeof createHost> | null = null;
+  #resizeObserver: ResizeObserver | null = null;
   #renderer: TermRenderer | null = null;
   #mount: HTMLElement | null = null;
   #grid: Grid | null = null;
@@ -153,6 +193,7 @@ class DrlAdapter implements GameAdapter {
 
   constructor() {
     this.debug = {
+      display: 'text',
       context: null,
       inGame: false,
       state: null,
@@ -160,8 +201,11 @@ class DrlAdapter implements GameAdapter {
       memoryBytes: () => this.#memoryBytes,
       rowText: (y) => (this.#grid ? screenRow(this.#grid, y).trimEnd() : ''),
       screenText: () => (this.#grid ? screenText(this.#grid) : ''),
-      views: () => this.#renderer?.views.map((view) => view.name) ?? [],
-      cellToClient: (x, y) => this.#renderer?.cellToClient(x, y) ?? null,
+      views: () => (this.#tiles ? ['tiles'] : (this.#renderer?.views.map((view) => view.name) ?? [])),
+      cellToClient: (x, y) =>
+        this.#tiles ? this.#tiles.cellToClient(x, y) : (this.#renderer?.cellToClient(x, y) ?? null),
+      tilesWindow: () => (this.#tiles ? this.#tiles.window : null),
+      selectedEntry: () => this.#selectedLine(),
     };
   }
 
@@ -175,38 +219,65 @@ class DrlAdapter implements GameAdapter {
     };
     const stored = Number(options.settings.mapCellCss);
     if (Number.isFinite(stored) && stored > 0) this.#mapCellCss = stored;
+    this.#display = options.settings.display === 'tiles' ? 'tiles' : 'text';
+    this.debug.display = this.#display;
 
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'drl' });
-    this.#worker = worker;
+    let resolveReady!: () => void;
+    let rejectReady!: (error: unknown) => void;
     const ready = new Promise<void>((resolve, reject) => {
-      worker.onmessage = (event: MessageEvent<FromWorker>) => {
-        const message = event.data;
-        if (message.type === 'ready') resolve();
-        else if (message.type === 'error' && !this.#started)
-          reject(
-            Object.assign(new Error(message.error.message), {
-              kind: message.error.kind,
-              action: message.error.action,
-            }),
-          );
-        this.#onWorkerMessage(message);
-      };
+      resolveReady = resolve;
+      rejectReady = reject;
+    });
+    const receive = (message: FromWorker) => {
+      if (message.type === 'ready') resolveReady();
+      else if (message.type === 'error' && !this.#started)
+        rejectReady(
+          Object.assign(new Error(message.error.message), {
+            kind: message.error.kind,
+            action: message.error.action,
+          }),
+        );
+      this.#onWorkerMessage(message);
+    };
+    signal.addEventListener('abort', () => void this.shutdown(), { once: true });
+    if (this.#display === 'tiles') {
+      // DRL's graphical mode, on this page (SDL draws into a canvas of the document).
+      const tiles = new TilesSurface(options.mount);
+      this.#tiles = tiles;
+      this.#resizeObserver = new ResizeObserver(() => this.#layout());
+      this.#resizeObserver.observe(tiles.root);
+      this.#layout();
+      // Messages arrive as from a worker: after the call that caused them.
+      this.#tilesHost = createHost({ post: (message) => queueMicrotask(() => receive(message)), tiles });
+      this.#post({
+        type: 'init',
+        glue: verified('drl-tiles.mjs'),
+        wasm: verified('drl-tiles.wasm'),
+        data: verified('drl-tiles.data'),
+      });
+    } else {
+      const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'drl' });
+      this.#worker = worker;
+      worker.onmessage = (event: MessageEvent<FromWorker>) => receive(event.data);
       worker.onerror = (event) => {
         event.preventDefault();
-        reject(
+        rejectReady(
           Object.assign(new Error(event.message || 'The game worker failed to start.'), { kind: 'crash' }),
         );
       };
-    });
-    signal.addEventListener('abort', () => void this.shutdown(), { once: true });
-    this.#post({
-      type: 'init',
-      glue: verified('drl.mjs'),
-      wasm: verified('drl.wasm'),
-      data: verified('drl-data.data'),
-    });
+      this.#post({
+        type: 'init',
+        glue: verified('drl.mjs'),
+        wasm: verified('drl.wasm'),
+        data: verified('drl-data.data'),
+      });
+    }
     await ready;
     if (signal.aborted) return;
+    if (this.#tiles) {
+      host.emit({ type: 'status', status: { stage: 'ready' } });
+      return;
+    }
 
     const renderer = new TermRenderer(options.mount, { glyph });
     renderer.canvas.classList.add('drl-canvas');
@@ -230,7 +301,7 @@ class DrlAdapter implements GameAdapter {
     if (this.#started) return;
     this.#started = true;
     this.#post({ type: 'start' });
-    this.#renderer?.canvas.focus({ preventScroll: true });
+    (this.#tiles?.canvas ?? this.#renderer?.canvas)?.focus({ preventScroll: true });
   }
 
   sendInput(input: GameInput): void {
@@ -254,7 +325,10 @@ class DrlAdapter implements GameAdapter {
   }
 
   #send(keys: number[]): void {
-    if (keys.length) this.#post({ type: 'keys', keys });
+    if (!keys.length) return;
+    // Tiles: the keys as the browser events SDL reads.
+    if (this.#tiles) this.#tiles.sendKeys(keys);
+    else this.#post({ type: 'keys', keys });
   }
 
   exitPrompt(): GameExitPrompt | null {
@@ -286,7 +360,12 @@ class DrlAdapter implements GameAdapter {
       "DRL's game menu",
     );
     // The menu opens on Continue; Up wraps to Save & Quit, its last entry.
-    this.#send([KEY.UP]);
+    // The graphical mode's menu fades in and ignores keys meanwhile: Up again
+    // until Save & Quit is the highlighted entry.
+    for (let i = 0; i < 12 && this.#selectedLine() !== 'Save & Quit'; i++) {
+      this.#send([KEY.UP]);
+      await waitUntil(() => this.#selectedLine() === 'Save & Quit', 700, 'Save & Quit').catch(() => {});
+    }
     await waitUntil(() => this.#selectedLine() === 'Save & Quit', 3000, 'Save & Quit');
     this.#send([13]);
     await waitUntil(() => !this.#hud && this.#context === 'title', 20_000, 'Saving');
@@ -311,7 +390,7 @@ class DrlAdapter implements GameAdapter {
   }
 
   async persist(): Promise<void> {
-    if (!this.#worker) return;
+    if (!this.#worker && !this.#tilesHost) return;
     const reply = await this.#request<'flushed'>((id) => ({ type: 'flush', id }), FLUSH_TIMEOUT_MS);
     if (reply.error) throw new Error(reply.error);
   }
@@ -348,14 +427,20 @@ class DrlAdapter implements GameAdapter {
 
   async #shutdown(): Promise<void> {
     const worker = this.#worker;
-    if (!worker) return;
+    if (!worker && !this.#tilesHost) return;
     try {
       await this.persist();
     } catch (error) {
       this.#host?.logger.warn('Could not persist before shutdown', error);
     }
-    worker.terminate();
+    worker?.terminate();
     this.#worker = null;
+    this.#tilesHost?.stop();
+    this.#tilesHost = null;
+    this.#resizeObserver?.disconnect();
+    this.#resizeObserver = null;
+    this.#tiles?.destroy();
+    this.#tiles = null;
     for (const cleanup of this.#cleanup.splice(0)) cleanup();
     clearTimeout(this.#busyTimer);
     this.#band?.remove();
@@ -368,7 +453,8 @@ class DrlAdapter implements GameAdapter {
   }
 
   #post(message: ToWorker): void {
-    this.#worker?.postMessage(message);
+    if (this.#tilesHost) this.#tilesHost.receive(message);
+    else this.#worker?.postMessage(message);
   }
 
   #request<T extends 'flushed' | 'exported' | 'imported'>(
@@ -492,6 +578,10 @@ class DrlAdapter implements GameAdapter {
 
   /** Views for the current presentation and screen. */
   #layout(): void {
+    if (this.#tiles) {
+      this.#layoutTiles(this.#tiles);
+      return;
+    }
     const renderer = this.#renderer;
     const grid = this.#grid;
     if (!renderer || !grid) return;
@@ -542,6 +632,17 @@ class DrlAdapter implements GameAdapter {
       );
     }
     renderer.setViews(views);
+  }
+
+  /**
+   * Tiles: the canvas fills the game's area (DRL sizes its window once, when
+   * it starts, so the area must not depend on the shell's controls, which
+   * may arrive later). On phones the status band covers DRL's message rows
+   * at the top and the controls its HUD at the foot: the band shows both.
+   */
+  #layoutTiles(tiles: TilesSurface): void {
+    this.#setBand(this.#presentation?.compact ? this.#hud : null);
+    tiles.setArea({ left: 0, top: 0, width: tiles.root.clientWidth, height: tiles.root.clientHeight });
   }
 
   /** Phones: DRL's HUD and its latest messages as a band; returns its height in CSS px. */

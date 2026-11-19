@@ -72,18 +72,28 @@ export interface DrlHud {
   level: string;
 }
 
-/** DRL's HUD (rows 22-24, drawn by TDRLIO.DrawHud), or null when it is not on screen. */
+/**
+ * DRL's HUD (rows 22-24, drawn by TDRLIO.DrawHud), or null when it is not
+ * on screen. The console mode has the name and armour, then health and
+ * weapon, then the level; the graphical mode the level first (above its
+ * minimap), then the other two.
+ */
 export function parseHud(grid: Grid): DrlHud | null {
   if (grid.rows < ROWS) return null;
-  const top = rowText(grid, HUD_TOP);
-  const middle = rowText(grid, HUD_TOP + 1);
-  const bottom = rowText(grid, HUD_TOP + 2);
+  const rows = [HUD_TOP, HUD_TOP + 1, HUD_TOP + 2].map((y) => rowText(grid, y));
+  const topIndex = rows.findIndex((row) => /\bA:/.test(row));
+  const middleIndex = rows.findIndex((row) => /^\s*Health:/.test(row));
+  if (topIndex < 0 || middleIndex !== topIndex + 1) return null;
+  const top = rows[topIndex]!;
+  const middle = rows[middleIndex]!;
+  const bottom = rows.find((_, i) => i !== topIndex && i !== middleIndex) ?? '';
   const health = /^\s*Health:\s*(\d+)(?:%|\s*\/\s*(\d+))/.exec(middle);
-  if (!health || !/\bA:/.test(top)) return null;
+  if (!health) return null;
   const current = Number(health[1]);
   const max = health[2] ? Number(health[2]) : 0;
   const percent = max > 0 ? Math.round((current * 100) / max) : current;
-  const armor = /A:\s*(.*)$/.exec(top)?.[1]?.trim() ?? '';
+  // The armour, up to a wide gap (the graphical mode's top row ends with the seed of a seeded game).
+  const armor = /A:\s*(.*?)(?:\s{3,}|$)/.exec(top)?.[1]?.trim() ?? '';
   return {
     name: top.slice(0, top.indexOf('A:')).trim(),
     armor,
