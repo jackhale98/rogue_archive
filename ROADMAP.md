@@ -198,18 +198,19 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 ## Phase 6g — DRL 0.10.12c ⚪ planned (port implemented)
 
 - [x] Feasibility report: docs/games/drl-feasibility.md (FreePascal 3.3.1's wasm32-wasip1 target, an exact commit built from source; Emscripten links its objects with Lua 5.1; branchful exceptions with Asyncify)
-- [x] License/provenance report (GPL-2.0 code and in-repository data; FPC Valkyrie and Lua MIT; FreePascal's RTL LGPL with its static-linking exception; CC BY-SA sprites not needed by the console mode, not shipped; music and sounds not in upstream's repository, not shipped)
+- [x] License/provenance report (GPL-2.0 code and in-repository data; FPC Valkyrie and Lua MIT; FreePascal's RTL LGPL with its static-linking exception; CC BY-SA 4.0 art shipped with the Tiles display only, with attribution and the licence text; SDL 3 and SDL3_image zlib; music and sounds not in upstream's repository, not shipped)
 - [x] Pinned, reproducible build (`pnpm build:drl`): DRL itself unmodified; patches to the FreePascal compiler (C varargs on wasm32), FPC Valkyrie (FreePascal 3.3's `TAnsiStringArray`) and Lua (64-bit `lua_Integer`, as on the desktop); the WADs built by upstream's `drlwad` run in WebAssembly (Lua bytecode records word sizes), without images, sounds and music
 - [x] Console mode through our own curses (upstream's Linux console driver, a Unix build): worker plus terminal renderer, idle sleeps that wait for a key
 - [x] DRL's own main menu as the launcher; saves (user/drl) in IndexedDB, settings and the first-run marker kept beside them, the log in memory; Save and leave (DRL's Save & Quit); export/import of the DRL folder
 - [x] Phone layout: status band from DRL's HUD and its message lines, map around the player with pinch and drag, the game menu as a sheet, full screens fitted; context docks (map, look and targeting, direction, menus and screens, [more], yes/no, typing), long-press look; landscape rails
 - [x] Message log from DRL's message rows
-- [x] Engine conformance (`pnpm test:engine:drl`): key coverage against `drlkeybindings.pas` and Valkyrie's curses driver; upstream drift (23 files); native (Linux, the same FreePascal and curses) vs WebAssembly replay of a seeded game and of continuing its save (65 screens identical)
+- [x] Engine conformance (`pnpm test:engine:drl`): key coverage against `drlkeybindings.pas` and Valkyrie's curses driver; upstream drift (38 files, the graphical mode's included); native (Linux, the same FreePascal and curses) vs WebAssembly replay of a seeded game and of continuing its save (65 screens identical)
 - [x] e2e: desktop (a new game through DRL's menus, walk, inventory, look, Save & Quit, reload, continue, export) and phone (all by taps: start, band, pad, dock, inventory, the game menu as a sheet, Save & Quit, continue; landscape rails)
 - [x] Memory and load time in Chromium and WebKit (BUILDING.md): the module's memory stays at 16 MB; the page's process about +60 MB (Chromium) and +90 MB (WebKit) over the library page; first screen in under 0.7 s locally
 - [x] CI build, deploy, weekly canary (latest release and `development`)
 - [ ] Death and the mortem by touch, in an e2e test (DRL's own screens with the Select/Back dock; not yet exercised)
-- [ ] DRL's graphical mode (sprites: CC BY-SA 4.0, redistributable with attribution) as a Display setting
+- [x] DRL's graphical mode as a Display setting (Tiles; Text stays the default; applies at the next launch): the same objects linked with Emscripten's SDL 3 and SDL3_image (built from source), found by Valkyrie's run-time loaders by name; an OpenGL 3.3 to WebGL 2 bridge (shaders rewritten at compile time, texture buffers emulated; DRL and Valkyrie unpatched); on the page's main thread with Asyncify; its own data package with the art. Rendering checked against a native build of the same seed in headless Chromium and WebKit (screenshots in `games/drl/tests/gate/`); the text DRL draws read back for contexts, the dock, the status band and Save & Quit; taps as DRL's mouse; unit and e2e tests (desktop and phone); memory and sizes in BUILDING.md
+- [ ] Tiles on a physical iPhone (memory: Safari's tab limit) and an Android phone (ANGLE's Vulkan back end: see the feasibility report); turning the phone (DRL's window is sized at launch)
 - [ ] Test on physical phones (iOS Safari first), Firefox and Safari
 - [ ] Move to `experimental` once the definition of done is met (a cover captured from the game; the above)
 

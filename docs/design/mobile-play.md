@@ -296,7 +296,7 @@ Angband draws an 80×24 screen (`games/angband/adapter/index.ts`, drawn with `pa
 
 ## DRL
 
-DRL plays its console mode (`games/drl/adapter/index.ts`, drawn with `packages/term-view`): an 80×25 screen of characters, drawn in a VGA text-mode palette with the curses line characters as box drawing. The console has no mouse (as in a terminal), so taps never reach the game: everything is the dock, the pad and gestures. Everything is read from DRL's own screen (`adapter/state.ts`): its HUD (rows 22-24), its message rows (0-1), its prompts on row 2 and the boxes it draws.
+With the Text display (the default), DRL plays its console mode (`games/drl/adapter/index.ts`, drawn with `packages/term-view`): an 80×25 screen of characters, drawn in a VGA text-mode palette with the curses line characters as box drawing. The console has no mouse (as in a terminal), so taps never reach the game: everything is the dock, the pad and gestures. Everything is read from DRL's own screen (`adapter/state.ts`): its HUD (rows 22-24), its message rows (0-1), its prompts on row 2 and the boxes it draws.
 
 - **Layout on phones:** a status band from DRL's HUD: health (with a bar; DRL shows a percentage, or current/maximum), the weapon and its ammunition, armour, experience, the level's name; then DRL's latest message lines (and a prompt on row 2, such as `[more]`). Tapping it opens the message log. The map (rows 2-21) follows the player at a readable cell size; pinch to zoom, drag to look around (it recentres when the player moves). A box DRL draws over the map (its game menu) is lifted into a sheet over the dimmed map; tap outside to close it (Escape). Full screens (the main menu, the choices before a game, the inventory, equipment, help, the mortem) fit the screen whole, as their text is laid out for 80 columns.
 - **Starting and ending a game:** DRL's own main menu is the start screen (New game, Continue game, scores, settings, Exit) and its choices before a game (game type, a seed, difficulty, class, trait) are full screens; the pad moves through their choices (its arrows are the arrow keys, its diagonals Home, End, Page Up and Page Down), with Select (Enter) in its centre and on the dock; Back is Escape. The name is typed with the device keyboard (the dock offers it). Leaving uses DRL's Save & Quit. Death goes through DRL's own screens (the mortem, the scores) back to its main menu.
@@ -314,6 +314,16 @@ DRL plays its console mode (`games/drl/adapter/index.ts`, drawn with `packages/t
 | Typing (`text`: the name, a seed) | **Done** (Enter), Keyboard, Delete, Cancel |
 
 `games/drl/tests/conformance/key-coverage.ts` checks that each command reaches, through the console's input path, the binding DRL gives its action by default.
+
+### DRL's Tiles display (`games/drl/adapter/tiles.ts`)
+
+The Display setting (the game's settings, applied when DRL next starts) offers DRL's own graphical mode: its sprites, lighting and its mouse, drawn by DRL with WebGL 2 on the page. The design choices, for review on a real phone:
+
+- **DRL's picture, not a recomposition.** The canvas fills the game's area; DRL draws everything, its own HUD, minimap and menus included. DRL sizes its window once, when it starts: one canvas pixel a CSS pixel where its 80×25 interface fits (landscape phones, desktops), larger where it does not (an upright phone: about 820 pixels across 412 CSS pixels, so DRL's 10×19 font is about 5 CSS pixels wide, as small as the Text display's full screens). The art is pixel art and is scaled with sharp pixels. Turning the phone fits the picture with bars until DRL is started again (DRL cannot change its window while it runs).
+- **The status band and dock are kept,** read from the text DRL draws over its graphics (its GL console's cells, the same 80×25 layout as the console): the band covers DRL's message rows at the top and the dock and pad cover its HUD at the foot, and repeat both. Contexts and docks are the Text display's.
+- **Taps are DRL's mouse** (`drlbase.pas` `HandleMouseEvent`): a tap is a left click (on the map: walk to a neighbouring cell, travel to an explored one, or use, pick up or open the inventory on the player's own cell; in menus: choose the entry), a long press (half a second) a right click (fire at that cell; reload when out of ammunition or on the player's cell). Drag and pinch do nothing: DRL's camera follows the player, and its tile and font scales are in DRL's own Settings (tile multiplier).
+- **Keys** from the dock and pad reach SDL as keyboard events, each held for two of DRL's own frames (DRL reads key states once a frame); they reach DRL a frame or two later than in the Text display.
+- **Memory:** in WebKit on Linux about 120 MB more than the Text display while playing (about 540 MB for the page's process), 650 MB at its peak (BUILDING.md); not yet measured on an iPhone.
 
 ## Cataclysm: DDA (pending design)
 

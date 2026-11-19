@@ -1,6 +1,6 @@
 # DRL patches
 
-DRL's own source is compiled unmodified (`patches/drl/` is empty). The port adds files instead (`port/`): the console's curses and the few FreePascal units WebAssembly lacks. Three small patches are needed elsewhere, each to a dependency, none touching gameplay. `scripts/build.sh` applies them in order (`NNNN-*.patch` per directory); `scripts/ensure-fpc.sh` applies the compiler's.
+DRL's own source is compiled unmodified (`patches/drl/` is empty). The port adds files instead (`port/`): the console's curses, the few FreePascal units WebAssembly lacks, and for the Tiles display the library tables and the OpenGL 3.3 to WebGL 2 bridge (`port/libraries.c`, `port/webgl.js`: shaders are rewritten as they are compiled, not patched). Three small patches are needed elsewhere, each to a dependency, none touching gameplay; the Tiles display adds none (SDL 3 and SDL3_image are built unmodified). `scripts/build.sh` applies them in order (`NNNN-*.patch` per directory); `scripts/ensure-fpc.sh` applies the compiler's.
 
 ## `fpc/0001-wasm32-c-varargs.patch` (FreePascal compiler)
 
