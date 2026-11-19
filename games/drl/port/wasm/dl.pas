@@ -1,8 +1,10 @@
 { SPDX-License-Identifier: GPL-2.0-only }
-{ FreePascal's dl unit for wasip1, which has none: a WebAssembly module loads
-  no shared libraries, so every dlopen fails, as on a desktop without the
-  library. DRL's console mode without sound needs none (SDL, FMOD and Steam
-  are optional). }
+{ FreePascal's dl unit for wasip1, which has none. A WebAssembly module loads
+  no shared libraries: the libraries a module was linked with stand in for
+  them (port/libraries.c in the graphical build: SDL 3, SDL3_image and the
+  GL functions of WebGL 2, by name); every other dlopen fails, as on a
+  desktop without the library (FMOD, Steam, SDL3_mixer). The console build
+  links none (port/libraries-none.c). }
 unit dl;
 
 {$mode objfpc}
@@ -23,24 +25,27 @@ function dlerror: PAnsiChar;
 
 implementation
 
+function ra_library_open(Name: PAnsiChar): Pointer; cdecl; external name 'ra_library_open';
+function ra_library_symbol(Lib: Pointer; Name: PAnsiChar): Pointer; cdecl; external name 'ra_library_symbol';
+
 function dlopen(Name: PAnsiChar; Flags: LongInt): Pointer;
 begin
-  Result := nil;
+  Result := ra_library_open(Name);
 end;
 
 function dlsym(Lib: Pointer; Name: PAnsiChar): Pointer;
 begin
-  Result := nil;
+  Result := ra_library_symbol(Lib, Name);
 end;
 
 function dlclose(Lib: Pointer): LongInt;
 begin
-  Result := -1;
+  if Lib = nil then Result := -1 else Result := 0;
 end;
 
 function dlerror: PAnsiChar;
 begin
-  Result := 'shared libraries are not available in WebAssembly';
+  Result := 'the library is not linked into this WebAssembly module';
 end;
 
 end.

@@ -1,0 +1,21 @@
+DRL graphics: attribution
+=========================
+
+The tiles (graphical) mode of the DRL port uses DRL's own art, unmodified,
+from its repository (https://github.com/chaosforgeorg/drl, tag 0_10_12c,
+bin/data/drl/graphics/*.png and bin/data/drl/fonts/font10x19.png), packed
+into the game's data file (drl.wad in drl-tiles.data) by DRL's own drlwad.
+
+As DRL's README states:
+
+  Original art and sprites (0.9.9.7) by Derek Yu, (C) 2003-2025, licensed
+  under CC BY-SA 4.0. Modified version and additions (0.9.9.8+) by Łukasz
+  Śliwiński, (C) 2025, licensed under CC BY-SA 4.0.
+
+  All art is distributed under the CC-BY-SA 4.0 license (see LICENSE file in
+  bin/data/drl/graphics).
+
+Licence: Creative Commons Attribution-ShareAlike 4.0 International
+(CC-BY-SA-4.0.txt beside this file, upstream's bin/data/drl/graphics/LICENSE;
+https://creativecommons.org/licenses/by-sa/4.0/). Rogue Archive made no
+changes to the art.

@@ -61,7 +61,7 @@ NATIVE_FLAGS+=(-Fu"$VSRC/src" -Fu"$VSRC/libs" -Fl"$NATIVE/lua" -FU"$NATIVE/obj" 
 (cd "$SRC" && "$FPC_NATIVE" "${NATIVE_FLAGS[@]}" -Farareplay src/drl.pas)
 (cd "$SRC" && "$FPC_NATIVE" "${NATIVE_FLAGS[@]}" src/drlwad.pas)
 cc -O2 -std=gnu17 -w -DLUA_USE_POSIX -o "$NATIVE/lua/lua-host" "$LUA_SRC/src/lua.c" "$NATIVE/lua/liblua5.1.a" -lm
-"$NATIVE/lua/lua-host" "$GAME_DIR/port/console-manifest.lua" "$SRC" "$SRC" "$NATIVE/data" > "$NATIVE/manifest.lua"
+"$NATIVE/lua/lua-host" "$GAME_DIR/port/wad-manifest.lua" "$SRC" "$SRC" "$NATIVE/data" > "$NATIVE/manifest.lua"
 (cd "$NATIVE" && ./drlwad "$NATIVE/manifest.lua")
 cp "$SRC/bin/config.lua" "$NATIVE/data/config.lua"
 

@@ -1,16 +1,17 @@
 -- SPDX-License-Identifier: GPL-2.0-only
 -- Writes the WAD manifest for the browser build from upstream's own
 -- build.lua (the manifest its drlwad reads): the same WADs and entries,
--- without the ones DRL's console mode never reads (images: the graphical
--- mode's sprites and fonts; sounds and music, which are not shipped), with
--- absolute source masks and output paths.
+-- without sounds and music (not shipped) and, for the console (text) mode,
+-- without the images it never reads (the graphical mode's sprites and
+-- bitmap fonts), with absolute source masks and output paths.
 --
---   lua console-manifest.lua <upstream checkout> <its path for drlwad> <output directory> > manifest.lua
+--   lua wad-manifest.lua <upstream checkout> <its path for drlwad> <output directory> [console|graphics] > manifest.lua
 --
 -- (The second and third paths are as drlwad sees them: it runs in
 -- WebAssembly with host directories mounted.)
-local root, src, out = arg[1], arg[2], arg[3]
-assert(root and src and out, "usage: console-manifest.lua <upstream checkout> <its path for drlwad> <output directory>")
+local root, src, out, mode = arg[1], arg[2], arg[3], arg[4] or "console"
+assert(root and src and out, "usage: wad-manifest.lua <upstream checkout> <its path for drlwad> <output directory> [console|graphics]")
+assert(mode == "console" or mode == "graphics", "the mode is console or graphics")
 
 local env = {}
 local chunk = assert(loadfile(root .. "/build.lua"))
@@ -20,7 +21,7 @@ assert(type(env.build) == "table", "upstream build.lua defines no build table")
 
 local function skipped(entry)
   local kind, folder = entry[2], entry[3]
-  return kind == "IMAGE" or folder == "sound" or folder == "music"
+  return (kind == "IMAGE" and mode == "console") or folder == "sound" or folder == "music"
 end
 
 local function quote(s)

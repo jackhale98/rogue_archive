@@ -5,7 +5,7 @@
   },
   "fpcvalkyrie/src/vcursesconsole.pas": {
     "sha256": "d25d7c99d25f1619eaac46cde78072f981f3afbcc35e30d9f123816361c48c68",
-    "review": "how the console is drawn through curses (init_pair numbering, A_BOLD, the alternate character set for line drawing): port/ncurses.pas, adapter/worker.ts present(), adapter/state.ts glyph() and the palette"
+    "review": "how the console is drawn through curses (init_pair numbering, A_BOLD, the alternate character set for line drawing): port/ncurses.pas, adapter/host.ts present(), adapter/state.ts glyph() and the palette"
   },
   "fpcvalkyrie/src/viorl.pas": {
     "sha256": "91bf7a09a66c9f11371d45fec99c16afd434dc1c8e2c3e3b91713989b89a5004",
@@ -25,7 +25,7 @@
   },
   "fpcvalkyrie/libs/vsdl3library.pas": {
     "sha256": "99820bdb55289c2b26a9c92cfc6614a4dbee560453e82b0ed4db33c498cc9be5",
-    "review": "the Unix units its uses clause lists (pthreads, baseunix, unix, x, xlib) and their names: port/wasm/"
+    "review": "the SDL 3 functions Valkyrie loads by name and their Pascal signatures: scripts/libraries.mjs builds port/libraries.c's table from it (a signature that differs from SDL 3.4's traps when called)"
   },
   "fpcvalkyrie/libs/vsdl3mixerlibrary.pas": {
     "sha256": "37a2259e51341dc5567851ce436d6b09f7aeb7f29f0018853eb1fcefed5bfc89",
@@ -45,7 +45,7 @@
   },
   "fpcvalkyrie/src/vapp.pas": {
     "sha256": "a7358898df32fa270d7350517dfc2176468876bdd0f9de94e4dc80be39118cd3",
-    "review": "paths and options (--config, --data-path, --write-path; config.lua, settings.lua and the log relative to the working directory or the write path): adapter/worker.ts"
+    "review": "paths and options (--config, --data-path, --write-path; config.lua, settings.lua and the log relative to the working directory or the write path): adapter/host.ts"
   },
   "fpcvalkyrie/src/vioevent.pas": {
     "sha256": "359c20f8473e150fdf468872adcee7c827d95c1021a44d5896b984b94f949f78",
@@ -53,7 +53,7 @@
   },
   "drl/build.lua": {
     "sha256": "4be5855fce09468184b7283891d97c10f6d9719d827406c11cc632aec216a29d",
-    "review": "the WAD manifest port/console-manifest.lua filters (images, sounds, music left out)"
+    "review": "the WAD manifest port/wad-manifest.lua filters (sounds and music left out; images too for the console mode)"
   },
   "drl/makefile.lua": {
     "sha256": "3a1234f0ff48a1e01158c1895f76e5b6df431aecb94343862350b41941ea1534",
@@ -65,11 +65,11 @@
   },
   "drl/src/drlapplication.pas": {
     "sha256": "eed1d3e33106d40d72ef077345ec984c3efdde8bb03484c46fda88661ed38118",
-    "review": "options (--console, --no-sound), the module and user paths (user/<module>/), settings: adapter/worker.ts"
+    "review": "options (--console, --no-sound), the module and user paths (user/<module>/), settings: adapter/host.ts"
   },
   "drl/src/drlbase.pas": {
     "sha256": "5960b34ab5aa0bee8f4ef5c1b9454f5093755d81f6bd5368479e62d97366d937",
-    "review": "the save file (user/drl/save) and when it is written and removed: adapter/worker.ts, exitWith, the resume hint"
+    "review": "mouse on the map (left: walk/travel/use, right: fire/reload): adapter/tiles.ts taps and long-presses"
   },
   "drl/src/drlkeybindings.pas": {
     "sha256": "04ffacea79db12817370a38756cfcef2f210be610a20a57c5e7cb7a8abc163f4",
@@ -89,6 +89,66 @@
   },
   "drl/src/drlmainmenuview.pas": {
     "sha256": "d0eed6e743ab25b9d1405f36d9b3ec22d250ce23e6a8f6c5ca2d1bfa0fe663f1",
-    "review": "the main menu (New game, Continue game), drl.prc: adapter/worker.ts KEPT, e2e tests"
+    "review": "the main menu (New game, Continue game), drl.prc: adapter/host.ts KEPT, e2e tests"
+  },
+  "fpcvalkyrie/libs/vsdl3imagelibrary.pas": {
+    "sha256": "8874d925c06e65a411a716877146a1c293b6f299b8aff20b40777443d9088820",
+    "review": "the SDL3_image functions loaded by name: scripts/libraries.mjs"
+  },
+  "fpcvalkyrie/libs/vgl3library.pas": {
+    "sha256": "e44d025a3bcc85dda69f831f36c066e50c77dbe6644fb467ebaf65876ab893a4",
+    "review": "how GL is loaded (libGL, glXGetProcAddress, GetSymbol vs GetSymbolExt): port/libraries.c"
+  },
+  "fpcvalkyrie/libs/vgl15vars.inc": {
+    "sha256": "416b4558064106150ae116c4fb2f7522f7cff01bf8c06bf93548c0ab7f6b5a1f",
+    "review": "GL declarations scripts/libraries.mjs reads (the stand-ins' signatures)"
+  },
+  "fpcvalkyrie/libs/vgl21vars.inc": {
+    "sha256": "3f833e742bd65aed05a396cabf77abad0f15fdbdab8a6791146159a189600203",
+    "review": "GL declarations scripts/libraries.mjs reads (the stand-ins' signatures)"
+  },
+  "fpcvalkyrie/libs/vgl33vars.inc": {
+    "sha256": "7c636d2feb2714055b3a3fd296e9df5812ed5bb3dca45235f45d845d500bfef5",
+    "review": "GL declarations scripts/libraries.mjs reads (the stand-ins' signatures)"
+  },
+  "fpcvalkyrie/src/vsdlio.pas": {
+    "sha256": "d83cad8548386385f86425928f524ade96f0d9268f19a606525bda8661f62cc7",
+    "review": "SDL window, GL context attributes, swap, sleeps, events and mouse: port/webgl.js, adapter/tiles.ts (keys and mouse events, canvas size)"
+  },
+  "fpcvalkyrie/src/vglconsole.pas": {
+    "sha256": "dec4a5e48c3a45bc019dc6780dfd962b7cbdb345fc96e2bfbd4d1b5a4627e707",
+    "review": "the GL console: its shaders (port/webgl.js raShaders: usamplerBuffer, the int-to-float fixes) and its texture buffer of cells (RGBA32UI, four values a cell), which port/webgl.js emulates and adapter/tiles.ts reads as the screen's text"
+  },
+  "fpcvalkyrie/src/vspriteengine.pas": {
+    "sha256": "f307e2eb221ec528ffca377f11b04ebf0c5049618ba6e2c7ca62545a3791d199",
+    "review": "sprite shaders (vertex-input arrays, the int-to-float fixes in port/webgl.js) and per-buffer blending (glEnablei)"
+  },
+  "fpcvalkyrie/src/vglquadrenderer.pas": {
+    "sha256": "7ad5b18aedeefb19870f6c7261a81a7f70ff16aeda76565ec920006dd7138821",
+    "review": "quad shaders (GLSL 3.30 -> ES 3.00 in port/webgl.js)"
+  },
+  "fpcvalkyrie/src/vgldrawarrays.pas": {
+    "sha256": "31f1a6fa1119616eefe24cb582b4f5134b37df5f5d0d5dfbd98f87ff7c736d84",
+    "review": "vertex arrays: disabled after each draw in their own VAO (port/webgl.js keeps them enabled)"
+  },
+  "fpcvalkyrie/src/vglframebuffer.pas": {
+    "sha256": "b87227e8b1909235b484783c7489fc11ef96d5b7630224a05d960125fb45fbc8",
+    "review": "framebuffers: GL_DEPTH_COMPONENT renderbuffers (24-bit depth in port/webgl.js)"
+  },
+  "drl/src/drlspritemapbase.pas": {
+    "sha256": "60ab4616742931ff64d69effc43f9e765947368ac952ac21008d27f235049b0e",
+    "review": "DRL's post-processing and blur shaders (GLSL 3.30 -> ES 3.00 in port/webgl.js)"
+  },
+  "drl/src/drlgfxio.pas": {
+    "sha256": "8474c333eefd828327a161c7ea4e39e51400b8ad77c543abcce174f0fe9d7ebe",
+    "review": "the graphical IO: window size and font/tile multipliers from settings (adapter/tiles.ts writes screen_width/height), the GL console's position (cellToClient), glEnable(GL_TEXTURE_2D)"
+  },
+  "drl/bin/data/drl/fonts/default": {
+    "sha256": "ea707941871260661905184baeb7b0f738a457166fea9e1b3a91f61bc326a423",
+    "review": "the GL console's size (80x25 cells of font10x19.png): adapter/tiles.ts"
+  },
+  "drl/bin/data/drl/graphics/LICENSE": {
+    "sha256": "bae5ccc863235f984a52c07d011e48a86c0c12f923be2dedd8624c7abdc22c6c",
+    "review": "the sprites' licence (CC BY-SA 4.0), shipped with the tiles mode: LICENSES.md"
   }
 }
