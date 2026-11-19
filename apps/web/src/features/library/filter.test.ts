@@ -14,13 +14,14 @@ describe('librarySections', () => {
     expect(sections.playable.map((g) => g.id)).toEqual([
       'angband',
       'brogue-ce',
+      'drl',
       'dcss',
       'hyperrogue',
       'nethack',
       'rogue',
       'sil-q',
     ]);
-    expect(sections.roadmap[0]!.id).toBe('drl');
+    expect(sections.roadmap[0]!.id).toBe('cataclysm-dda');
     expect(sections.roadmap.map((g) => g.priority)).toEqual(
       [...sections.roadmap.map((g) => g.priority)].sort((a, b) => a - b),
     );
@@ -38,12 +39,13 @@ describe('librarySections', () => {
 
   it('filters by interface style and touch support', () => {
     const graphical = librarySections(catalog.games, { ...EMPTY_FILTERS, interfaceStyle: 'graphical' });
-    expect(graphical.playable.map((g) => g.id)).toEqual(['hyperrogue']);
+    expect(graphical.playable.map((g) => g.id)).toEqual(['drl', 'hyperrogue']);
     expect(graphical.roadmap.every((g) => g.interface.includes('graphical'))).toBe(true);
     const touch = librarySections(catalog.games, { ...EMPTY_FILTERS, touchOnly: true });
     expect(touch.playable.map((g) => g.id)).toEqual([
       'angband',
       'brogue-ce',
+      'drl',
       'dcss',
       'hyperrogue',
       'nethack',
@@ -61,6 +63,7 @@ describe('library order', () => {
     expect(order('title')).toEqual([
       'angband',
       'brogue-ce',
+      'drl',
       'dcss',
       'hyperrogue',
       'nethack',

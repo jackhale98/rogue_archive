@@ -195,7 +195,7 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Memory and load time on real phones (iOS Safari first)
 - [ ] Move to `experimental` once the definition of done is met
 
-## Phase 6g — DRL 0.10.12c ⚪ planned (port implemented)
+## Phase 6g — DRL 0.10.12c 🟡 experimental
 
 - [x] Feasibility report: docs/games/drl-feasibility.md (FreePascal 3.3.1's wasm32-wasip1 target, an exact commit built from source; Emscripten links its objects with Lua 5.1; branchful exceptions with Asyncify)
 - [x] License/provenance report (GPL-2.0 code and in-repository data; FPC Valkyrie and Lua MIT; FreePascal's RTL LGPL with its static-linking exception; CC BY-SA 4.0 art shipped with the Tiles display only, with attribution and the licence text; SDL 3 and SDL3_image zlib; music and sounds not in upstream's repository, not shipped)
@@ -211,8 +211,10 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 - [ ] Death and the mortem by touch, in an e2e test (DRL's own screens with the Select/Back dock; not yet exercised)
 - [x] DRL's graphical mode as a Display setting (Tiles; Text stays the default; applies at the next launch): the same objects linked with Emscripten's SDL 3 and SDL3_image (built from source), found by Valkyrie's run-time loaders by name; an OpenGL 3.3 to WebGL 2 bridge (shaders rewritten at compile time, texture buffers emulated; DRL and Valkyrie unpatched); on the page's main thread with Asyncify; its own data package with the art. Rendering checked against a native build of the same seed in headless Chromium and WebKit (screenshots in `games/drl/tests/gate/`); the text DRL draws read back for contexts, the dock, the status band and Save & Quit; taps as DRL's mouse; unit and e2e tests (desktop and phone); memory and sizes in BUILDING.md
 - [ ] Tiles on a physical iPhone (memory: Safari's tab limit) and an Android phone (ANGLE's Vulkan back end: see the feasibility report); turning the phone (DRL's window is sized at launch)
-- [ ] Test on physical phones (iOS Safari first), Firefox and Safari
-- [ ] Move to `experimental` once the definition of done is met (a cover captured from the game; the above)
+- [x] Played on a physical iPhone (iOS Safari) in the Text display
+- [ ] Android Chrome, Firefox and desktop Safari
+- [x] `experimental`: the definition of done met, with a cover captured from the Tiles display
+- [ ] `playable` once Tiles has been played on a physical phone and death and the mortem have an e2e test by touch
 
 ## Phase 5 — First public release
 
@@ -222,5 +224,5 @@ Status as of the first implementation pass. The plan is in [docs/plan/implementa
 
 ## Phase 6 — Catalog expansion (after DCSS)
 
-~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → ~~Angband 4.2.6~~ (experimental, Phase 6e) → DRL → Cataclysm: DDA (Phase 6f: upstream's Emscripten build reproduced; phone design next) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
+~~Sil-Q~~ (experimental, Phase 6a) → ~~Rogue 5.4.4~~ (experimental, Phase 6b) → ~~HyperRogue~~ (Phase 6c) → ~~NetHack 5.0.0~~ (experimental, Phase 6d) → ~~Angband 4.2.6~~ (experimental, Phase 6e) → ~~DRL 0.10.12c~~ (experimental, Phase 6g) → Cataclysm: DDA (Phase 6f: upstream's Emscripten build reproduced; phone design next) → Shattered Pixel Dungeon → IVAN → Infra Arcana.
 Watchlist: ToME (asset licensing), GearHead (noncommercial assets).

@@ -13,7 +13,8 @@
 | [Rogue](games/rogue/PORTING.md) 5.4.4 | **Playable** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
 | [NetHack](games/nethack/PORTING.md) 5.0.0 | **Experimental** | Upstream's own WebAssembly build; NetHack's terminal interface as tty draws it, the map in text or NetHack's own tiles; keyboard, mouse and touch with a phone layout (menus as sheets); local saves with export/import; offline. Touch controls are a first version. |
 | [Angband](games/angband/PORTING.md) 4.2.6 | **Experimental** | Angband's own 80×24 interface, the map in text or Adam Bolt's tiles (Angband's graphics mode); keyboard, mouse (click to travel) and touch with a phone layout (map around the player, item prompts, stores and menus as buttons); local saves with export/import; offline. Not yet tested on physical phones. |
-| DRL, Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
+| [DRL](games/drl/PORTING.md) 0.10.12c | **Experimental** | Built from DRL's FreePascal source; its console (text) mode or its own graphical mode with its CC BY-SA sprites (Tiles); keyboard, mouse (Tiles) and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone in Text; Tiles not yet tested on a phone. |
+| Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works
 

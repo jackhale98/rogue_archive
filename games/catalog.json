@@ -904,7 +904,7 @@
       "title": "DRL",
       "subtitle": "Formerly DoomRL",
       "description": "The 90s shooter reimagined as a roguelike: shotguns, chainsaws and demons from the moons of Mars down to Hell, in fast, brutal runs built for a coffee break.",
-      "status": "planned",
+      "status": "experimental",
       "priority": 7,
       "effort": "medium-high",
       "rationale": "Distinctive Doom-inspired roguelike; Pascal runtime and asset considerations.",
@@ -992,9 +992,9 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
+        "Played on a physical iPhone (iOS Safari) in the Text display only; Tiles, Android Chrome, Firefox and desktop Safari not yet tested on real devices.",
         "No music or sound (upstream does not publish them in its repository). Tiles: DRL's graphical mode runs on the page's main thread with WebGL 2 (needed: browsers without it can use Text); its window is sized when DRL starts, so after turning a phone or resizing, the picture is fitted with bars until DRL is started again; on an upright phone its 80-column text is small (the status band and dock repeat the essentials); no pinch zoom (DRL's own Settings change its tile and font scales).",
-        "The Display setting applies the next time DRL starts. Tiles downloads about 4 MB compressed (Text: 1.5 MB) and has not been tried on a physical iPhone yet (WebKit on Linux: about 540 MB for the page's process while playing, 650 MB at its peak; Text: 410 and 435 MB).",
+        "The Display setting applies the next time DRL starts. Tiles downloads about 4 MB compressed (Text: 1.5 MB) and has not been tried on a physical phone yet (WebKit on Linux: about 540 MB for the page's process while playing, 650 MB at its peak; Text: 410 and 435 MB).",
         "As in a terminal, the console reads no Shift or Ctrl with the arrow keys: Shift+direction (run) and Ctrl+direction (move the target) do nothing, as in upstream's Linux console; use , then a direction to run, and targeting mode to aim. DRL's console has no mouse (its graphical mode, the Tiles display, has).",
         "Saved games do not move to or from desktop DRL: DRL's save format records word-sized values, which differ between 64-bit desktops and WebAssembly (32-bit). The DRL folder can be exported and imported back here.",
         "Built with FreePascal's development branch (its WebAssembly target is not in a release yet), with one compiler fix of ours (patches/fpc).",
@@ -1022,13 +1022,20 @@
         },
         {
           "environment": "Safari (macOS / iOS)",
-          "result": "untested"
+          "result": "partial",
+          "notes": "Played on a physical iPhone (iOS Safari) in November 2026 in the Text display: a game started and played with the touch controls. Tiles and desktop Safari not yet tested."
         },
         {
           "environment": "Chrome for Android",
           "result": "untested"
         }
-      ]
+      ],
+      "cover": {
+        "src": "covers/drl.webp",
+        "alt": "DRL's Tiles display: the marine on the hexagonal floor outside the Phobos base, by its door, with dead trees on the red ground beyond.",
+        "width": 1200,
+        "height": 675
+      }
     },
     {
       "id": "cataclysm-dda",

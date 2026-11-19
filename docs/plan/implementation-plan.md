@@ -1169,7 +1169,7 @@ These are initial hypotheses for the porting agents, not implementation guarante
 - Investigate `chaosforgeorg/drl` and its FPC Valkyrie dependency; confirm the FreePascal toolchain can target WebAssembly maintainably.
 - Separate GPL source from game data, graphics, music and sounds; do not bundle binary data because a README references it.
 - Defer rather than build a brittle port if runtime or licensing cost is too high.
-- **Status (November 2026):** feasible and implemented, catalog status `planned` (games/drl; docs/games/drl-feasibility.md). FreePascal's development branch targets wasm32-wasip1 maintainably once pinned to a commit and built from source; one compiler fix was needed (C varargs). The console mode ships; the CC BY-SA sprites and the separately distributed audio do not.
+- **Status (November 2026):** feasible and implemented, catalog status `experimental` (games/drl; docs/games/drl-feasibility.md); played on a physical iPhone in the Text display. FreePascal's development branch targets wasm32-wasip1 maintainably once pinned to a commit and built from source; one compiler fix was needed (C varargs). The console mode ships, and DRL's graphical mode with its CC BY-SA sprites as the Tiles display; the separately distributed audio does not.
 
 ## 12.9 Allure of the Stars (dropped)
 
