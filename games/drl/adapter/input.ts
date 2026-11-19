@@ -217,6 +217,9 @@ const PAD = {
   se: 'move-se',
 } as const;
 
+/** Menus and the screens before a game: the arrows move, the centre selects (Enter). */
+const MENU_PAD = { ...PAD, center: 'ok' } as const;
+
 const PALETTE = DRL_COMMANDS.filter((entry) => entry.category !== 'Keys').map((entry) => entry.id);
 
 export const DRL_TOUCH_LAYOUT: TouchControlLayout = {
@@ -228,8 +231,6 @@ export const DRL_TOUCH_LAYOUT: TouchControlLayout = {
 export interface MapSituation {
   /** Health as a percentage (DRL's HUD), if shown. */
   health: number | null;
-  /** The menu's footer offers panels (Left/Right). */
-  panels?: boolean;
 }
 
 /** The dock for a context: tap the main action; long-press fans its related actions. */
@@ -275,16 +276,17 @@ export function controlsFor(
         palette,
       };
     case 'menu':
-    case 'title': {
-      const actions: (string | TouchAction)[] = [
-        { command: 'ok', label: 'Select', emphasis: 'primary' },
-        { command: 'down', label: '↓ Next' },
-        { command: 'up', label: '↑ Previous' },
-      ];
-      if (situation.panels) actions.push({ command: 'right', label: 'Panel →', alternates: ['left'] });
-      actions.push({ command: 'escape', label: 'Back', alternates: ['backspace'] });
-      return { actions, palette };
-    }
+    case 'title':
+      // The pad moves through the choices (up and down; left and right
+      // between panels, as the arrow keys do), Select in its centre.
+      return {
+        directionPad: MENU_PAD,
+        actions: [
+          { command: 'ok', label: 'Select', emphasis: 'primary' },
+          { command: 'escape', label: 'Back', alternates: ['backspace'] },
+        ],
+        palette,
+      };
     case 'yesno':
       return {
         actions: [

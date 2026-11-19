@@ -53,7 +53,6 @@ import {
   boxRect,
   detectContext,
   glyph,
-  hasPanels,
   messageLines,
   parseHud,
   playerCell,
@@ -483,11 +482,7 @@ class DrlAdapter implements GameAdapter {
   #emitContext(context: DrlContext): void {
     this.#context = context;
     this.debug.context = context;
-    const grid = this.#grid;
-    const layout = controlsFor(context, {
-      health: this.#hud?.health ?? null,
-      panels: grid ? hasPanels(grid) : false,
-    });
+    const layout = controlsFor(context, { health: this.#hud?.health ?? null });
     const signature = JSON.stringify([context, layout]);
     if (signature === this.#layoutSignature) return;
     this.#layoutSignature = signature;

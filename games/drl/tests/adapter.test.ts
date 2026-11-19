@@ -125,11 +125,14 @@ describe('the dock', () => {
 
   it('answers menus, prompts and typing', () => {
     expect(controlsFor('menu').actions[0]).toMatchObject({ command: 'ok', label: 'Select' });
-    expect(
-      controlsFor('menu', { health: null, panels: true }).actions.map((a) =>
-        typeof a === 'string' ? a : a.command,
-      ),
-    ).toContain('right');
+    // The pad moves through choices (and panels), Select in its centre.
+    expect(controlsFor('menu').directionPad).toMatchObject({
+      n: 'move-n',
+      s: 'move-s',
+      e: 'move-e',
+      center: 'ok',
+    });
+    expect(controlsFor('title').directionPad?.center).toBe('ok');
     expect(controlsFor('pager').actions[0]).toMatchObject({ command: 'ok', wide: true });
     expect(controlsFor('yesno').actions.map((a) => (typeof a === 'string' ? a : a.command))).toEqual([
       'yes',

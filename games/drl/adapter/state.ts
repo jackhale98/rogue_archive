@@ -179,11 +179,6 @@ export function detectContext(grid: Grid): DrlContext {
   return 'busy';
 }
 
-/** Whether a menu's footer offers panels (<Left,Right> panels). */
-export function hasPanels(grid: Grid): boolean {
-  return /<Left,Right>/.test(screenText(grid));
-}
-
 /** The player on the map: the '@' DRL draws, else the terminal cursor. */
 export function playerCell(grid: Grid): { x: number; y: number } | null {
   const at = '@'.charCodeAt(0);

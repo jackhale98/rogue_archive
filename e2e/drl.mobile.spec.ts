@@ -22,7 +22,17 @@ test('DRL phone: a game started by taps, status band, pad, dock, sheets, Save & 
     await page.waitForTimeout(500);
   }
   await waitForText(page, /New game/);
-  await expect(dock.getByRole('button', { name: /^↓ Next/ })).toBeVisible();
+  // The pad moves through the choices: down to Exit and back up, Select in its centre.
+  await expect(pad).toBeVisible();
+  await pad
+    .getByRole('button', { name: /^Move down \(/ })
+    .first()
+    .tap();
+  await pad
+    .getByRole('button', { name: /^Move up \(/ })
+    .first()
+    .tap();
+  await expect(pad.getByRole('button', { name: /^OK/ })).toBeVisible();
   for (const next of [/Regular game/, /Too Young To Die/, /Marine/, /Select trait/, /Type a name/]) {
     await select();
     await waitForText(page, next);
@@ -48,7 +58,7 @@ test('DRL phone: a game started by taps, status band, pad, dock, sheets, Save & 
     await expect(dock.getByRole('button', { name })).toBeVisible();
 
   // The pad moves the player (walls permitting: four directions, back to the map each time).
-  for (const name of [/Move right/, /Move down/, /Move left/, /Move up/]) {
+  for (const name of [/^Move right \(/, /^Move down \(/, /^Move left \(/, /^Move up \(/]) {
     await pad.getByRole('button', { name }).first().tap();
     await page.waitForTimeout(250);
   }
@@ -67,7 +77,10 @@ test('DRL phone: a game started by taps, status band, pad, dock, sheets, Save & 
   await waitForText(page, /Save & Quit/);
   await waitForContext(page, 'menu');
   expect((await drl(page))?.views).toEqual(['map', 'sheet']);
-  await tap(/^↑ Previous/);
+  await pad
+    .getByRole('button', { name: /^Move up \(/ })
+    .first()
+    .tap();
   await page.waitForTimeout(300);
   await select();
   await waitForText(page, /Continue game/, 30_000);
