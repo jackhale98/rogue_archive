@@ -32,7 +32,7 @@ export function GameCard({ game }: { game: CatalogGame }) {
         </ul>
         {isLaunchable(game) ? (
           <div className="game-card__actions">
-            <a className="button button--primary button--small" href={href(`/play/${game.id}`)}>
+            <a className="button button--outline button--small" href={href(`/play/${game.id}`)}>
               Play<span className="visually-hidden"> {game.title}</span>
             </a>
             <a className="button button--quiet button--small" href={details}>

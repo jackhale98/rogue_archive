@@ -320,6 +320,16 @@ main {
 .button--quiet {
   background: transparent;
 }
+/* The library cards' Play: outlined, so eight of them don't fill the page with the accent. */
+.button--outline {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.button--outline:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
 .button--danger {
   border-color: var(--danger);
   color: var(--danger);
@@ -417,7 +427,8 @@ main {
   max-width: 46rem;
 }
 .hero__title {
-  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+  /* Small enough on a phone for the line to break once. */
+  font-size: clamp(1.4rem, 4.2vw, 2.75rem);
   font-weight: 500;
   letter-spacing: -0.03em;
   margin-bottom: var(--space-4);
@@ -972,20 +983,6 @@ p.download-all {
 .empty-state p {
   margin: 0 0 var(--space-3);
 }
-.about-strip__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
-  gap: var(--space-5);
-  color: var(--text-muted);
-}
-.about-strip strong {
-  color: var(--text);
-  display: block;
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 500;
-  margin-bottom: var(--space-1);
-}
 
 /* Game detail ----------------------------------------------------------- */
 
@@ -1081,16 +1078,6 @@ p.download-all {
   text-transform: uppercase;
   color: var(--text-muted);
 }
-.compat--pass {
-  color: var(--success);
-}
-.compat--fail {
-  color: var(--danger);
-}
-.compat--partial,
-.compat--untested {
-  color: var(--text-muted);
-}
 .bullet-list {
   padding-left: 1.2rem;
 }
@@ -1173,31 +1160,6 @@ p.download-all {
   .facts-table th,
   .facts-table td {
     overflow-wrap: anywhere;
-  }
-  /* The compatibility table: each row a small block (browser, then result and notes). */
-  .compat-table thead {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-  }
-  .compat-table tr {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    column-gap: var(--space-3);
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .compat-table th[scope='row'] {
-    grid-column: 1 / -1;
-    width: auto;
-    padding: 0 0 var(--space-1);
-    border: 0;
-  }
-  .compat-table td {
-    padding: 0;
-    border: 0;
   }
   .library-sort__label {
     position: absolute;

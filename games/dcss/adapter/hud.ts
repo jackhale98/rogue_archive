@@ -13,7 +13,7 @@ const STYLE = `
 .dcss-hud{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;box-sizing:border-box;
   padding:6px calc(var(--reserve,0px) + 8px) 6px 8px;padding-top:max(6px,env(safe-area-inset-top));
   background:linear-gradient(rgba(10,9,7,.96),rgba(10,9,7,.9));border-bottom:1px solid rgba(236,227,207,.12);
-  font:13px/1.25 'Inter Variable',system-ui,sans-serif;color:#ece3cf;z-index:1}
+  font:13px/1.25 var(--font-body,system-ui,sans-serif);color:#ece3cf;z-index:1}
 .dcss-hud__status{flex:1;display:flex;align-items:center;gap:8px;min-height:34px;min-width:0;padding:0 10px 0 6px;
   border:1px solid rgba(236,227,207,.16);border-radius:999px;background:rgba(30,26,21,.9);color:inherit;font:inherit;
   cursor:pointer;overflow:hidden}

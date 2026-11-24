@@ -14,7 +14,7 @@ const STYLE = `
   grid-template-areas:"status messages";align-items:center;gap:6px 12px;box-sizing:border-box;
   padding:6px calc(var(--reserve,0px) + 8px) 6px 8px;padding-top:max(6px,env(safe-area-inset-top));
   background:linear-gradient(rgba(10,9,7,.94),rgba(10,9,7,.86));border-bottom:1px solid rgba(236,227,207,.12);
-  font:13px/1.25 'Inter Variable',system-ui,sans-serif;color:#ece3cf;z-index:1;pointer-events:auto}
+  font:13px/1.25 var(--font-body,system-ui,sans-serif);color:#ece3cf;z-index:1;pointer-events:auto}
 .brogue-hud[data-portrait]{grid-template-columns:minmax(0,1fr);grid-template-areas:"status" "messages"}
 .brogue-hud__status{grid-area:status;display:flex;align-items:center;gap:8px;min-height:32px;padding:0 10px 0 6px;
   border:1px solid rgba(236,227,207,.16);border-radius:999px;background:rgba(30,26,21,.9);color:inherit;font:inherit;cursor:pointer}

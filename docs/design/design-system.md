@@ -16,7 +16,7 @@
 | `--line-strong` | `#5d6670` | `#7d857f` | Borders of cards and controls (≥ 3:1) |
 | `--brand-amber` | `#e0aa4a` | `#9a5e0c` | The wordmark's ARCHIVE only |
 
-Type: **IBM Plex Mono** (headings, labels, tables, keys; 400 and 500) and **IBM Plex Sans** (reading text), self-hosted (OFL), Latin and Latin Extended only (`styles/fonts.css`). The header's wordmark keeps the logo's lockup in **Fraunces** and **Inter**, which the games' launch screens also use. Spacing uses a 4px-based scale (`--space-1`…`--space-8`). Corners are square (0 or 2px).
+Type: **IBM Plex Mono** (headings, labels, tables, keys; 400 and 500) and **IBM Plex Sans** (reading text), self-hosted (OFL), Latin and Latin Extended only (`styles/fonts.css`). The header's wordmark follows the logo's lockup: ROGUE in **Fraunces** (its only use, one Latin file), ARCHIVE in spaced amber Plex Sans capitals. The games' own launch screens and HUDs use the same tokens (`--font-display`, `--font-body`). Spacing uses a 4px-based scale (`--space-1`…`--space-8`). Corners are square (0 or 2px).
 
 Details: section headings start with an accent `>` (a prompt, and the stairs down); the hero ends in a still block cursor; the selected filter is in reverse video; tags read `[Text] [Tiles]`; games without art show their glyph on a floor of dots; roadmap rows show the glyph in a map cell.
 

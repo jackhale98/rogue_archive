@@ -369,7 +369,7 @@ class HyperRogueAdapter implements GameAdapter {
       'top:var(--hr-top,0px)!important;width:var(--hr-width,100%)!important;height:var(--hr-height,100%)!important}' +
       '.hr-hint{position:absolute;left:50%;bottom:calc(var(--hr-bottom,0px) + 56px);transform:translateX(-50%);' +
       'display:flex;flex-direction:column;align-items:center;gap:4px;max-width:calc(100% - 24px);pointer-events:none;' +
-      "font:600 13px/1.25 'Inter Variable',system-ui,sans-serif;color:#ece3cf;text-align:center}" +
+      'font:600 13px/1.25 var(--font-body,system-ui,sans-serif);color:#ece3cf;text-align:center}' +
       '.hr-hint[hidden]{display:none}' +
       '.hr-hint>span{padding:4px 10px;border-radius:999px;background:rgba(22,19,15,.82);' +
       'border:1px solid rgba(236,227,207,.16)}';

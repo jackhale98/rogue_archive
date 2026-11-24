@@ -859,7 +859,7 @@ class AngbandAdapter implements GameAdapter {
       const band = document.createElement('div');
       band.className = 'angband-band';
       band.style.cssText =
-        "position:absolute;top:0;left:0;right:0;z-index:1;box-sizing:border-box;padding:6px 10px;display:grid;gap:4px;background:rgba(10,9,7,.94);border-bottom:1px solid rgba(236,227,207,.12);color:#ece3cf;font:13px/1.3 'Inter Variable',system-ui,sans-serif;cursor:pointer";
+        'position:absolute;top:0;left:0;right:0;z-index:1;box-sizing:border-box;padding:6px 10px;display:grid;gap:4px;background:rgba(10,9,7,.94);border-bottom:1px solid rgba(236,227,207,.12);color:#ece3cf;font:13px/1.3 var(--font-body,system-ui,sans-serif);cursor:pointer';
       band.addEventListener('click', () =>
         this.#host?.emit({ type: 'shell-command', command: SHELL_COMMAND.log }),
       );

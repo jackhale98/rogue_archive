@@ -120,7 +120,7 @@ export function titleChoices(screen: TitleScreen): Choice[] {
 const STYLE = `
 .brogue-title{position:absolute;inset:0;z-index:2;display:grid;place-items:center;overflow-y:auto;padding:16px;box-sizing:border-box;
   background:radial-gradient(120% 80% at 50% 0%,rgba(224,170,74,.12),rgba(0,0,0,0) 60%),rgba(8,7,6,.94);color:#ece3cf;
-  font:15px/1.4 'Inter Variable',system-ui,sans-serif}
+  font:15px/1.4 var(--font-body,system-ui,sans-serif)}
 /* The main menu: Brogue's title art and flames show above (the renderer draws
    them large at the top); the buttons sit at the bottom over a fade. */
 .brogue-title[data-backdrop]{align-items:end;padding-bottom:max(16px,env(safe-area-inset-bottom));
@@ -128,7 +128,7 @@ const STYLE = `
 .brogue-title[data-backdrop] .brogue-title__choice:not([data-primary]){background:rgba(26,23,18,.86);backdrop-filter:blur(2px)}
 .brogue-title[hidden]{display:none}
 .brogue-title__card{width:min(32rem,100%);display:grid;gap:14px}
-.brogue-title__heading{margin:0;font:600 clamp(24px,5vw,32px)/1.1 'Fraunces Variable',Georgia,serif;text-align:center}
+.brogue-title__heading{margin:0;font:600 clamp(24px,5vw,32px)/1.1 var(--font-display,ui-monospace,monospace);text-align:center}
 .brogue-title__sub{margin:-8px 0 0;color:#b3a88f;text-align:center;font-size:13px}
 .brogue-title__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .brogue-title__grid[data-list]{grid-template-columns:minmax(0,1fr)}

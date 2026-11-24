@@ -22,8 +22,7 @@ The complete corresponding source of each game build is this repository at the d
 |---|---|
 | React, React DOM | MIT |
 | idb | ISC |
-| Fraunces (via @fontsource-variable/fraunces) | SIL Open Font License 1.1 |
-| Inter (via @fontsource-variable/inter) | SIL Open Font License 1.1 |
+| Fraunces (via @fontsource-variable/fraunces; the wordmark only) | SIL Open Font License 1.1 |
 | IBM Plex Mono (via @fontsource/ibm-plex-mono) | SIL Open Font License 1.1 |
 | IBM Plex Sans (via @fontsource-variable/ibm-plex-sans) | SIL Open Font License 1.1 |
 

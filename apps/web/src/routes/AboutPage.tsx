@@ -44,8 +44,8 @@ export function AboutPage() {
         ))}
       </ul>
       <p>
-        Interface typefaces: IBM Plex Mono and IBM Plex Sans, with Fraunces and Inter in the wordmark and the
-        games' launch screens, all under the SIL Open Font License.{' '}
+        Interface typefaces: IBM Plex Mono and IBM Plex Sans, with Fraunces in the wordmark, all under the SIL
+        Open Font License.{' '}
         <a href={repositoryFileUrl('licenses/THIRD_PARTY_NOTICES.md')}>All third-party notices</a>.
       </p>
       <h2>Source and contributions</h2>

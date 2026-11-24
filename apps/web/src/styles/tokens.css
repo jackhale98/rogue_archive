@@ -8,7 +8,7 @@
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   /* The header's wordmark keeps the logo's lockup: a serif ROGUE over amber ARCHIVE. */
   --font-wordmark: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  --font-wordmark-caps: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-wordmark-caps: 'IBM Plex Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   --ink-0: #08090a;
   --ink-1: #0e1011;

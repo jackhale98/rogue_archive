@@ -10,7 +10,7 @@ import type { Description } from './describe.ts';
 const STYLE = `
 .brogue-chip{position:absolute;left:50%;transform:translateX(-50%);z-index:1;display:flex;align-items:center;gap:10px;
   max-width:min(80%,520px);min-height:38px;padding:0 6px 0 14px;border-radius:999px;border:1px solid rgba(224,170,74,.45);
-  background:rgba(16,14,11,.92);color:#ece3cf;font:14px/1.2 'Inter Variable',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);
+  background:rgba(16,14,11,.92);color:#ece3cf;font:14px/1.2 var(--font-body,system-ui,sans-serif);box-shadow:0 8px 24px rgba(0,0,0,.45);
   cursor:pointer;animation:brogue-chip-in .18s ease-out both}
 .brogue-chip__icon{color:#e0aa4a;font-weight:700}
 .brogue-chip__title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
