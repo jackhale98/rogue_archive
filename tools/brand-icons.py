@@ -6,7 +6,8 @@ Run by hand after changing the emblem (needs Pillow): python3 tools/brand-icons.
 - icon-maskable-192/512: the emblem on a navy square with all of its art inside the
   maskable safe zone (a circle of 40% of the icon's size), centred on the art.
 - icon-180: the iOS home screen icon (iOS fills transparency black and rounds the corners itself).
-- mark-144: the header's mark in the dark theme (drawn at 44 CSS px; sharp on 3x screens).
+- mark-144: the header's mark in the dark theme: no navy disc (transparent), the art in its
+  own colours, cropped to the art, 144 px high (drawn about 38 CSS px high; sharp on 3x screens).
 - mark-light-144: the header's mark in the light theme: no navy disc (transparent), the
   cream parts (arch, hero, stars, steps) in the site's ink, teal and amber kept; cropped
   to the art, 144 px high.
@@ -45,8 +46,9 @@ def on_navy(size: int, emblem_size: int) -> Image.Image:
     return square
 
 
-def for_light_theme(image: Image.Image) -> Image.Image:
-    """The navy made transparent (softly, by its distance from the navy), neutral tones redrawn in ink."""
+def without_navy(image: Image.Image, recolour: bool) -> Image.Image:
+    """The navy made transparent (softly, by its distance from the navy); with `recolour`,
+    neutral tones redrawn in ink for the light theme."""
     out = Image.new('RGBA', image.size)
     source, target = image.load(), out.load()
     for y in range(image.height):
@@ -57,7 +59,9 @@ def for_light_theme(image: Image.Image) -> Image.Image:
             if a == 0 or keep == 0:
                 continue
             _, lightness, saturation = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
-            if saturation > 0.35 and lightness < 0.85 and max(r, g, b) - min(r, g, b) > 60:
+            if not recolour:
+                colour = (r, g, b)
+            elif saturation > 0.35 and lightness < 0.85 and max(r, g, b) - min(r, g, b) > 60:
                 colour = (r, g, b)  # teal and amber
             else:
                 t = min(1.0, max(0.0, (0.92 - lightness) / 0.2))  # cream -> ink, tan -> soft ink
@@ -68,10 +72,10 @@ def for_light_theme(image: Image.Image) -> Image.Image:
 
 for size in (32, 48, 192, 512):
     save(emblem(size), f'icon-{size}.png')
-save(emblem(144), 'mark-144.png')
 for size in (192, 512):
     save(on_navy(size, int(0.40 * size * S0 / ART_R)), f'icon-maskable-{size}.png')
 save(on_navy(180, int(0.84 * 180 * S0 / ART_W)), 'icon-180.png')
 art = SRC.crop((ART_BOX[0] - 8, ART_BOX[1] - 8, ART_BOX[2] + 8, ART_BOX[3] + 8))
-art = for_light_theme(art)
-save(art.resize((round(art.width * 144 / art.height), 144), Image.LANCZOS), 'mark-light-144.png')
+for name, recolour in (('mark-144.png', False), ('mark-light-144.png', True)):
+    mark = without_navy(art, recolour)
+    save(mark.resize((round(mark.width * 144 / mark.height), 144), Image.LANCZOS), name)

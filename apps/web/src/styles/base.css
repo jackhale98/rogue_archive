@@ -171,16 +171,15 @@ main {
 .wordmark:hover {
   color: var(--text);
 }
+/* The mark without the emblem's navy disc: the art alone, as tall as the wordmark
+   (in its own colours in the dark theme, redrawn in ink in the light one). */
 .wordmark__mark {
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: none;
-}
-/* The light theme's mark has no navy disc: the art alone, as tall as the wordmark. */
-.wordmark__mark--light {
-  display: none;
   width: auto;
   height: 2.4rem;
+  flex: none;
+}
+.wordmark__mark--light {
+  display: none;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) .wordmark__mark--dark {
