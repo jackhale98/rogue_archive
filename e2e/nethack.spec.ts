@@ -27,7 +27,11 @@ test('NetHack: character creation, the map and status, menus, tiles, save and co
 
   const game = (await nethack(page))!;
   const rows = game.text.split('\n');
-  expect(rows[0]).toMatch(/welcome to NetHack! +You are a lawful dwarven Valkyrie/);
+  // The welcome, unless the real date's moon or Friday the 13th has the last
+  // word (NetHack shows that message after it).
+  expect(rows[0]).toMatch(
+    /welcome to NetHack! +You are a lawful dwarven Valkyrie|Full moon tonight|New moon tonight|Friday the 13th/,
+  );
   expect(rows[22]).toMatch(/^Tester the Stripling +St:/);
   expect(rows[23]).toMatch(/^Dlvl:1 .*HP:\d+\(\d+\)/);
   expect(game.state).toMatchObject({ inGame: true, depth: 1 });

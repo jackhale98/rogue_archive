@@ -201,7 +201,8 @@ test('DRL phone, Tiles display: taps on its menus, a game by taps, band, pad, do
             .tap();
         return selected();
       },
-      { intervals: [1000] },
+      // Headless Chromium draws the Tiles display in software, slowly on CI.
+      { intervals: [1000], timeout: 40_000 },
     )
     .toBe('Save & Quit');
   await select();
