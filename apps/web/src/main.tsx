@@ -1,5 +1,8 @@
+// Fraunces and Inter set the header's wordmark (after the logo's lockup) and the games' own
+// launch screens; the site itself is set in the faces declared in fonts.css.
 import '@fontsource-variable/fraunces';
 import '@fontsource-variable/inter';
+import './styles/fonts.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import { StrictMode } from 'react';

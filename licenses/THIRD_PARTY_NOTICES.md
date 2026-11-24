@@ -24,5 +24,7 @@ The complete corresponding source of each game build is this repository at the d
 | idb | ISC |
 | Fraunces (via @fontsource-variable/fraunces) | SIL Open Font License 1.1 |
 | Inter (via @fontsource-variable/inter) | SIL Open Font License 1.1 |
+| IBM Plex Mono (via @fontsource/ibm-plex-mono) | SIL Open Font License 1.1 |
+| IBM Plex Sans (via @fontsource-variable/ibm-plex-sans) | SIL Open Font License 1.1 |
 
 Build-time tools (Vite, TypeScript, ESLint, Vitest, Playwright, Zod for CI validation) are not distributed.
