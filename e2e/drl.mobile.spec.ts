@@ -217,6 +217,14 @@ test('DRL phone, Tiles display: taps on its menus, a game by taps, band, pad, do
   await waitForContext(page, 'map');
   expect((await drl(page))?.state?.name).toBe('Pixels');
 
+  // The shell's Save and leave: DRL's Save & Quit, sent as keys while the
+  // dialog is open (its Escape must reach DRL, not close the dialog).
+  await page.getByRole('link', { name: 'Back to library' }).tap();
+  await page.getByRole('dialog').getByRole('button', { name: 'Save and leave' }).tap();
+  await expect(page).toHaveURL(/#\/games\/drl$/, { timeout: 60_000 });
+  await openDrl(page);
+  await waitForText(page, /Continue game/, 60_000);
+
   // Back to Text.
   await chooseDisplay(page, 'text', true);
   expect((await drl(page))?.views).not.toEqual(['tiles']);

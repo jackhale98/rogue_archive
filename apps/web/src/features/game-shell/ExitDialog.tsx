@@ -14,17 +14,26 @@ interface ExitDialogProps {
 /** Asked before leaving a game in progress: how saving works, and the ways to leave. */
 export function ExitDialog({ title, prompt, busy, error, onChoose, onCancel }: ExitDialogProps) {
   const first = useRef<HTMLButtonElement>(null);
+  // The latest values, for the key listener (registered once).
+  const busyRef = useRef(busy);
+  const cancelRef = useRef(onCancel);
+  useEffect(() => {
+    busyRef.current = busy;
+    cancelRef.current = onCancel;
+  });
   useEffect(() => first.current?.focus(), []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || busy) return;
+      // Only the player's Escape cancels: a game's own key events (synthetic,
+      // e.g. the Escape that opens its menu to save) pass through untouched.
+      if (event.key !== 'Escape' || !event.isTrusted || busyRef.current) return;
       event.preventDefault();
       event.stopPropagation();
-      onCancel();
+      cancelRef.current();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [busy, onCancel]);
+  }, []);
   const busyLabel = prompt.options.find((option) => option.id === busy)?.label;
   return (
     <div className="shell-overlay shell-overlay--top">
