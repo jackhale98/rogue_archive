@@ -1,31 +1,41 @@
-/* Design tokens. Dark is the default archive mood; light is a warm parchment. */
+/* Design tokens. "Terminal": the 80×24 screen these games come from. Dark is a black
+   terminal with a phosphor-green accent, used sparingly; light is printer paper in the
+   same green ink. Headings, labels and data are monospace; reading text is a grotesque. */
 :root {
   color-scheme: dark;
-  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
-  --font-body: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-display: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-body: 'IBM Plex Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  /* The header's wordmark keeps the logo's lockup: a serif ROGUE over amber ARCHIVE. */
+  --font-wordmark: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-wordmark-caps: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
-  --ink-0: #100e0b;
-  --ink-1: #16130f;
-  --ink-2: #1e1a15;
-  --ink-3: #2a251e;
-  --line: #3a3329;
-  --text: #ece3cf;
-  --text-muted: #b3a88f;
-  --accent: #e0aa4a;
-  --accent-strong: #f0be62;
-  --accent-ink: #1a1308;
-  --danger: #e2735f;
-  --success: #9ccf8a;
-  --focus: #f6c86b;
+  --ink-0: #08090a;
+  --ink-1: #0e1011;
+  --ink-2: #15181a;
+  --ink-3: #1d2124;
+  --line: #2c3236;
+  /* Borders of controls (fields, chips, buttons): at least 3:1 on the page. */
+  --line-strong: #5d6670;
+  --text: #dfe4e0;
+  --text-muted: #97a29c;
+  --accent: #74dc9c;
+  --accent-strong: #9aebb8;
+  --accent-ink: #04130a;
+  --danger: #f08a76;
+  --success: #74dc9c;
+  --focus: #9aebb8;
+  --brand-amber: #e0aa4a;
 
   --bg: var(--ink-1);
   --surface: var(--ink-2);
   --surface-raised: var(--ink-3);
+  /* Text fields: a black terminal well in the dark theme, white paper in the light one. */
+  --field: var(--ink-0);
 
-  --radius-s: 6px;
-  --radius-m: 10px;
-  --radius-l: 16px;
+  --radius-s: 0;
+  --radius-m: 2px;
+  --radius-l: 2px;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -43,39 +53,45 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark']) {
     color-scheme: light;
-    --ink-0: #e9dfc9;
-    --ink-1: #f4ecdb;
-    --ink-2: #fbf6ea;
-    --ink-3: #efe4cd;
-    --line: #d6c7a6;
-    --text: #231d14;
-    --text-muted: #6a5d45;
-    --accent: #9a5e0c;
-    --accent-strong: #7d4b06;
-    --accent-ink: #fff8ea;
-    --danger: #a83a26;
-    --success: #3f7a2c;
-    --focus: #9a5e0c;
-    --shadow-panel: 0 18px 50px rgb(60 40 10 / 0.18);
+    --ink-0: #e2e5df;
+    --ink-1: #f3f4f0;
+    --ink-2: #fbfcf9;
+    --ink-3: #e8eae5;
+    --line: #cbcfc8;
+    --line-strong: #7d857f;
+    --text: #121513;
+    --text-muted: #545c57;
+    --accent: #15693a;
+    --accent-strong: #0d4f29;
+    --accent-ink: #f4fff8;
+    --danger: #ad301d;
+    --success: #2c6e2a;
+    --focus: #15693a;
+    --brand-amber: #9a5e0c;
+    --field: var(--ink-2);
+    --shadow-panel: 0 18px 50px rgb(20 30 24 / 0.18);
   }
 }
 
 :root[data-theme='light'] {
   color-scheme: light;
-  --ink-0: #e9dfc9;
-  --ink-1: #f4ecdb;
-  --ink-2: #fbf6ea;
-  --ink-3: #efe4cd;
-  --line: #d6c7a6;
-  --text: #231d14;
-  --text-muted: #6a5d45;
-  --accent: #9a5e0c;
-  --accent-strong: #7d4b06;
-  --accent-ink: #fff8ea;
-  --danger: #a83a26;
-  --success: #3f7a2c;
-  --focus: #9a5e0c;
-  --shadow-panel: 0 18px 50px rgb(60 40 10 / 0.18);
+  --ink-0: #e2e5df;
+  --ink-1: #f3f4f0;
+  --ink-2: #fbfcf9;
+  --ink-3: #e8eae5;
+  --line: #cbcfc8;
+  --line-strong: #7d857f;
+  --text: #121513;
+  --text-muted: #545c57;
+  --accent: #15693a;
+  --accent-strong: #0d4f29;
+  --accent-ink: #f4fff8;
+  --danger: #ad301d;
+  --success: #2c6e2a;
+  --focus: #15693a;
+  --brand-amber: #9a5e0c;
+  --field: var(--ink-2);
+  --shadow-panel: 0 18px 50px rgb(20 30 24 / 0.18);
 }
 
 :root[data-text-size='large'] {

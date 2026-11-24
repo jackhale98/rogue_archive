@@ -16,7 +16,8 @@ body {
   font-family: var(--font-body);
   font-size: 1rem;
   line-height: 1.6;
-  font-feature-settings: 'ss01', 'cv11';
+  /* The monospace face ships in two weights: never fake a bold. */
+  font-synthesis-weight: none;
 }
 
 img {
@@ -45,9 +46,9 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 560;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
   margin: 0 0 var(--space-3);
   text-wrap: balance;
 }
@@ -105,12 +106,10 @@ kbd {
   color: var(--danger);
 }
 .eyebrow {
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
   color: var(--accent);
   margin-bottom: var(--space-2);
-  font-weight: 600;
 }
 .notice {
   border-left: 3px solid var(--accent);
@@ -160,6 +159,9 @@ main {
   max-width: var(--content-width);
   width: 100%;
   margin: 0 auto;
+  /* A 1px rule under the header, as wide as the content. */
+  background: linear-gradient(var(--line), var(--line)) center bottom / calc(100% - 2 * var(--gutter)) 1px
+    no-repeat;
 }
 .wordmark {
   display: inline-flex;
@@ -195,14 +197,15 @@ main {
 :root[data-theme='light'] .wordmark__mark--light {
   display: block;
 }
-/* After the logo's lockup: ROGUE in the display serif, ARCHIVE in spaced amber capitals below. */
+/* After the logo's lockup, whatever the site's own faces: ROGUE in a serif, ARCHIVE in spaced
+   amber capitals below. */
 .wordmark__text {
   display: grid;
   justify-items: center;
   line-height: 1;
 }
 .wordmark__rogue {
-  font-family: var(--font-display);
+  font-family: var(--font-wordmark);
   font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -210,14 +213,14 @@ main {
 }
 .wordmark__archive {
   margin-top: 0.2rem;
-  font-family: var(--font-body);
+  font-family: var(--font-wordmark-caps);
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.42em;
   /* The spacing follows the last letter too: pull it back so the word stays centred. */
   margin-right: -0.42em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--brand-amber);
 }
 .site-nav {
   display: flex;
@@ -232,7 +235,8 @@ main {
   border-radius: var(--radius-s);
   color: var(--text-muted);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
 }
 .site-nav a:hover {
   color: var(--text);
@@ -250,6 +254,10 @@ main {
   padding-bottom: max(var(--space-6), env(safe-area-inset-bottom));
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+.site-footer__links {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
 }
 .site-footer > * {
   max-width: var(--content-width);
@@ -275,11 +283,13 @@ main {
   min-height: 2.75rem;
   padding: 0 var(--space-5);
   border-radius: var(--radius-m);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--surface-raised);
   color: var(--text);
   font: inherit;
-  font-weight: 560;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -317,13 +327,13 @@ main {
 }
 .button--large {
   min-height: 3.25rem;
-  font-size: 1.08rem;
+  font-size: 1.02rem;
   padding: 0 var(--space-6);
 }
 .button--small {
   min-height: 2.25rem;
   padding: 0 var(--space-4);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 .button-row {
   display: flex;
@@ -332,24 +342,27 @@ main {
   margin-bottom: var(--space-3);
 }
 
-/* Release year and author: a quiet eyebrow on cards and detail pages. */
+/* Release year and author: a line of data, as a terminal would list it. */
 .game-card__meta,
 .detail__eyebrow {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: 1ch;
   min-width: 0;
   margin: 0 0 var(--space-2);
   color: var(--text-muted);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.game-card__meta > span:first-child:not(:only-child),
+.detail__eyebrow > span:first-child:not(:only-child) {
+  color: var(--accent);
 }
 .game-card__meta > span:first-child:not(:only-child)::after,
 .detail__eyebrow > span:first-child:not(:only-child)::after {
-  content: '·';
-  margin-left: var(--space-2);
+  content: '/';
+  margin-left: 1ch;
+  color: var(--text-muted);
 }
 .game-card__author {
   overflow: hidden;
@@ -369,24 +382,22 @@ main {
   border-radius: var(--radius-m);
   background: #000;
 }
+/* No artwork: the game's glyph standing on a floor of dots, as on its own map. */
 .game-cover--glyph {
   position: relative;
   display: grid;
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 22px,
-      color-mix(in srgb, var(--line) 45%, transparent) 22px 23px
-    ),
+    radial-gradient(circle, var(--line-strong) 1px, transparent 1.5px) center / 1.25rem 1.25rem,
     var(--ink-0);
 }
 .game-cover__glyph {
   font-family: var(--font-mono);
   font-size: clamp(3rem, 9vw, 5rem);
-  font-weight: 700;
+  font-weight: 500;
+  padding: 0 0.1em;
+  background: var(--ink-0);
   color: var(--accent);
   line-height: 1;
 }
@@ -394,9 +405,9 @@ main {
   position: absolute;
   bottom: var(--space-3);
   left: var(--space-4);
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 /* Library ------------------------------------------------------------- */
@@ -406,10 +417,20 @@ main {
   max-width: 46rem;
 }
 .hero__title {
-  font-size: clamp(1.9rem, 4.6vw, 3.1rem);
-  font-weight: 520;
-  letter-spacing: -0.025em;
+  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
   margin-bottom: var(--space-4);
+}
+/* The cursor waiting after the line (still: no blinking). */
+.hero__title::after {
+  content: '';
+  display: inline-block;
+  width: 0.55em;
+  height: 0.9em;
+  margin-left: 0.15em;
+  vertical-align: -0.1em;
+  background: var(--accent);
 }
 .hero__lede {
   font-size: clamp(1rem, 1.8vw, 1.12rem);
@@ -429,8 +450,14 @@ main {
   margin-bottom: var(--space-4);
 }
 .section-title {
-  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  font-size: clamp(1.3rem, 2.6vw, 1.6rem);
   margin-bottom: var(--space-3);
+}
+/* A ">" before each section: a prompt, and the stairs down on a roguelike's map. */
+.section-title::before {
+  content: '>';
+  margin-right: 0.6ch;
+  color: var(--accent);
 }
 .section-heading .section-title {
   margin: 0;
@@ -442,9 +469,9 @@ main {
   max-width: 34rem;
 }
 .subsection-title {
-  font-family: var(--font-body);
+  font-family: var(--font-mono);
   font-size: 0.82rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-muted);
   margin: var(--space-5) 0 var(--space-3);
@@ -479,11 +506,12 @@ main {
   width: 100%;
   min-height: 3rem;
   padding: 0 3rem 0 2.9rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
+  background: var(--field);
   color: var(--text);
   font: inherit;
+  font-family: var(--font-mono);
   font-size: 1rem;
   transition:
     border-color var(--motion),
@@ -496,7 +524,7 @@ main {
 .library-search input:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .library-search input::-webkit-search-cancel-button {
   cursor: pointer;
@@ -562,15 +590,17 @@ main {
 .library-sort select {
   appearance: none;
   min-height: 2.25rem;
-  padding: 0 2rem 0 var(--space-4);
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  padding: 0 2rem 0 var(--space-3);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b3a88f' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")
-      no-repeat right 0.85rem center,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23889089' stroke-width='1.6'/%3E%3C/svg%3E")
+      no-repeat right 0.75rem center,
     var(--surface);
   color: var(--text);
   font: inherit;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
   cursor: pointer;
 }
 .library-sort select:focus-visible {
@@ -584,7 +614,8 @@ main {
   min-height: 1.5rem;
   margin: 0 0 var(--space-4);
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
 }
 .link-button {
   padding: 0;
@@ -624,22 +655,23 @@ main {
   display: inline-flex;
   align-items: center;
   min-height: 2.5rem;
-  padding: 0 var(--space-4);
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
   color: var(--text-muted);
-  font-size: 0.92rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
   transition:
     background var(--motion),
     color var(--motion);
 }
-.chip input:checked + span {
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface));
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--accent) 70%, var(--line));
-}
 .chip span:hover {
   color: var(--text);
+}
+.chip input:checked + span {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
 }
 .chip input:focus-visible + span {
   outline: 2px solid var(--focus);
@@ -654,7 +686,7 @@ main {
 .game-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-l);
   background: var(--surface);
   overflow: hidden;
@@ -668,6 +700,7 @@ main {
 }
 .game-card__cover {
   border-radius: 0;
+  border-bottom: 1px solid var(--line-strong);
 }
 .game-card__body {
   display: flex;
@@ -676,7 +709,7 @@ main {
   padding: var(--space-4) var(--space-5) var(--space-5);
 }
 .game-card__title {
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   margin-bottom: 0;
 }
 .game-card__title a {
@@ -708,12 +741,19 @@ main {
   padding: 0;
   margin: 0;
 }
+.tag-list {
+  column-gap: 1ch;
+}
 .tag-list li {
-  font-size: 0.78rem;
-  padding: 0.1rem 0.6rem;
-  border-radius: 999px;
-  background: var(--surface-raised);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   color: var(--text-muted);
+}
+.tag-list li::before {
+  content: '[';
+}
+.tag-list li::after {
+  content: ']';
 }
 
 /* Offline: the download button on cards, and "Download all". */
@@ -726,8 +766,8 @@ main {
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
@@ -822,7 +862,7 @@ p.download-all {
 }
 .resume-card__title {
   font-family: var(--font-display);
-  font-size: 1.1rem;
+  font-size: 1rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -833,8 +873,8 @@ p.download-all {
 }
 .resume-card__go {
   color: var(--accent);
-  font-weight: 600;
-  font-size: 0.92rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
   white-space: nowrap;
 }
 
@@ -866,16 +906,19 @@ p.download-all {
   place-items: center;
   width: 2.6rem;
   height: 2.6rem;
-  border-radius: var(--radius-m);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
   background: var(--ink-0);
   color: var(--accent);
   font-family: var(--font-mono);
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 500;
 }
 .roadmap__title {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
+  font-weight: 500;
 }
 .roadmap__rationale {
   display: block;
@@ -887,7 +930,8 @@ p.download-all {
   flex-direction: column;
   align-items: flex-end;
   gap: var(--space-1);
-  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
   color: var(--text-muted);
   text-align: right;
 }
@@ -905,7 +949,8 @@ p.download-all {
   width: fit-content;
   padding: var(--space-2) 0;
   color: var(--accent);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
 }
 .roadmap-more[open] > summary {
   margin-bottom: var(--space-3);
@@ -937,8 +982,8 @@ p.download-all {
   color: var(--text);
   display: block;
   font-family: var(--font-display);
-  font-size: 1.1rem;
-  font-weight: 560;
+  font-size: 1rem;
+  font-weight: 500;
   margin-bottom: var(--space-1);
 }
 
@@ -953,11 +998,11 @@ p.download-all {
   gap: var(--space-2);
   min-height: 2.5rem;
   padding: 0 var(--space-4) 0 var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-m);
   color: var(--text);
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
   text-decoration: none;
   transition:
     border-color var(--motion),
@@ -979,7 +1024,7 @@ p.download-all {
   margin-bottom: var(--space-6);
 }
 .detail__title {
-  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  font-size: clamp(2.1rem, 5vw, 3.1rem);
   margin: var(--space-2) 0 0;
 }
 .detail__subtitle {
@@ -996,7 +1041,7 @@ p.download-all {
   gap: var(--space-4);
 }
 .detail__art .game-cover {
-  box-shadow: var(--shadow-panel);
+  border: 1px solid var(--line-strong);
 }
 .detail-section {
   max-width: 50rem;
@@ -1022,13 +1067,17 @@ p.download-all {
   border-bottom: 1px solid var(--line);
 }
 .facts-table th[scope='row'] {
-  font-weight: 560;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  font-weight: 400;
   width: 34%;
   color: var(--text-muted);
 }
 .facts-table thead th {
+  font-family: var(--font-mono);
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -1087,7 +1136,7 @@ p.download-all {
   min-height: 2.75rem;
   padding: 0 var(--space-3);
   border-radius: var(--radius-s);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--surface-raised);
   color: var(--text);
   font: inherit;
