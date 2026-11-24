@@ -162,14 +162,16 @@ test('NetHack phone: the game’s own context menus, item lists at once, travel 
       ).__rogueArchive.adapter.debug;
       const hx = d.state.x - 1;
       const hy = d.state.y + 1;
-      for (let r = 2; r < 6; r++)
+      // The nearest floor or corridor two or more steps away (a random level
+      // can leave none within five).
+      for (let r = 2; r < 20; r++)
         for (let y = hy - r; y <= hy + r; y++)
           for (let x = hx - r; x <= hx + r; x++)
             if (
               Math.max(Math.abs(x - hx), Math.abs(y - hy)) === r &&
               y > 0 &&
               y < 22 &&
-              d.rowText(y)[x] === '.'
+              (d.rowText(y)[x] === '.' || d.rowText(y)[x] === '#')
             )
               return d.cellToClient(x, y);
       return null;
