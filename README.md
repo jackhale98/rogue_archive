@@ -2,18 +2,18 @@
 
 # Rogue Archive
 
-**Classic roguelikes, playable in your browser.** A curated, static, local-first library of the genre's landmark games, built from their original source. No account, no installs, no backend. Games run on your device, and saves stay in your browser unless you export them.
+**Classic roguelikes, playable in your browser.** Landmark games of the genre, compiled from their original source code. No account, no installs, no backend. Games run on your device, and saves stay in your browser unless you export them.
 
 | Game | Status | Notes |
 |---|---|---|
-| [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Playable** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
-| [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Playable** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
-| [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Playable** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
-| [HyperRogue](games/hyperrogue/PORTING.md) 13.1p | **Playable** | Upstream's own web version with saving switched on; the hyperbolic plane drawn with WebGL; keyboard, mouse and touch modelled on its mobile version; score file export/import; offline. Played on a physical iPhone; Android not yet tested. |
-| [Rogue](games/rogue/PORTING.md) 5.4.4 | **Playable** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone; Android not yet tested. |
+| [Brogue: Community Edition](games/brogue-ce/PORTING.md) 1.15.1 | **Playable** | Text, tiles and hybrid display; keyboard, mouse and touch; local saves with export/import; offline. |
+| [Dungeon Crawl Stone Soup](games/dcss/PORTING.md) 0.34.1 | **Playable** | The official WebTiles interface (tiles or text); keyboard, mouse and touch with a phone layout; local saves with export/import; offline. |
+| [Sil-Q](games/sil-q/PORTING.md) 1.5.0 | **Playable** | Sil's own 80×24 text interface; keyboard and touch with a phone layout (map around the player, item prompts and lists as buttons); local saves with export/import; offline. |
+| [HyperRogue](games/hyperrogue/PORTING.md) 13.1p | **Playable** | Upstream's own web version with saving switched on; the hyperbolic plane drawn with WebGL; keyboard, mouse and touch modelled on its mobile version; score file export/import; offline. |
+| [Rogue](games/rogue/PORTING.md) 5.4.4 | **Playable** | The 1980 original's BSD-licensed 5.4.4 release on its own 80×24 screen; keyboard and touch with a phone layout; local saves with export/import; offline. |
 | [NetHack](games/nethack/PORTING.md) 5.0.0 | **Experimental** | Upstream's own WebAssembly build; NetHack's terminal interface as tty draws it, the map in text or NetHack's own tiles; keyboard, mouse and touch with a phone layout (menus as sheets); local saves with export/import; offline. Touch controls are a first version. |
-| [Angband](games/angband/PORTING.md) 4.2.6 | **Experimental** | Angband's own 80×24 interface, the map in text or Adam Bolt's tiles (Angband's graphics mode); keyboard, mouse (click to travel) and touch with a phone layout (map around the player, item prompts, stores and menus as buttons); local saves with export/import; offline. Not yet tested on physical phones. |
-| [DRL](games/drl/PORTING.md) 0.10.12c | **Experimental** | Built from DRL's FreePascal source; its console (text) mode or its own graphical mode with its CC BY-SA sprites (Tiles); keyboard, mouse (Tiles) and touch with a phone layout; local saves with export/import; offline. Played on a physical iPhone in Text; Tiles not yet tested on a phone. |
+| [Angband](games/angband/PORTING.md) 4.2.6 | **Experimental** | Angband's own 80×24 interface, the map in text or Adam Bolt's tiles (Angband's graphics mode); keyboard, mouse (click to travel) and touch with a phone layout (map around the player, item prompts, stores and menus as buttons); local saves with export/import; offline. |
+| [DRL](games/drl/PORTING.md) 0.10.12c | **Experimental** | Built from DRL's FreePascal source; its console (text) mode or its own graphical mode with its CC BY-SA sprites (Tiles); keyboard, mouse (Tiles) and touch with a phone layout; local saves with export/import; offline. |
 | Cataclysm: DDA, Shattered Pixel Dungeon, IVAN, Infra Arcana | Planned | In this order; see [ROADMAP.md](ROADMAP.md). |
 
 ## How it works

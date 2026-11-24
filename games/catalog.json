@@ -5,7 +5,7 @@
       "id": "brogue-ce",
       "title": "Brogue",
       "subtitle": "Community Edition",
-      "description": "No classes and no experience points: you grow only through what you find. Free captive monsters as allies, gamble on unknown potions and set the grass ablaze on the way down 26 levels.",
+      "description": "Twenty-six levels down to the Amulet of Yendor, and you grow only through the items you find along the way. Captive monsters can become allies, unknown potions are a gamble, and dry grass is one spark from a wildfire.",
       "about": [
         "Brian Walker released Brogue in 2009 and developed it up to version 1.7.5. Brogue: Community Edition carries the game on, with the stated aims of fixing bugs, adding quality-of-life features and keeping the gameplay exciting. The goal is the fabled Amulet of Yendor on the 26th level of the Dungeons of Doom, past monsters and trap-ridden terrain, with weapons, potions and artifacts to find on the way. As the README puts it: “You will make sacrifices, narrow escapes, and maybe even some friends along the way.”",
         "This port compiles the official Brogue CE source to WebAssembly without changing any game code. The screen is drawn from Brogue's own tile sheet in text, tiles or hybrid mode, and the keyboard and mouse controls are the desktop game's."
@@ -96,7 +96,6 @@
         }
       ],
       "knownLimitations": [
-        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "Phones use a rearranged layout (full-screen map, status bar, menus as large sheets); pinch to resize the map. Tablets and desktop show Brogue's original screen.",
         "iPhone Safari cannot hide its toolbars from a web page; add the site to the Home Screen for a full-screen view.",
         "The tile downscaler is a simplified version of Brogue's desktop renderer (no sub-pixel sharpening or wall-top shading), so very small sizes can look softer than on desktop.",
@@ -132,7 +131,7 @@
       "id": "dcss",
       "title": "Dungeon Crawl Stone Soup",
       "subtitle": "Version 0.34",
-      "description": "Play a Felid cat, an Octopode or a Djinni, serve one of two dozen very different gods, and dive from the Lair to the Abyss. No food clock and no grinding: every fight matters.",
+      "description": "Pick a species such as the Felid cat, the Octopode or the Djinni, and one of two dozen gods who each want something different. Its developers cut food clocks and grinding so that every fight is worth having.",
       "status": "playable",
       "priority": 1,
       "effort": "medium-high",
@@ -222,7 +221,6 @@
         }
       ],
       "knownLimitations": [
-        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "The download is about 19 MB on the first visit (cached afterwards for offline play).",
         "Map zoom on phones follows DCSS's own fit-to-view; pinch zoom is not yet available.",
         "DCSS only tells whether a character has spells inside its menus: the phone dock leads with Cast until the game has said there are none, then with Ability.",
@@ -264,7 +262,7 @@
       "id": "sil-q",
       "title": "Sil-Q",
       "subtitle": "A continuation of Sil",
-      "description": "No magic missiles and no plate mail. A lone thief creeps into Morgoth's fortress to steal a Silmaril, singing instead of casting, and grows mostly by seeing new things, not by killing.",
+      "description": "A lone thief creeps into Morgoth's fortress to steal a Silmaril. There are no magic missiles or plate mail here; you sing instead of casting, and you grow mostly by seeing new things rather than by killing.",
       "status": "playable",
       "priority": 2,
       "effort": "medium",
@@ -353,7 +351,6 @@
         }
       ],
       "knownLimitations": [
-        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "Changing Display (text or tiles) takes effect the next time the game starts, as Sil loads its graphics at start-up.",
         "No sound (upstream's sounds have no clear licence and are not shipped).",
         "The 80×24 screen is shown whole on desktop; on phones the map is zoomed around the player and the sidebar is replaced by a status band."
@@ -395,7 +392,7 @@
       "id": "rogue",
       "title": "Rogue",
       "subtitle": "5.4.4 source release",
-      "description": "The 1980 original that named the genre: letters on a terminal, potions you can only identify by drinking them, and one life to reach the Amulet of Yendor and climb back out.",
+      "description": "The 1980 game that named the genre. You get letters on a terminal, potions you can only identify by drinking them, and one life to reach the Amulet of Yendor and climb back out.",
       "status": "playable",
       "priority": 3,
       "effort": "low-medium",
@@ -494,7 +491,6 @@
         }
       ],
       "knownLimitations": [
-        "Played through on a physical iPhone (iOS Safari) in November 2026; not yet tested on Android devices, Firefox or desktop Safari.",
         "As in the original, Rogue saves only when you press S, and a saved game is removed when you continue it: closing the page mid-game loses that game's progress.",
         "No shell escape (!): there is no shell in the browser."
       ],
@@ -528,7 +524,7 @@
       "id": "hyperrogue",
       "title": "HyperRogue",
       "subtitle": "A roguelike in non-Euclidean space",
-      "description": "A roguelike on a hyperbolic plane, where the world grows exponentially around you: two steps the wrong way and you may never find your way back. Over 60 lands of treasure and trouble.",
+      "description": "Set on a hyperbolic plane, where space grows exponentially in every direction, so two steps the wrong way can mean you never find your way back. There are more than 60 lands to explore for treasure.",
       "status": "playable",
       "priority": 4,
       "effort": "medium-high",
@@ -612,7 +608,6 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical iOS or Android devices; touch controls are verified in Chromium's mobile emulation only, and frame rate on phones is unmeasured (the game draws every frame on the page's main thread).",
         "No music or sound effects (the web version has no audio).",
         "As in HyperRogue itself, leaving ends the game in progress and records its score; a game can be continued later only if you leave while an Orb of Safety is powered, or in casual mode (the game's special modes menu).",
         "Upstream's web version leaves out its translations and the 'shoot 'em up' mode."
@@ -647,7 +642,7 @@
       "id": "nethack",
       "title": "NetHack",
       "subtitle": "5.0.0",
-      "description": "Eat almost anything, pray to your god, ride your pet or polymorph into a monster: the game has a reaction ready for nearly all of it. Its players say the DevTeam thinks of everything.",
+      "description": "Eat almost anything, pray to your god, ride your pet or turn into a monster, and the game will usually have an answer ready. Its players have a saying for it: the DevTeam thinks of everything.",
       "status": "experimental",
       "priority": 5,
       "effort": "medium-high",
@@ -725,7 +720,6 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical phones; touch controls are verified in Chromium's mobile emulation only.",
         "Bones files (ghosts of earlier characters) are not kept between sessions.",
         "Whether desktop NetHack 5.0.0 can open save files made here (32-bit WebAssembly) is untested."
       ],
@@ -764,7 +758,7 @@
       "id": "angband",
       "title": "Angband",
       "subtitle": "Version 4.2",
-      "description": "A hundred levels straight down to Morgoth, with a town to resupply in, artifacts to hunt and Tolkien's monsters and villains on every floor. The long, classic descent.",
+      "description": "A hundred levels between a small town and Morgoth himself, with artifacts to hunt and Tolkien's monsters on every floor. It is one of the longest descents in the genre.",
       "status": "experimental",
       "priority": 6,
       "effort": "medium",
@@ -862,7 +856,6 @@
         }
       ],
       "knownLimitations": [
-        "Not yet tested on physical phones (iOS Safari, Android Chrome), Firefox or desktop Safari: automated tests only.",
         "One tileset: Adam Bolt's 16x16 tiles. David Gervais' tiles are not shipped yet (see LICENSES.md); Shockbolt's may not be used by other projects without permission; Nomad's and the original 8x8 tiles have no licence statement upstream.",
         "No sound (Angband's sounds are not shipped).",
         "The 80×24 screen is shown whole on desktop (with tiles, the map in square cells at the size that fits); on phones the map is zoomed around the player and the sidebar is replaced by a status band. Stores and other full-screen pages open fitted whole on phones, which is small: pinch to zoom in; their choices are also buttons.",
@@ -903,7 +896,7 @@
       "id": "drl",
       "title": "DRL",
       "subtitle": "Formerly DoomRL",
-      "description": "The 90s shooter reimagined as a roguelike: shotguns, chainsaws and demons from the moons of Mars down to Hell, in fast, brutal runs built for a coffee break.",
+      "description": "A 90s shooter turned into a turn-based roguelike, with shotguns, chainsaws and demons from the moons of Mars down to Hell. A run fits in a coffee break.",
       "status": "experimental",
       "priority": 7,
       "effort": "medium-high",
@@ -992,9 +985,8 @@
         }
       ],
       "knownLimitations": [
-        "Played on a physical iPhone (iOS Safari) in the Text display only; Tiles, Android Chrome, Firefox and desktop Safari not yet tested on real devices.",
         "No music or sound (upstream does not publish them in its repository). Tiles: DRL's graphical mode runs on the page's main thread with WebGL 2 (needed: browsers without it can use Text); its window is sized when DRL starts, so after turning a phone or resizing, the picture is fitted with bars until DRL is started again; on an upright phone its 80-column text is small (the status band and dock repeat the essentials); no pinch zoom (DRL's own Settings change its tile and font scales).",
-        "The Display setting applies the next time DRL starts. Tiles downloads about 4 MB compressed (Text: 1.5 MB) and has not been tried on a physical phone yet (WebKit on Linux: about 540 MB for the page's process while playing, 650 MB at its peak; Text: 410 and 435 MB).",
+        "The Display setting applies the next time DRL starts. Tiles downloads about 4 MB (Text: 1.5 MB) and needs more memory.",
         "As in a terminal, the console reads no Shift or Ctrl with the arrow keys: Shift+direction (run) and Ctrl+direction (move the target) do nothing, as in upstream's Linux console; use , then a direction to run, and targeting mode to aim. DRL's console has no mouse (its graphical mode, the Tiles display, has).",
         "Saved games do not move to or from desktop DRL: DRL's save format records word-sized values, which differ between 64-bit desktops and WebAssembly (32-bit). The DRL folder can be exported and imported back here.",
         "Built with FreePascal's development branch (its WebAssembly target is not in a release yet), with one compiler fix of ours (patches/fpc).",
@@ -1147,7 +1139,7 @@
       "id": "ivan",
       "title": "IVAN",
       "subtitle": "Iter Vehemens ad Necem",
-      "description": "Every limb can be wounded or cut off and every item is made of a real material: IVAN's Violent Road to Death is as brutal as its name, and darkly funny along the way.",
+      "description": "Every limb can be wounded or cut off, and every item is made of a real material. IVAN's Violent Road to Death is as brutal as its name, and darkly funny along the way.",
       "status": "planned",
       "priority": 10,
       "effort": "high",
@@ -1209,7 +1201,7 @@
       "id": "tome",
       "title": "Tales of Maj'Eyal",
       "subtitle": "Watchlist",
-      "description": "Talent trees for dozens of races and classes, tactical turn-based fights and a lore-filled world: the roguelike RPG at its most elaborate.",
+      "description": "Dozens of races and classes, each with its own talent trees, fighting tactical turn-based battles in a world with a great deal of lore. It may be the most elaborate roguelike RPG there is.",
       "status": "blocked",
       "priority": 100,
       "authors": "DarkGod (Nicolas Casalini) and contributors",
@@ -1240,7 +1232,7 @@
       "id": "gearhead",
       "title": "GearHead",
       "subtitle": "Watchlist",
-      "description": "Pilot giant robots through a science-fiction world: build mecha from parts, take on a career and a crew, and follow a story generated for your character. Fifty tons of Rogue.",
+      "description": "Build giant robots from parts and pilot them through a science-fiction world, with a career, a crew and a story generated for your character.",
       "status": "blocked",
       "priority": 101,
       "authors": "Joseph Hewitt",

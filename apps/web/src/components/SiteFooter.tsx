@@ -4,10 +4,6 @@ import { href } from '../app/router.ts';
 export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <p>
-        Games run entirely in your browser. No accounts, no tracking; saves stay on this device unless you
-        export them.
-      </p>
       <ul className="site-footer__links">
         <li>
           <a href={href('/about')}>About & credits</a>

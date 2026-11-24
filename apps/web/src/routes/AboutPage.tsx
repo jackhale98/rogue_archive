@@ -2,6 +2,11 @@ import { catalog } from '../app/catalog.ts';
 import { REPOSITORY_URL, repositoryFileUrl } from '../app/config.ts';
 import { href } from '../app/router.ts';
 
+/** Text as a sentence: a closing period added unless it already ends in one. */
+function sentence(text: string): string {
+  return /[.!?]$/.test(text.trim()) ? text.trim() : `${text.trim()}.`;
+}
+
 export function AboutPage() {
   const launchable = catalog.games.filter((game) => game.license.report);
   return (
@@ -9,8 +14,15 @@ export function AboutPage() {
       <h1 className="page-title">About Rogue Archive</h1>
       <p>
         Rogue Archive is an open-source library of classic roguelikes that run directly in the browser. Each
-        game is compiled from its original, pinned source and adapted only at the edges—screen, input and
-        saving—so the rules and character of the original stay intact.
+        game is compiled from its original source, pinned to an exact upstream revision. The port changes how
+        the game is drawn, controlled and saved in a browser, and leaves its rules alone.
+      </p>
+      <h2>How it is made</h2>
+      <p>
+        Rogue Archive is developed with extensive help from an AI coding assistant (Claude); the commit
+        history shows which changes it wrote. Every game is still built from its upstream source and tested
+        against the original before it is listed, and no AI-written changes are sent to the games' own
+        projects.
       </p>
       <h2>Privacy</h2>
       <p>
@@ -25,8 +37,8 @@ export function AboutPage() {
       <ul>
         {launchable.map((game) => (
           <li key={game.id}>
-            <a href={href(`/games/${game.id}`)}>{game.title}</a> — {game.authors}. Code: {game.license.code}.
-            Assets: {game.license.assets}.{' '}
+            <a href={href(`/games/${game.id}`)}>{game.title}</a>: {sentence(game.authors)} Code:{' '}
+            {sentence(game.license.code)} Assets: {sentence(game.license.assets)}{' '}
             <a href={repositoryFileUrl(game.license.report!)}>Provenance report</a>
           </li>
         ))}

@@ -19,12 +19,6 @@ import { NotFoundPage } from './NotFoundPage.tsx';
 import { leadAuthor } from '../lib/authors.ts';
 
 const INTERFACE_LABELS = { ascii: 'Text (ASCII)', tiles: 'Tiles', graphical: 'Graphical' } as const;
-const RESULT_LABELS = {
-  pass: 'Works',
-  partial: 'Partly verified',
-  fail: 'Does not work',
-  untested: 'Not yet tested',
-} as const;
 
 function yesNo(value: boolean | undefined): string {
   return value ? 'Yes' : 'No';
@@ -357,34 +351,6 @@ export function GameDetailPage({ gameId }: { gameId: string }) {
           </tbody>
         </table>
       </section>
-
-      {game.compatibility.length > 0 ? (
-        <section className="detail-section" aria-labelledby="compat-title">
-          <h2 id="compat-title" className="section-title">
-            Compatibility
-          </h2>
-          <table className="facts-table compat-table">
-            <thead>
-              <tr>
-                <th scope="col">Browser / device</th>
-                <th scope="col">Result</th>
-                <th scope="col">Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {game.compatibility.map((row) => (
-                <tr key={row.environment}>
-                  <th scope="row">{row.environment}</th>
-                  <td>
-                    <span className={`compat compat--${row.result}`}>{RESULT_LABELS[row.result]}</span>
-                  </td>
-                  <td>{row.notes ?? ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      ) : null}
 
       {game.knownLimitations.length > 0 ? (
         <section className="detail-section" aria-labelledby="limits-title">

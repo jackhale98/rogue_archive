@@ -6,7 +6,6 @@ import {
 } from '@rogue-archive/catalog';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { catalog, gamesById } from '../app/catalog.ts';
-import { repositoryFileUrl } from '../app/config.ts';
 import { href } from '../app/router.ts';
 import { getStore } from '../app/store.ts';
 import { GameCard } from '../components/GameCard.tsx';
@@ -250,8 +249,8 @@ export function LibraryPage() {
       <section className="hero">
         <h1 className="hero__title">Classic roguelikes, playable in your browser.</h1>
         <p className="hero__lede">
-          Landmark games of the genre, built from their original source. No account, no installs; your saves
-          stay on your device, and games you have opened work offline.
+          Landmark games of the genre, compiled from their original source code. Nothing to install and no
+          account: your saves stay on your device, and a game you have opened once keeps working offline.
         </p>
       </section>
 
@@ -336,25 +335,6 @@ export function LibraryPage() {
           ) : null}
         </section>
       ) : null}
-
-      <section className="library-section about-strip">
-        <h2 className="section-title">How this archive works</h2>
-        <div className="about-strip__grid">
-          <p>
-            <strong>Original games, faithfully built.</strong> Each game is compiled from its pinned upstream
-            source. Rules, balance and permadeath are untouched.
-          </p>
-          <p>
-            <strong>Local-first.</strong> Everything runs on your device. There is no server, account or
-            telemetry, and you can export your saves at any time.
-          </p>
-          <p>
-            <strong>Tested before it ships.</strong> A game joins the library once it builds from source and
-            passes its tests; anything not yet working is listed on its page.{' '}
-            <a href={repositoryFileUrl('CONTRIBUTING.md')}>Help port the next one.</a>
-          </p>
-        </div>
-      </section>
     </div>
   );
 }
